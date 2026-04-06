@@ -15,6 +15,7 @@ const MODEL_CHAIN = [
     ...SOLVER_FALLBACK_MODELS.filter((model) => model !== DEFAULT_SOLVER_MODEL),
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function errorDetail(error: unknown): string {
     return (error instanceof Error ? error.message : String(error)).substring(0, 300);
 }
@@ -163,7 +164,7 @@ export async function generateResponseBuffered(
             }
 
             return { text: result.text || "", finishReason: reason, model: modelName, retried: i > 0 };
-        } catch (err) {
+        } catch (_err) {
             // const isAbort = errorDetail(err).includes("abort") || (err instanceof Error && err.name === "AbortError");
             if (!isLast) {
                 continue;
@@ -319,17 +320,19 @@ function cleanToolResult(toolName: string, result: unknown): string {
                     ? JSON.stringify(result, null, 1) 
                     : String(result);
         }
-    } catch (_e) {
+    } catch {
         return typeof result === "object" ? JSON.stringify(result) : String(result);
     }
 }
 
 function cleanKnowledgeBaseResult(result: unknown): string {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = result as any;
     const documents = Array.isArray(res) ? res : res.documents || res.results || [];
     if (documents.length === 0) return "No se encontró información relevante en la base de conocimientos.";
 
     return documents
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((doc: any, i: number) => {
             const title = doc.title || doc.metadata?.title || `Documento ${i + 1}`;
             const content = doc.content || doc.text || "";
@@ -341,6 +344,7 @@ function cleanKnowledgeBaseResult(result: unknown): string {
 }
 
 function cleanOnuDiagnosticResult(result: unknown): string {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = result as any;
     const data = res.data || res;
     if (!data || data.error) return `Error de diagnóstico: ${data.error || "Datos no encontrados"}`;
@@ -362,6 +366,7 @@ function cleanOnuDiagnosticResult(result: unknown): string {
 }
 
 function cleanClientStatusResult(result: unknown): string {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = result as any;
     const data = res.client || res.data || res;
     if (!data) return "Datos de cliente inaccesibles.";
