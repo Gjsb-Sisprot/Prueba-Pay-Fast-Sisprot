@@ -51,7 +51,7 @@ const MODEL_CHAIN: string[] = [
 ];
 const MAX_TOOL_STEPS = 1;
 
-const ROUTER_TEMPERATURE = 1.0;
+const ROUTER_TEMPERATURE = 0.0;
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
