@@ -22,7 +22,7 @@ function errorDetail(error: unknown): string {
 
 const TRUNCATION_THRESHOLD = 200;
 
-function buildSolverSystemPrompt(clientData: ClientContextData | undefined): string {
+function buildSolverSystemPrompt(clientData: ClientContextData | undefined, hasHistory: boolean = false): string {
     const portalChannelRule = clientData?.identification
         ? `
 
@@ -35,7 +35,15 @@ El cliente ya esta dentro del portal autenticado.
 ### REGLA DE PORTAL NO AUTENTICADO:
 Si no hay cliente autenticado y el usuario pide pagar o reportar pago, puedes compartir la URL oficial http://portal.sisprotgf.com.`;
 
-    return buildSystemPrompt(clientData) + portalChannelRule + `
+    const noGreetingRule = hasHistory ? `
+
+### ⛔ REGLA MÁXIMA ANTI-SALUDOS (CRÍTICA):
+ESTÁ TOTALMENTE PROHIBIDO SALUDAR EN ESTE RESPUESTA.
+Como la conversación ya está en curso (ya hay historial), TU RESPUESTA DEBE IR DIRECTAMENTE AL GRANO.
+NO DIGAS "Hola", NO DIGAS "Soy Susana", NO des los buenos días/tardes.
+IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD DEL USUARIO.` : "";
+
+    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + `
     
 ### REGLA SUPREMA DE SEGURIDAD:
 BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
@@ -93,7 +101,7 @@ export function generateResponse(
         ...config
     };
 
-    const systemPrompt = buildSolverSystemPrompt(clientData);
+    const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
 
     const messages = buildSolverMessages(message, toolResults, conversationHistory);
 
@@ -131,7 +139,7 @@ export async function generateResponseBuffered(
         ? MODEL_CHAIN
         : [primaryModel, ...MODEL_CHAIN.filter(m => m !== primaryModel)];
 
-    const systemPrompt = buildSolverSystemPrompt(clientData);
+    const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
     const messages = buildSolverMessages(message, toolResults, conversationHistory);
 
     for (let i = 0; i < chain.length; i++) {
