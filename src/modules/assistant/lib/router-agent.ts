@@ -580,7 +580,7 @@ export async function routeRequest(
       intentClassification: intent,
       retriedModel,
     };
-  } catch (error) {
+  } catch (_error) {
     return buildErrorFallback(message, clientData, tools, intent, elapsed, sessionId, contextualEscalation.reason, explicitCloseRequest);
   }
 }
