@@ -58,7 +58,21 @@ function stripUiControlTokens(content: string): string {
   return cleaned.replace(PAYMENT_ACTION_TOKEN_REGEX, "").trim();
 }
 
-function buildSolverHistory(conversationHistory: ConversationMessage[]) {
+function buildSolverHistory(
+  conversationHistory: ConversationMessage[],
+  frontendMessages: ChatRequestBody["messages"]
+) {
+  if (frontendMessages && frontendMessages.length > 1) {
+    // The last message is the current user request, so we exclude it to prevent duplication
+    const historySlice = frontendMessages.slice(0, -1);
+    return historySlice
+      .filter(msg => msg.role === "user" || msg.role === "assistant")
+      .map(msg => ({
+        role: msg.role === "assistant" ? "assistant" as const : "user" as const,
+        content: extractTextContent(msg),
+      }));
+  }
+
   return conversationHistory
     .filter(msg => msg.role !== "tool")
     .map(msg => ({
@@ -279,7 +293,7 @@ export async function POST(request: Request) {
       ...(selectedSolverModel ? { model: selectedSolverModel } : {}),
     };
 
-    const solverHistory = buildSolverHistory(conversationHistory);
+    const solverHistory = buildSolverHistory(conversationHistory, messages);
 
     const solverOptions = {
       config: assistantConfig,
