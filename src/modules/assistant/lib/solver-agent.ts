@@ -15,11 +15,6 @@ const MODEL_CHAIN = [
     ...SOLVER_FALLBACK_MODELS.filter((model) => model !== DEFAULT_SOLVER_MODEL),
 ];
 
-function isHighDemandError(error: unknown): boolean {
-    const msg = String(error).toLowerCase();
-    return msg.includes("high demand") || msg.includes("503") || msg.includes("overloaded") || msg.includes("resource_exhausted") || msg.includes("resource exhausted");
-}
-
 function errorDetail(error: unknown): string {
     return (error instanceof Error ? error.message : String(error)).substring(0, 300);
 }
@@ -169,7 +164,7 @@ export async function generateResponseBuffered(
 
             return { text: result.text || "", finishReason: reason, model: modelName, retried: i > 0 };
         } catch (err) {
-            const isAbort = errorDetail(err).includes("abort") || (err instanceof Error && err.name === "AbortError");
+            // const isAbort = errorDetail(err).includes("abort") || (err instanceof Error && err.name === "AbortError");
             if (!isLast) {
                 continue;
             }
@@ -305,7 +300,7 @@ function formatToolResults(toolResults: ToolResult[], userMessage: string): stri
 /**
  * Limpia y resume el resultado de una herramienta específica para el Solver
  */
-function cleanToolResult(toolName: string, result: any): string {
+function cleanToolResult(toolName: string, result: unknown): string {
     if (!result) return "Sin datos devueltos.";
 
     try {
@@ -324,13 +319,14 @@ function cleanToolResult(toolName: string, result: any): string {
                     ? JSON.stringify(result, null, 1) 
                     : String(result);
         }
-    } catch (e) {
+    } catch (_e) {
         return typeof result === "object" ? JSON.stringify(result) : String(result);
     }
 }
 
-function cleanKnowledgeBaseResult(result: any): string {
-    const documents = Array.isArray(result) ? result : result.documents || result.results || [];
+function cleanKnowledgeBaseResult(result: unknown): string {
+    const res = result as any;
+    const documents = Array.isArray(res) ? res : res.documents || res.results || [];
     if (documents.length === 0) return "No se encontró información relevante en la base de conocimientos.";
 
     return documents
@@ -344,8 +340,9 @@ function cleanKnowledgeBaseResult(result: any): string {
         .join("\n\n");
 }
 
-function cleanOnuDiagnosticResult(result: any): string {
-    const data = result.data || result;
+function cleanOnuDiagnosticResult(result: unknown): string {
+    const res = result as any;
+    const data = res.data || res;
     if (!data || data.error) return `Error de diagnóstico: ${data.error || "Datos no encontrados"}`;
 
     const status = data.status || data.state || "Desconocido";
@@ -364,8 +361,9 @@ function cleanOnuDiagnosticResult(result: any): string {
     ].filter(Boolean).join("\n");
 }
 
-function cleanClientStatusResult(result: any): string {
-    const data = result.client || result.data || result;
+function cleanClientStatusResult(result: unknown): string {
+    const res = result as any;
+    const data = res.client || res.data || res;
     if (!data) return "Datos de cliente inaccesibles.";
 
     return [
