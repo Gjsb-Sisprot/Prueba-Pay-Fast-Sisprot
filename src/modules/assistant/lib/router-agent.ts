@@ -207,7 +207,7 @@ export async function routeRequest(
         reason: "Respuesta directa (FAQ/Cortesía) interceptada tempranamente",
       }),
       durationMs: elapsed(),
-      intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, requiresDiagnosis: false, suggestedQuery: undefined },
+      intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Intercepción directa temprana" },
     };
   }
 
