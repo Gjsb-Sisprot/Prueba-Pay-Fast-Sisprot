@@ -168,19 +168,7 @@ function ChatMessageComponent({
           </div>
           
           { }
-          {isAssistant && onReload && !isLoading && (
-            <div className="flex items-center gap-1 mt-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onReload}
-                className="h-6 px-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Reintentar
-              </Button>
-            </div>
-          )}
+          { }
 
           { }
           {showCloseOffer && (
