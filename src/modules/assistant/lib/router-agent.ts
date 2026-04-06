@@ -196,6 +196,21 @@ export async function routeRequest(
   const startTime = Date.now();
   const elapsed = () => Date.now() - startTime;
 
+  const eagerDirectResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+  if (eagerDirectResponse) {
+    return {
+      noToolNeeded: true,
+      toolCalls: [],
+      toolResults: [],
+      directResponse: eagerDirectResponse,
+      routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+        reason: "Respuesta directa (FAQ/Cortesía) interceptada tempranamente",
+      }),
+      durationMs: elapsed(),
+      intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, requiresDiagnosis: false, suggestedQuery: undefined },
+    };
+  }
+
   const intent = classifyIntent(message);
 
   const fallbackSolverModel = getFallbackSolverModel(intent, clientData, conversationHistory);
