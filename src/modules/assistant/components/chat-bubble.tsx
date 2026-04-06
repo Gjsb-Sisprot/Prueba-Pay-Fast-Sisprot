@@ -22,14 +22,14 @@ import { canAccessAIAssistant } from "@/shared/lib/validation/ai-access-control"
 import { DEFAULT_MEDIA_LIMITS, getStatusLabel } from "@/modules/assistant/lib/types";
 
 function ThinkingIndicator() {
-  const [phaseText, setPhaseText] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhaseText("Buscando informaci\u00f3n..."), 4000);
-    const t2 = setTimeout(() => setPhaseText("Procesando resultados..."), 12000);
-    const t3 = setTimeout(() => setPhaseText("Generando respuesta..."), 25000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t = setTimeout(() => setIsVisible(true), 2000);
+    return () => clearTimeout(t);
   }, []);
+
+  if (!isVisible) return null;
 
   return (
     <div className="flex gap-2 w-full justify-start">
@@ -37,18 +37,11 @@ function ThinkingIndicator() {
         <Bot className="w-4 h-4 text-white" />
       </div>
       <div className="max-w-[80%]">
-        <div className="rounded-2xl px-3 py-2 text-sm bg-gray-100 text-gray-900 rounded-tl-sm">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-            </div>
-            {phaseText && (
-              <span className="text-xs text-gray-400 animate-in fade-in duration-300">
-                {phaseText}
-              </span>
-            )}
+        <div className="rounded-2xl px-4 py-3 text-sm bg-gray-100 text-gray-900 rounded-tl-sm flex items-center justify-center">
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
           </div>
         </div>
       </div>
