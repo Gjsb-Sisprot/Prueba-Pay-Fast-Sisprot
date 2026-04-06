@@ -106,8 +106,8 @@ ${buildPaymentVerificationStatus(clientData.allContracts)}
    ${onuSerial ? `- Serial ONU del cliente: ${onuSerial}
    - NO necesitas pedirle al cliente su serial, ya lo tienes.` : '- Serial ONU no disponible en contexto'}
 
-5. **USO DE COORDENADAS**:
-    - Si el cliente pregunta por ubicaciones y las herramientas te dan coordenadas, responde con la dirección formateada para links de google maps
+5. **UBICACIÓN Y MAPAS**:
+    - Si el cliente pregunta dónde queda la oficina principal, ubicación física, o dirección de la empresa de Sisprot Global Fiber, DEBES responder con la dirección y ACOMPAÑARLA SIEMPRE de este enlace exacto de Google Maps para que puedan guiarse visualmente: [Ver en Google Maps](https://maps.app.goo.gl/nGHU6FUNwUS9ugmm9)
 
 ### EJEMPLO DE FLUJO CORRECTO:
 
