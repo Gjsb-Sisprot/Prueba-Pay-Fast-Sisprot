@@ -178,7 +178,7 @@ function ChatMessageComponent({
                         </a>
                       );
                     },
-                    p: ({ children }) => <p className="my-1">{children}</p>,
+                    p: ({ children }: any) => <p className="my-1">{children}</p>,
                   }}
                 >
                   {content}
