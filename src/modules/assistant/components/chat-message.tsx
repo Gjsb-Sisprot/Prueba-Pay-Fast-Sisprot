@@ -143,7 +143,7 @@ function ChatMessageComponent({
               <div className="prose prose-sm prose-gray max-w-none wrap-anywhere [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
                 <ReactMarkdown
                   components={{
-                    a: ({ href, children }) => {
+                    a: ({ href, children }: any) => {
                       if (href && (href.includes('maps.app.goo.gl') || href.includes('google.com/maps'))) {
                         return (
                           <div className="my-3 block w-full">
