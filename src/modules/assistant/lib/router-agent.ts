@@ -80,18 +80,28 @@ function buildSupportContractDisambiguationMessage(clientData?: ClientContextDat
   return "Para ayudarte con soporte o escalamiento necesito que me indiques a cuál contrato te refieres, ya que tienes múltiples contratos asociados.";
 }
 
-function buildPlansQueryForClientType(clientData: ClientContextData | undefined, fallbackQuery: string): string {
+function buildPlansQueryForClientUsage(clientData: ClientContextData | undefined, message: string): string {
   const normalizedType = clientData?.clientType?.toUpperCase() || "";
-
+  const msgLower = message.toLowerCase();
+  
+  let baseQuery = "planes de internet precios velocidades sisprot";
+  
   if (normalizedType.includes("PYME") || normalizedType.includes("COMERCIAL") || normalizedType.includes("EMPRESA")) {
-    return "planes pymes empresas internet precios velocidades sisprot";
+    baseQuery = "planes pymes empresas internet precios velocidades sisprot";
+  } else if (normalizedType.includes("RESIDENCIAL")) {
+    baseQuery = "planes residenciales internet precios velocidades sisprot";
   }
 
-  if (normalizedType.includes("RESIDENCIAL")) {
-    return "planes residenciales internet precios velocidades sisprot";
+  // Enriquecer según el uso detectado
+  if (msgLower.includes("gamer") || msgLower.includes("jugar") || msgLower.includes("ps5") || msgLower.includes("xbox")) {
+    baseQuery += " gamer juegos latencia";
+  } else if (msgLower.includes("streaming") || msgLower.includes("netflix") || msgLower.includes("4k") || msgLower.includes("televisores")) {
+    baseQuery += " streaming peliculas tv";
+  } else if (msgLower.includes("trabajar") || msgLower.includes("zoom") || msgLower.includes("oficina") || msgLower.includes("home office")) {
+    baseQuery += " trabajo oficina zoom simetria";
   }
 
-  return fallbackQuery;
+  return baseQuery;
 }
 
 function shouldKeepToolRouting(intent: ReturnType<typeof classifyIntent>): boolean {
@@ -358,7 +368,7 @@ export async function routeRequest(
     intent.suggestedTool === "search_knowledge_base";
 
   if (shouldForcePlansSearch) {
-    const plansQuery = buildPlansQueryForClientType(clientData, intent.suggestedQuery || message);
+    const plansQuery = buildPlansQueryForClientUsage(clientData, message);
     const forcedPlans = await executeForced("search_knowledge_base", plansQuery, routerTools);
     if (forcedPlans) {
       return {
