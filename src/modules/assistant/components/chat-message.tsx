@@ -20,7 +20,6 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import type { MediaAttachment } from "../lib/types";
-import { PLAN_RESIDENCIAL_BASE_64, PLAN_PYME_BASE_64 } from "../lib/plan-images-base64";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -156,24 +155,52 @@ function ChatMessageComponent({
                 <ReactMarkdown
                   components={{
                     img: ({ src, alt }) => {
-                      let finalSrc = src || "";
-                      const isPlanResidencial = finalSrc === '__PLAN_RESIDENCIAL__';
-                      const isPlanPyme = finalSrc === '__PLAN_PYME__';
-                      
-                      if (isPlanResidencial) finalSrc = PLAN_RESIDENCIAL_BASE_64;
-                      if (isPlanPyme) finalSrc = PLAN_PYME_BASE_64;
-
+                      const finalSrc = typeof src === 'string' ? src : "";
+                      const isPlanResidencial = finalSrc.includes('residenciales.png');
+                      const isPlanPyme = finalSrc.includes('pymes.png');
                       const isPlanImage = isPlanResidencial || isPlanPyme;
                       
+                      if (isPlanImage) {
+                        return (
+                          <span className="my-4 block w-full">
+                            <span className="flex flex-col gap-0 bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden">
+                              <span className="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
+                                <span className="bg-blue-100 p-2 rounded-lg flex items-center justify-center">
+                                  <CreditCard className="w-4 h-4 text-blue-600" />
+                                </span>
+                                <span className="flex-1">
+                                  <span className="text-sm font-bold text-gray-900 block leading-tight">
+                                    {isPlanResidencial ? "Plan Residencial" : "Plan PYME (Empresas)"}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Sisprot Global Fiber</span>
+                                </span>
+                              </span>
+                              <span className="p-1 bg-white flex items-center justify-center">
+                                <img
+                                  src={finalSrc}
+                                  alt={alt || "Oferta de planes"}
+                                  className="w-full h-auto object-cover rounded-xl"
+                                />
+                              </span>
+                              <a 
+                                href={finalSrc} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex items-center justify-center gap-2 w-full p-2.5 text-xs font-semibold text-blue-700 bg-blue-50/50 hover:bg-blue-100 transition-colors border-t border-gray-100 no-underline decoration-0"
+                              >
+                                <Maximize2 className="w-3 h-3" /> Ver en pantalla completa
+                              </a>
+                            </span>
+                          </span>
+                        );
+                      }
+
                       return (
-                        <span className={cn("block my-4 text-center", isPlanImage ? "max-w-md mx-auto" : "")}>
+                        <span className="block my-4 text-center">
                           <img
                             src={finalSrc}
                             alt={alt || "Imagen de Sisprot"}
-                            className={cn(
-                              "rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]",
-                              isPlanImage ? "w-full h-auto" : "max-w-full inline-block"
-                            )}
+                            className="rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] max-w-full inline-block"
                           />
                           {alt && <span className="text-[10px] text-gray-400 mt-2 block font-medium">{alt}</span>}
                         </span>
