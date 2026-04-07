@@ -376,9 +376,7 @@ export async function routeRequest(
   }
 
   if (intent.suggestedTool === null && intent.confidence !== "baja" && !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)) {
-
     const directResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
-
     if ((intent.category === "CONVERSACIONAL" || intent.category === "CIERRE_CONFIRMADO") && directResponse) {
       return {
         noToolNeeded: true,
@@ -386,7 +384,7 @@ export async function routeRequest(
         toolResults: [],
         directResponse,
         routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-          reason: `Respuesta directa para ${intent.category}`,
+          reason: `Fast path sin herramienta para ${intent.category} (Respuesta determinista)`,
         }),
         durationMs: elapsed(),
         intentClassification: intent,
@@ -405,6 +403,28 @@ export async function routeRequest(
       durationMs: elapsed(),
       intentClassification: intent,
     };
+  }
+
+  if (
+    intent.confidence === "alta" &&
+    intent.suggestedTool &&
+    FAST_PATH_ELIGIBLE_TOOLS.has(intent.suggestedTool) &&
+    !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)
+  ) {
+    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, routerTools);
+    if (forced) {
+      return {
+        noToolNeeded: false,
+        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
+        toolResults: [forced],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+          solverModel: fallbackSolverModel,
+          reason: `Tool forzada por regex (Short-circuit) para ${intent.category}`,
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
+    }
   }
 
   const nativeRoute = await classifyNativeRouteDecision({
@@ -440,28 +460,8 @@ export async function routeRequest(
     };
   }
 
-  if (
-    intent.confidence === "alta" &&
-    intent.suggestedTool &&
-    FAST_PATH_ELIGIBLE_TOOLS.has(intent.suggestedTool) &&
-    !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)
-  ) {
-    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, routerTools);
-    if (forced) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
-        toolResults: [forced],
-        routePolicy: buildRoutePolicy("tool_call", nativeRoute ? "native_classifier" : "fallback", {
-          solverModel: preferredToolSolverModel,
-          confidence: nativeRoute?.confidence,
-          reason: nativeRoute?.reason || `Tool forzada por regex para ${intent.category}`,
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
+  // Ya procesado arriba como short-circuit
+  
 
   if (intent.confidence === "alta" && intent.suggestedTool && FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)) {
   }
