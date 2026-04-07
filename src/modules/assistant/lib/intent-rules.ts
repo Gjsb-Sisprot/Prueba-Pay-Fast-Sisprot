@@ -79,6 +79,10 @@ export const INTENT_RULES: IntentRule[] = [
       /\d+\s*megas?/i,
       /velocidad(es)?\s*(disponibles|que\s*ofrecen)/i,
       /fibra\s*(optica|simetrica)/i,
+
+      // Detección de dispositivos y uso para asesoría de ventas
+      /\d+\s*(dispositivos|equipos|celulares|telf|pcs|computadoras|televisores|tv|consolas|ps\d|xbox)/i,
+      /(gamer|jugar|en\s*linea|streaming|netflix|4k|trabajar|home\s*office|zoom|videollamada|clases\s*online)/i,
     ],
   },
 
