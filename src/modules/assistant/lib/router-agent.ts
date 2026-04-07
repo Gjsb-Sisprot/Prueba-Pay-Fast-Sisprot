@@ -43,8 +43,8 @@ const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
-const ROUTER_PRIMARY_MODEL = process.env.ROUTER_PRIMARY_MODEL?.trim() || "gemini-2.5-flash";
-const ROUTER_FALLBACK_MODELS = ["gemini-2.5-flash-lite"] as const;
+const ROUTER_PRIMARY_MODEL = process.env.ROUTER_PRIMARY_MODEL?.trim() || "gemini-1.5-flash";
+const ROUTER_FALLBACK_MODELS = ["gemini-1.5-flash-8b"] as const;
 const MODEL_CHAIN: string[] = [
   ROUTER_PRIMARY_MODEL,
   ...ROUTER_FALLBACK_MODELS.filter((model) => model !== ROUTER_PRIMARY_MODEL),
@@ -59,8 +59,8 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
-const ROUTER_PRIMARY_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_PRIMARY_TIMEOUT_MS, 24000);
-const ROUTER_FALLBACK_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_FALLBACK_TIMEOUT_MS, 18000);
+const ROUTER_PRIMARY_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_PRIMARY_TIMEOUT_MS, 10000);
+const ROUTER_FALLBACK_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_FALLBACK_TIMEOUT_MS, 7000);
 
 function getRouterTimeoutMs(attemptIndex: number): number {
   return attemptIndex === 0 ? ROUTER_PRIMARY_TIMEOUT_MS : ROUTER_FALLBACK_TIMEOUT_MS;
