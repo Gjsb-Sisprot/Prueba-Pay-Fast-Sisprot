@@ -36,8 +36,8 @@ const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
 const EMPTY_RESPONSE_FALLBACK = "Disculpa, tuve un inconveniente procesando tu mensaje. ¿Podrías repetir tu pregunta?";
-const SOLVER_FLASH_MODEL = process.env.SOLVER_FLASH_MODEL?.trim() || "gemini-3-flash-preview";
-const SOLVER_PRO_MODEL = process.env.SOLVER_PRO_MODEL?.trim() || process.env.SOLVER_PRIMARY_MODEL?.trim() || "gemini-3.1-pro-preview";
+const SOLVER_FLASH_MODEL = process.env.SOLVER_FLASH_MODEL?.trim() || "gemini-1.5-flash";
+const SOLVER_PRO_MODEL = process.env.SOLVER_PRO_MODEL?.trim() || process.env.SOLVER_PRIMARY_MODEL?.trim() || "gemini-1.5-pro";
 
 
 export const maxDuration = 300;
