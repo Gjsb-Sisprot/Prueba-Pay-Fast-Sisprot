@@ -19,8 +19,8 @@ interface ClassifyRouteInput {
 }
 
 const AI_ROUTE_CLASSIFIER_ENABLED = (process.env.AI_ROUTE_CLASSIFIER_ENABLED ?? "true").toLowerCase() !== "false";
-const AI_ROUTE_CLASSIFIER_MODEL = process.env.AI_ROUTE_CLASSIFIER_MODEL?.trim() || "gemini-2.5-flash";
-const AI_ROUTE_CLASSIFIER_TIMEOUT_MS = parsePositiveInt(process.env.AI_ROUTE_CLASSIFIER_TIMEOUT_MS, 7000);
+const AI_ROUTE_CLASSIFIER_MODEL = process.env.AI_ROUTE_CLASSIFIER_MODEL?.trim() || "gemini-2.5-flash-lite";
+const AI_ROUTE_CLASSIFIER_TIMEOUT_MS = parsePositiveInt(process.env.AI_ROUTE_CLASSIFIER_TIMEOUT_MS, 5000);
 const AI_ROUTE_CLASSIFIER_MIN_CONFIDENCE = parseConfidence(process.env.AI_ROUTE_CLASSIFIER_MIN_CONFIDENCE, 0.6);
 const AI_ROUTE_CLASSIFIER_DEBUG = (process.env.AI_ROUTE_CLASSIFIER_DEBUG ?? "false").toLowerCase() === "true";
 
