@@ -74,10 +74,10 @@ function buildSupportContractDisambiguationMessage(clientData?: ClientContextDat
     .join(", ");
 
   if (contractsHint) {
-    return `Para ayudarte con soporte o escalamiento necesito saber a cuál contrato te refieres. Tienes estos contratos: ${contractsHint}. Puedes responder con el número de contrato o el sector.`;
+    return `He notado que tienes varios contratos activos, ¿de cuál de ellos deseas consultar información? Actualmente tienes estos servicios: ${contractsHint}. Puedes responderme con el número de contrato o el nombre del sector.`;
   }
 
-  return "Para ayudarte con soporte o escalamiento necesito que me indiques a cuál contrato te refieres, ya que tienes múltiples contratos asociados.";
+  return "He notado que tienes múltiples contratos asociados a tu cuenta. ¿Sobre cuál de ellos deseas realizar tu consulta hoy?";
 }
 
 function buildPlansQueryForClientUsage(clientData: ClientContextData | undefined, message: string): string {
@@ -257,7 +257,10 @@ export async function routeRequest(
   }
 
   const isAmbiguousSupportIssue =
-    (intent.category === "PROBLEMA_TECNICO" || intent.category === "ESCALACION" || contextualEscalation.shouldEnableEscalation) &&
+    (intent.category === "PROBLEMA_TECNICO" || 
+     intent.category === "ESCALACION" || 
+     intent.category === "CONSULTA_PERSONAL" || 
+     contextualEscalation.shouldEnableEscalation) &&
     (clientData?.totalContracts ?? 0) > 1 &&
     !hasExplicitContractReference(message, clientData);
 
