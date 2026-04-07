@@ -1,12 +1,25 @@
 
 "use client";
 
-import { cn } from "@/shared/lib/utils";
-import { Bot, User, Video, Maximize2, RotateCcw, Info, LogOut, MessageSquarePlus, CreditCard, X } from "lucide-react";
+import * as React from "react";
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { MediaAttachment } from "../lib/types";
+import { 
+  Bot, 
+  User, 
+  Video, 
+  Maximize2, 
+  RotateCcw, 
+  Info, 
+  LogOut, 
+  MessageSquarePlus, 
+  CreditCard, 
+  X 
+} from "lucide-react";
+
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
+import type { MediaAttachment } from "../lib/types";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -86,10 +99,11 @@ function ChatMessageComponent({
                 <div
                   key={attachment.id}
                   className="relative group w-20 h-20 rounded-lg overflow-hidden cursor-pointer"
-                  onClick={() =>
-                    attachment.type === "image" &&
-                    setExpandedImage(attachment.url)
-                  }
+                  onClick={() => {
+                    if (attachment.type === "image") {
+                      setExpandedImage(attachment.url);
+                    }
+                  }}
                 >
                   {attachment.type === "image" ? (
                     <>
@@ -140,13 +154,17 @@ function ChatMessageComponent({
               <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
                 <ReactMarkdown
                   components={{
-                    a: ({ href, children }: any) => {
-                      if (href && (href.includes('maps.app.goo.gl') || href.includes('google.com/maps'))) {
+                    a: ({ href, children, ...props }) => {
+                      const isMapLink = href && (href.includes('maps.app.goo.gl') || href.includes('google.com/maps'));
+                      if (isMapLink) {
                         return (
                           <span className="my-3 block w-full">
                             <span className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
                               <span className="flex-shrink-0 bg-red-50 p-2.5 rounded-full">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                                  <circle cx="12" cy="10" r="3"/>
+                                </svg>
                               </span>
                               <span className="flex-1 min-w-0 flex flex-col justify-center">
                                 <span className="text-sm font-semibold text-gray-900 m-0 leading-tight">Ubicación Sisprot</span>
@@ -166,6 +184,7 @@ function ChatMessageComponent({
                       }
                       return (
                         <a
+                          {...props}
                           href={href}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -175,7 +194,7 @@ function ChatMessageComponent({
                         </a>
                       );
                     },
-                    p: ({ children }: any) => <p className="my-1">{children}</p>,
+                    p: ({ children }) => <p className="my-1">{children}</p>,
                   }}
                 >
                   {content}
@@ -268,3 +287,4 @@ function ChatMessageComponent({
 }
 
 export const ChatMessage = memo(ChatMessageComponent);
+
