@@ -107,7 +107,7 @@ ${buildPaymentVerificationStatus(clientData.allContracts)}
    - NO necesitas pedirle al cliente su serial, ya lo tienes.` : '- Serial ONU no disponible en contexto'}
 
 5. **UBICACIÓN Y MAPAS**:
-    - Si el cliente pregunta dónde queda la oficina principal, ubicación física, o dirección de la empresa de Sisprot Global Fiber, DEBES responder con la dirección y ACOMPAÑARLA SIEMPRE de este enlace exacto de Google Maps para que puedan guiarse visualmente: [Ver en Google Maps](https://maps.app.goo.gl/nGHU6FUNwUS9ugmm9)
+    - Si el cliente pregunta dónde queda la oficina principal, ubicación física, o dirección de la empresa de Sisprot Global Fiber, DEBES responder con la dirección y ACOMPAÑARLA SIEMPRE de este enlace exacto de Google Maps para que puedan guiarse visualmente: [Ver en Google Maps](https://maps.app.goo.gl/33vLLKyo5vUWujQUA?g_st=awb)
 
 ### EJEMPLO DE FLUJO CORRECTO:
 
