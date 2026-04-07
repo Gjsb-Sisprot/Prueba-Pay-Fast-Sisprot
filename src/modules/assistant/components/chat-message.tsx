@@ -155,15 +155,20 @@ function ChatMessageComponent({
                 <ReactMarkdown
                   components={{
                     img: ({ src, alt }) => {
-                      const finalSrc = typeof src === 'string' ? src : "";
-                      const isPlanResidencial = finalSrc.includes('residenciales.png');
-                      const isPlanPyme = finalSrc.includes('pymes.png');
+                      const githubUrl = typeof src === 'string' ? src : "";
+                      const isPlanResidencial = githubUrl.includes('/residenciales.png');
+                      const isPlanPyme = githubUrl.includes('/pymes.png');
                       const isPlanImage = isPlanResidencial || isPlanPyme;
                       
                       if (isPlanImage) {
+                        // Convertir la URL de GitHub (blob) a Raw URL para que cargue la imagen real
+                        const rawSrc = githubUrl
+                          .replace('github.com', 'raw.githubusercontent.com')
+                          .replace('/blob/', '/');
+
                         return (
                           <span className="my-4 block w-full">
-                            <span className="flex flex-col gap-0 bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden">
+                            <span className="flex flex-col gap-0 bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
                               <span className="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
                                 <span className="bg-blue-100 p-2 rounded-lg flex items-center justify-center">
                                   <CreditCard className="w-4 h-4 text-blue-600" />
@@ -177,13 +182,13 @@ function ChatMessageComponent({
                               </span>
                               <span className="p-1 bg-white flex items-center justify-center">
                                 <img
-                                  src={finalSrc}
+                                  src={rawSrc}
                                   alt={alt || "Oferta de planes"}
                                   className="w-full h-auto object-cover rounded-xl"
                                 />
                               </span>
                               <a 
-                                href={finalSrc} 
+                                href={githubUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="flex items-center justify-center gap-2 w-full p-2.5 text-xs font-semibold text-blue-700 bg-blue-50/50 hover:bg-blue-100 transition-colors border-t border-gray-100 no-underline decoration-0"
@@ -198,7 +203,7 @@ function ChatMessageComponent({
                       return (
                         <span className="block my-4 text-center">
                           <img
-                            src={finalSrc}
+                            src={githubUrl}
                             alt={alt || "Imagen de Sisprot"}
                             className="rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] max-w-full inline-block"
                           />
