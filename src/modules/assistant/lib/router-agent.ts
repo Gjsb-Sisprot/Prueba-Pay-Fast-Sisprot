@@ -5,7 +5,7 @@ import type { ClientContextData } from "./types";
 import type { MCPToolSet } from "./mcp-types";
 import { classifyIntent } from "./intent-classifier";
 import { buildRouterPrompt } from "./router-prompt";
-import { buildNoToolDirectResponse } from "./router-direct-responses";
+import { buildNoToolDirectResponse, buildSupportContractDisambiguationMessage } from "./router-direct-responses";
 import {
   classifyNativeRouteDecision,
   getFallbackSolverModel,
@@ -64,20 +64,6 @@ const ROUTER_FALLBACK_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_FALLBACK_
 
 function getRouterTimeoutMs(attemptIndex: number): number {
   return attemptIndex === 0 ? ROUTER_PRIMARY_TIMEOUT_MS : ROUTER_FALLBACK_TIMEOUT_MS;
-}
-
-function buildSupportContractDisambiguationMessage(clientData?: ClientContextData): string {
-  const contracts = clientData?.allContracts ?? [];
-  const contractsHint = contracts
-    .slice(0, 4)
-    .map((contract) => `#${contract.contractId}${contract.sector ? ` (${contract.sector})` : ""}`)
-    .join(", ");
-
-  if (contractsHint) {
-    return `He notado que tienes varios contratos activos, ¿de cuál de ellos deseas consultar información? Actualmente tienes estos servicios: ${contractsHint}. Puedes responderme con el número de contrato o el nombre del sector.`;
-  }
-
-  return "He notado que tienes múltiples contratos asociados a tu cuenta. ¿Sobre cuál de ellos deseas realizar tu consulta hoy?";
 }
 
 function buildPlansQueryForClientUsage(clientData: ClientContextData | undefined, message: string): string {
