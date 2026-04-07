@@ -20,6 +20,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import type { MediaAttachment } from "../lib/types";
+import { PLAN_RESIDENCIAL_BASE_64, PLAN_PYME_BASE_64 } from "../lib/plan-images-base64";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -155,25 +156,26 @@ function ChatMessageComponent({
                 <ReactMarkdown
                   components={{
                     img: ({ src, alt }) => {
-                      const isPlanImage = typeof src === 'string' && src.includes('/images/plans/');
+                      let finalSrc = src || "";
+                      const isPlanResidencial = finalSrc === '__PLAN_RESIDENCIAL__';
+                      const isPlanPyme = finalSrc === '__PLAN_PYME__';
+                      
+                      if (isPlanResidencial) finalSrc = PLAN_RESIDENCIAL_BASE_64;
+                      if (isPlanPyme) finalSrc = PLAN_PYME_BASE_64;
+
+                      const isPlanImage = isPlanResidencial || isPlanPyme;
                       
                       return (
-                        <span className={cn("block my-4", isPlanImage ? "max-w-md mx-auto" : "")}>
+                        <span className={cn("block my-4 text-center", isPlanImage ? "max-w-md mx-auto" : "")}>
                           <img
-                            src={src}
+                            src={finalSrc}
                             alt={alt || "Imagen de Sisprot"}
-                            onError={(e) => {
-                              // Intento de recuperación si falla la ruta absoluta
-                              if (typeof src === 'string' && src.startsWith('/')) {
-                                (e.target as HTMLImageElement).src = src.substring(1);
-                              }
-                            }}
                             className={cn(
                               "rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]",
-                              isPlanImage ? "w-full h-auto" : "max-w-full"
+                              isPlanImage ? "w-full h-auto" : "max-w-full inline-block"
                             )}
                           />
-                          {alt && <span className="text-[10px] text-gray-400 mt-2 block text-center font-medium">{alt}</span>}
+                          {alt && <span className="text-[10px] text-gray-400 mt-2 block font-medium">{alt}</span>}
                         </span>
                       );
                     },
