@@ -110,6 +110,26 @@ export function buildNoToolDirectResponse(
     return response;
   }
 
+  if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar\s*pago)/i.test(normalized)) {
+    return "__PAYMENT_ACTION__\u00a1Claro! Puedes realizar tus pagos de forma r\u00e1pida a trav\u00e9s de:\n\n" +
+           "\ud83d\udcf1 **Pago M\u00f3vil**: (Los datos aparecer\u00e1n en pantalla)\n" +
+           "\ud83c\udfe6 **Transferencia Bancaria**: BNC, Bancamiga o Provincial.\n" +
+           "\ud83d\udcb5 **Zelle**: Para pagos internacionales.\n\n" +
+           "Recuerda que si el pago es en Bs., usamos la **tasa BCV** del d\u00eda. \u00bfNecesitas los datos espec\u00edficos de alguna cuenta?";
+  }
+
+  if (/(?:redes|instagram|sociales|youtube|contacto|whatsapp|facebook)/i.test(normalized)) {
+    return "\u00a1S\u00edguenos y mantente al d\u00eda con Sisprot! \ud83d\udcf1\n\n" +
+           "\ud83d\udcf8 **Instagram**: @sisprotgf\n" +
+           "\ud83d\udcfa **YouTube**: [Sisprot Online](https://www.youtube.com/@sisprotgf)\n" +
+           "\ud83d\udcac **WhatsApp**: [0412-0261134](https://wa.me/584120261134)\n" +
+           "\ud83c\udf10 **Web**: [www.sisprotgf.com](https://www.sisprotgf.com)";
+  }
+
+  if (/(?:cobertura|donde\s*llegan|sectores|zona)/i.test(normalized)) {
+    return "Actualmente ofrecemos el mejor servicio de Fibra \u00d3ptica en todo el **Municipio Santiago Mari\u00f1o** (Turmero, Sam\u00e1n de G\u00fcre, etc.) y zonas aleda\u00f1as. \ud83d\udccd\n\n\u00bfEn qu\u00e9 sector te encuentras para confirmarte disponibilidad exacta?";
+  }
+
   return undefined;
 }
 
