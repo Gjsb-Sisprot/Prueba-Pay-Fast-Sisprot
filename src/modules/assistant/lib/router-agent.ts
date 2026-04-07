@@ -629,7 +629,7 @@ async function callGeminiWithFallback(
         tools: routerTools,
         stopWhen: stepCountIs(MAX_TOOL_STEPS),
         temperature: ROUTER_TEMPERATURE,
-        maxOutputTokens: 512,
+        maxOutputTokens: 1024,
         maxRetries: 0,
         abortSignal: abortController.signal,
       });
