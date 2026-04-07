@@ -82,7 +82,7 @@ Responde siempre en español.`;
 
 
 export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
-  model: "gemini-2.5-flash",
+  model: "gemini-1.5-flash",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   maxTokens: 2048,
   temperature: 0.7,
