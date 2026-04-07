@@ -20,7 +20,7 @@ function errorDetail(error: unknown): string {
     return (error instanceof Error ? error.message : String(error)).substring(0, 300);
 }
 
-const TRUNCATION_THRESHOLD = 200;
+const TRUNCATION_THRESHOLD = 1000;
 
 function buildSolverSystemPrompt(clientData: ClientContextData | undefined, hasHistory: boolean = false): string {
     const portalChannelRule = clientData?.identification
@@ -345,7 +345,7 @@ function cleanKnowledgeBaseResult(result: unknown): string {
             const title = doc.title || doc.metadata?.title || `Documento ${i + 1}`;
             const content = doc.content || doc.text || "";
             // Limpiar saltos de línea excesivos y espacios
-            const cleanContent = content.replace(/\s+/g, " ").trim().substring(0, 800);
+            const cleanContent = content.replace(/\s+/g, " ").trim().substring(0, 3000);
             return `DOC: ${title}\nCONTENIDO: ${cleanContent}`;
         })
         .join("\n\n");
