@@ -8,8 +8,8 @@ const google = createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
-const DEFAULT_SOLVER_MODEL = process.env.SOLVER_PRIMARY_MODEL?.trim() || "gemini-2.5-flash";
-const SOLVER_FALLBACK_MODELS = ["gemini-2.5-flash-lite"] as const;
+const DEFAULT_SOLVER_MODEL = process.env.SOLVER_PRIMARY_MODEL?.trim() || "gemini-1.5-flash";
+const SOLVER_FALLBACK_MODELS = ["gemini-1.5-flash-8b"] as const;
 const MODEL_CHAIN = [
     DEFAULT_SOLVER_MODEL,
     ...SOLVER_FALLBACK_MODELS.filter((model) => model !== DEFAULT_SOLVER_MODEL),
