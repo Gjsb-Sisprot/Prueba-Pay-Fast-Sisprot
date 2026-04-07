@@ -88,7 +88,11 @@ export function buildNoToolDirectResponse(
     return personalize("¡Perfecto{name}! ¿Necesitas algo más?", clientData);
   }
 
-  if (/(?:planes|precios|cu[áa]nto\s*cuesta|tarifas?|mensualidad|costos?|cat[áa]logo).*(?:internet|fibra|pymes?|residencial|hogar|empresa)/i.test(normalized)) {
+  if (/(?:d[o\u00f3]nde|ubica|direcci[o\u00f3]n|sitio|oficina|lugar|quedan?|ir\s*a)/i.test(normalized)) {
+    return "Nuestra oficina principal de Sisprot Global Fiber se ubica en:\n\n📍 **Dirección**: Avenida Intercomunal Santiago Mariño, C.C. Paseo Estación Central (Antiguo Graffitti), Nivel Mezzanina, Local M-14. Turmero, Estado Aragua.\n🕒 **Horario**: Lunes a Viernes de 8:00 AM a 5:00 PM y Sábados de 9:00 AM a 1:00 PM.\n\n[Ver en Google Maps](https://maps.app.goo.gl/33vLLKyo5vUWujQUA?g_st=awb)";
+  }
+
+  if (/(?:plan|precio|cu\u00e1nto\s*cuesta|tarifa|mensualidad|costo|megas|cat\u00e1logo|pyme|residencial)/i.test(normalized)) {
     const isPyme = /pymes?|empresa|comercial/i.test(normalized);
     const isResidencial = /residencial|hogar|casa/i.test(normalized);
 
@@ -110,7 +114,7 @@ export function buildNoToolDirectResponse(
     return response;
   }
 
-  if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar\s*pago)/i.test(normalized)) {
+  if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar|bcv)/i.test(normalized)) {
     return "__PAYMENT_ACTION__\u00a1Claro! Puedes realizar tus pagos de forma r\u00e1pida a trav\u00e9s de:\n\n" +
            "\ud83d\udcf1 **Pago M\u00f3vil**: (Los datos aparecer\u00e1n en pantalla)\n" +
            "\ud83c\udfe6 **Transferencia Bancaria**: BNC, Bancamiga o Provincial.\n" +
