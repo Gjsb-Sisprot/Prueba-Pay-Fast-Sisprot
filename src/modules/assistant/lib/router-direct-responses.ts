@@ -103,13 +103,13 @@ export function buildNoToolDirectResponse(
     if (isPyme || (!isResidencial && !isPyme)) {
       response += "**Planes PYMES (Empresas):**\n";
       response += "- **150 Megas**: $27.60\n- **300 Megas**: $39.09\n- **400 Megas**: $51.74\n- **650 Megas**: $70.18\n- **800 Megas**: $110.40\n- **1 Giga**: $161.00\n\n";
-      response += "![Planes PYMES](https://raw.githubusercontent.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot-main/main/public/images/plans/pymes.png)\n\n";
+      response += "![Planes PYMES](https://github.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot/blob/main/public/assets/images/plan/pymes.png)\n\n";
     }
 
     if (isResidencial || (!isResidencial && !isPyme)) {
       response += "**Planes Residenciales:**\n";
       response += "- **300 Megas**: $27.60\n- **450 Megas**: $34.50\n- **600 Megas**: $40.25\n- **650 Megas**: $46.00\n- **750 Megas**: $49.50\n- **800 Megas**: $55.00\n- **1 Giga**: $74.70\n\n";
-      response += "![Planes Residenciales](https://raw.githubusercontent.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot-main/main/public/images/plans/residenciales.png)\n\n";
+      response += "![Planes Residenciales](https://github.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot/blob/main/public/assets/images/plan/residenciales.png)\n\n";
     }
 
     response += "\u00bfCu\u00e1l de estos planes se adapta mejor a lo que buscas? \ud83d\udca1 Recuerda que puedes contratar con solo el **30% de inicial**.";
