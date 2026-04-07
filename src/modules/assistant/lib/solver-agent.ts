@@ -48,7 +48,7 @@ IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD 
 ### REGLA SUPREMA DE SEGURIDAD:
 BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
 Si no sabes qué responder, di: "Disculpa, no entendí tu consulta. ¿Podrías darme más detalles?"
-Si hay un error técnico, di: "Tuve un problema técnico momentáneo. ¿Me repites la pregunta?"
+Si hay un error técnico, di: "Dispulpa, tuve un inconveniente momentáneo al cargar la información detallada de planes y servicios. ¿Podrías intentar hacerme la pregunta de nuevo o consultar nuestra web oficial www.sisprotgf.com para más detalles?"
 SIEMPRE ESCRIBE ALGO.
 
 ### FORMATO DE RESPUESTA:
