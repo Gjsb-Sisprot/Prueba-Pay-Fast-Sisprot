@@ -59,7 +59,11 @@ export function buildNoToolDirectResponse(
   }
 
   if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)\s*[,.!?]*$/i.test(normalized)) {
-    return personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot. \u00bfEn qu\u00e9 puedo ayudarte hoy?", clientData);
+    const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
+    if ((clientData?.totalContracts ?? 0) > 1) {
+      return `${greeting} ${buildSupportContractDisambiguationMessage(clientData)}`;
+    }
+    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?`;
   }
 
   if (/d[oó]nde\s*(est[áa]n?|quedan?|se\s*ubican?|est[áa]\s*la\s*oficina)|ubicacci[oó]n|ubicaci[oó]n|direcci[oó]n(\s*f[ií]sica)?|oficina\s*principal|ir\s*a\s*la\s*oficina|c[oó]mo\s*llegar|d[oó]nde\s*es/i.test(normalized)) {
@@ -137,4 +141,18 @@ export function buildNoToolDirectResponse(
 
 export function buildNoToolFallbackResponse(clientData?: ClientContextData): string {
   return personalize("Te leo{name}. ¿En qué puedo ayudarte con tu servicio, pagos o facturas?", clientData);
+}
+
+export function buildSupportContractDisambiguationMessage(clientData?: ClientContextData): string {
+  const contracts = clientData?.allContracts ?? [];
+  const contractsHint = contracts
+    .slice(0, 4)
+    .map((contract) => `#${contract.contractId}${contract.sector ? ` (${contract.sector})` : ""}`)
+    .join(", ");
+
+  if (contractsHint) {
+    return `He notado que tienes varios contratos activos, \u00bfde cu\u00e1l de ellos deseas consultar informaci\u00f3n? Actualmente tienes estos servicios: ${contractsHint}. Puedes responderme con el n\u00famero de contrato o el nombre del sector.`;
+  }
+
+  return "He notado que tienes m\u00faltiples contratos asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy?";
 }
