@@ -154,7 +154,31 @@ function ChatMessageComponent({
               <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
                 <ReactMarkdown
                   components={{
+                    img: ({ src, alt }) => {
+                      const isPlanImage = typeof src === 'string' && src.includes('/images/plans/');
+                      
+                      return (
+                        <span className={cn("block my-4", isPlanImage ? "max-w-md mx-auto" : "")}>
+                          <img
+                            src={src}
+                            alt={alt || "Imagen de Sisprot"}
+                            onError={(e) => {
+                              // Intento de recuperación si falla la ruta absoluta
+                              if (typeof src === 'string' && src.startsWith('/')) {
+                                (e.target as HTMLImageElement).src = src.substring(1);
+                              }
+                            }}
+                            className={cn(
+                              "rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]",
+                              isPlanImage ? "w-full h-auto" : "max-w-full"
+                            )}
+                          />
+                          {alt && <span className="text-[10px] text-gray-400 mt-2 block text-center font-medium">{alt}</span>}
+                        </span>
+                      );
+                    },
                     a: ({ href, children, ...rest }) => {
+
                       const url = href || "";
                       const isMapLink = url.includes('maps.app.goo.gl') || url.includes('google.com/maps') || url.includes('goo.gl/maps');
                       
