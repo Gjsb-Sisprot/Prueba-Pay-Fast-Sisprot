@@ -63,7 +63,7 @@ export function buildNoToolDirectResponse(
   }
 
   if (/d[oó]nde\s*(est[áa]n?|quedan?|se\s*ubican?|est[áa]\s*la\s*oficina)|ubicacci[oó]n|ubicaci[oó]n|direcci[oó]n(\s*f[ií]sica)?|oficina\s*principal|ir\s*a\s*la\s*oficina|c[oó]mo\s*llegar|d[oó]nde\s*es/i.test(normalized)) {
-    return "Nuestra oficina principal de Sisprot Global Fiber se ubica en:\n\n📍 **Dirección**: Avenida Intercomunal Santiago Mariño, C.C. Paseo Estación Central (Antiguo Graffitti), Nivel Mezzanina, Local M-14. Turmero, Estado Aragua.\n🕒 **Horario**: Lunes a Viernes de 8:00 AM a 5:00 PM y Sábados de 9:00 AM a 1:00 PM.\n\n[Ver en Google Maps](https://maps.app.goo.gl/nGHU6FUNwUS9ugmm9)";
+    return "Nuestra oficina principal de Sisprot Global Fiber se ubica en:\n\n📍 **Dirección**: Avenida Intercomunal Santiago Mariño, C.C. Paseo Estación Central (Antiguo Graffitti), Nivel Mezzanina, Local M-14. Turmero, Estado Aragua.\n🕒 **Horario**: Lunes a Viernes de 8:00 AM a 5:00 PM y Sábados de 9:00 AM a 1:00 PM.\n\n[Ver en Google Maps](https://maps.app.goo.gl/33vLLKyo5vUWujQUA?g_st=awb)";
   }
 
   if (isSocialCourtesy(normalized)) {
