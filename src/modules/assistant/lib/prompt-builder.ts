@@ -228,7 +228,7 @@ function buildPaymentVerificationStatus(allContracts?: ClientContextData["allCon
 function buildClientTypePlanInstruction(clientType?: string): string {
   if (!clientType) return "";
 
-  const isResidential = clientType.toUpperCase().includes("RESIDENCIAL");
+  const isResidential = clientType.toUpperCase().includes("RESIDENCIAL")
 
   return `
 ### TIPO DE CLIENTE: ${clientType}
