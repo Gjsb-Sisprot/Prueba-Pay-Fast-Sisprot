@@ -375,34 +375,43 @@ export async function routeRequest(
     }
   }
 
-  if (intent.suggestedTool === null && intent.confidence !== "baja" && !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)) {
-    const directResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
-    if ((intent.category === "CONVERSACIONAL" || intent.category === "CIERRE_CONFIRMADO") && directResponse) {
+  const directResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+  const isStandardFaq = ["CONVERSACIONAL", "CIERRE_CONFIRMADO", "INFO_EMPRESA", "INFO_COBERTURA", "INFO_PLANES"].includes(intent.category);
+
+  if (isStandardFaq && directResponse) {
+    return {
+      noToolNeeded: true,
+      toolCalls: [],
+      toolResults: [],
+      directResponse,
+      routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+        reason: `Fast path sin herramienta para ${intent.category} (Respuesta determinista)`,
+      }),
+      durationMs: elapsed(),
+      intentClassification: intent,
+    };
+  }
+
+  if (
+    intent.confidence === "alta" &&
+    intent.suggestedTool &&
+    FAST_PATH_ELIGIBLE_TOOLS.has(intent.suggestedTool) &&
+    !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)
+  ) {
+    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, routerTools);
+    if (forced) {
       return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse,
-        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-          reason: `Fast path sin herramienta para ${intent.category} (Respuesta determinista)`,
+        noToolNeeded: false,
+        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
+        toolResults: [forced],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+          solverModel: fallbackSolverModel,
+          reason: `Tool forzada por regex (Short-circuit) para ${intent.category}`,
         }),
         durationMs: elapsed(),
         intentClassification: intent,
       };
     }
-
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse: undefined,
-      routePolicy: buildRoutePolicy("solver", "fallback", {
-        solverModel: fallbackSolverModel,
-        reason: `Fast path sin herramienta para ${intent.category}`,
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
   }
 
   if (
