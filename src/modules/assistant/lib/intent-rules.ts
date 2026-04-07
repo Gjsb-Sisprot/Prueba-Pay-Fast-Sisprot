@@ -213,6 +213,11 @@ export const INTENT_RULES: IntentRule[] = [
       /desconfigurad.*onu/i,
       /reiniciar\s*(la\s*)?onu/i,
       /reboot/i,
+      /prio(ridad|ritario)/i,
+      /sla/i,
+      /tiempos?\s*(de\s*)?respuesta/i,
+      /cu[aá]nto\s*(tarde|demora|tardan)/i,
+      /atenci[oó]n/i,
     ],
   },
 
@@ -413,4 +418,3 @@ export const UNKNOWN_INTENT: IntentClassification = {
   suggestedQuery: null,
   reasoning: "No se detectó patrón claro",
 };
-
