@@ -13,8 +13,8 @@ export interface IntentRule {
 export const INTENT_RULES: IntentRule[] = [
   {
     category: "INFO_EMPRESA",
-    tool: "search_knowledge_base",
-    query: "redes sociales Sisprot YouTube Instagram WhatsApp Facebook",
+    tool: null,
+    query: null,
     confidence: "alta",
     patterns: [
       /red(es|es\s*sociales?)\s*(de\s*)?(sisprot)?/i,
@@ -27,8 +27,8 @@ export const INTENT_RULES: IntentRule[] = [
 
   {
     category: "INFO_EMPRESA",
-    tool: "search_knowledge_base",
-    query: "información corporativa Sisprot",
+    tool: null,
+    query: null,
     confidence: "alta",
     patterns: [
       /qu[ée]\s*(es|son)\s*sisprot/i,
@@ -45,8 +45,8 @@ export const INTENT_RULES: IntentRule[] = [
 
   {
     category: "INFO_PLANES",
-    tool: "search_knowledge_base",
-    query: "planes internet precios",
+    tool: null,
+    query: null,
     confidence: "alta",
     patterns: [
       /qu[ée]\s*planes/i,
@@ -84,8 +84,8 @@ export const INTENT_RULES: IntentRule[] = [
 
   {
     category: "INFO_COBERTURA",
-    tool: "search_knowledge_base",
-    query: "cobertura sectores servicio",
+    tool: null,
+    query: null,
     confidence: "alta",
     patterns: [
       /cobertura/i,
@@ -100,8 +100,8 @@ export const INTENT_RULES: IntentRule[] = [
 
   {
     category: "INFO_PAGOS",
-    tool: "search_knowledge_base",
-    query: "Datos Bancarios y Métodos de Pago",
+    tool: null,
+    query: null,
     confidence: "alta",
     patterns: [
       /cuentas?\s*bancarias?/i,
