@@ -57,21 +57,37 @@ export async function getClientFromMCP(
 }
 
 
+interface UnifiedContract {
+  contractId: number;
+  status: string;
+  isActive: boolean;
+  sector: string;
+  debt: string;
+  onuSerial: string;
+  planName: string;
+}
+
 function buildEnhancedClientData(
   parsed?: MCPClientStatusResponse,
   directContracts: SisprotContract[] = [],
   frontendData?: ClientContextData
 ): ClientContextData {
-  // Combinar datos: priorizar los de la API directa para la lista de contratos
   const mcpContracts = parsed?.data?.contracts || [];
   
-  // Si no hay datos de MCP, construimos un objeto base desde la API directa o frontend
   const identification = parsed?.data?.identification?.toUpperCase() || frontendData?.identification?.toUpperCase() || "";
   const name = directContracts[0]?.clientName || parsed?.data?.contracts?.[0]?.clientName || frontendData?.name || "";
 
-  // Unificar contratos (evitar duplicados por ID)
-  const unifiedContracts = directContracts.length > 0 
-    ? directContracts 
+  // Unificamos ambas fuentes de datos bajo la misma interfaz para evitar errores de tipo
+  const unifiedContracts: UnifiedContract[] = directContracts.length > 0 
+    ? directContracts.map(c => ({
+        contractId: c.contractId,
+        status: c.status,
+        isActive: c.isActive,
+        sector: c.sector,
+        debt: c.debt,
+        onuSerial: c.onuSerial,
+        planName: c.planName
+      }))
     : mcpContracts.map(c => ({
         contractId: c.contractId,
         status: c.status,
@@ -79,7 +95,7 @@ function buildEnhancedClientData(
         sector: c.sector,
         debt: String(c.debt || "0"),
         onuSerial: c.onuSerial,
-        planName: (c as any).planName || ""
+        planName: "" // El mcp-types no tiene planName actualmente
       }));
 
   const activeContract = unifiedContracts.find(c => c.isActive);
@@ -94,7 +110,7 @@ function buildEnhancedClientData(
     phone: frontendData?.phone || undefined,
     contract: frontendData?.contract || (unifiedContracts.length === 1 ? primaryContract?.contractId?.toString() : undefined),
     sector: primaryContract?.sector,
-    serviceStatus: (activeContract ? "active" : "suspended") as any,
+    serviceStatus: (activeContract ? "active" : "suspended") as "active" | "suspended" | "paused" | "cancelled" | "pending",
     hasDebt: totalDebt > 0,
     debtAmount: totalDebt,
     onuSerial: primaryContract?.onuSerial,
@@ -102,10 +118,10 @@ function buildEnhancedClientData(
     activeContracts: unifiedContracts.filter(c => c.isActive).length,
     suspendedContracts: unifiedContracts.filter(c => !c.isActive).length,
     allContracts: unifiedContracts.map(c => ({
-      contractId: Number(c.contractId),
+      contractId: c.contractId,
       status: c.status,
-      hasDebt: parseFloat(String(c.debt || 0)) > 0,
-      debt: parseFloat(String(c.debt || 0)),
+      hasDebt: parseFloat(c.debt) > 0,
+      debt: parseFloat(c.debt),
       sector: c.sector,
       planName: c.planName,
       onuSerial: c.onuSerial
