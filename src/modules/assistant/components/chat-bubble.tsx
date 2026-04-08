@@ -73,7 +73,6 @@ export function ChatBubble() {
     handleSubmit,
     isLoading,
     error,
-    reload,
     stop,
     isOpen,
     toggleChat,
@@ -272,13 +271,6 @@ export function ChatBubble() {
                       index === messages.length - 1 &&
                       message.role === "assistant" &&
                       message.content.length > 0
-                    }
-                    onReload={
-                      message.role === "assistant" &&
-                      index === messages.length - 1 &&
-                      !isLoading
-                        ? () => reload()
-                        : undefined
                     }
                   />
                 ))}
