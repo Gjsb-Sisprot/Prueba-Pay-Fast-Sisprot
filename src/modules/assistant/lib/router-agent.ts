@@ -1,4 +1,3 @@
-
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, stepCountIs } from "ai";
 import type { ClientContextData } from "./types";
@@ -226,6 +225,27 @@ export async function routeRequest(
   }
 
   const intent = classifyIntent(message);
+  console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
+
+  // OVERRIDE MULTICONTRACTO ESTÁTICO:
+  // Si es la primera interacción y hay múltiples contratos, FORZAMOS la respuesta estática sin excepciones.
+  if (conversationLength === 0 && (clientData?.totalContracts ?? 0) > 1) {
+    const forcedResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+    if (forcedResponse) {
+      console.log(`[ROUTER_DECISION] ¡Multicontrato Detectado! Forzando respuesta determinista inmediata.`);
+      return {
+        noToolNeeded: true,
+        toolCalls: [],
+        toolResults: [],
+        directResponse: forcedResponse,
+        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+          reason: "Multicontrato inicial forzado (Fast Path Ineludible)",
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
+    }
+  }
 
   const fallbackSolverModel = getFallbackSolverModel(intent, clientData, conversationHistory);
 
