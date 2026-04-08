@@ -161,7 +161,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
             attachments: m.attachments,
           })),
           sessionId,
-          clientData: mcpClientData,
+          clientData: mcpClientData || (identification ? { identification } : undefined),
           config: { ...DEFAULT_ASSISTANT_CONFIG, ...config },
         };
 
