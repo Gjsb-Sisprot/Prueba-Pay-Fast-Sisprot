@@ -72,7 +72,11 @@ export function buildNoToolDirectResponse(
       return `${greeting} Estoy lista para ayudarte con tu contrato de **${clientData.sector || clientData.contract}**. \u00bfQu\u00e9 necesitas saber hoy?`;
     }
 
-    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?`;
+    const debugNote = clientData?.debugQuery 
+      ? `\n\n---\n\u2699\ufe0f **DEBUG**: \`${clientData.debugQuery}\` | ID: \`${clientData.identification}\` | Total: **${total}**`
+      : "";
+
+    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?${debugNote}`;
   }
 
   if (/d[oó]nde\s*(est[áa]n?|quedan?|se\s*ubican?|est[áa]\s*la\s*oficina)|ubicacci[oó]n|ubicaci[oó]n|direcci[oó]n(\s*f[ií]sica)?|oficina\s*principal|ir\s*a\s*la\s*oficina|c[oó]mo\s*llegar|d[oó]nde\s*es/i.test(normalized)) {
