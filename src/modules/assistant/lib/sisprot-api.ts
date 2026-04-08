@@ -23,17 +23,43 @@ export async function fetchClientContracts(identification: string): Promise<{ co
   if (!identification) return { contracts: [], debugUrl: "No identification provided" };
 
   const identificationStr = identification.trim().toUpperCase();
-  const cleanId = identificationStr.startsWith('V') 
-    ? identificationStr.slice(1) 
-    : identificationStr;
+  const rawId = identificationStr.replace(/^V[-.]?/, '');
+  const withV = `V${rawId}`;
+  const withoutV = rawId;
 
+  // Intentamos primero con la identificación tal cual llegó
+  let { contracts, debugUrl } = await executeFetch(identificationStr);
+  
+  // Si no encontró nada y tenía una 'V', intentamos sin 'V'
+  if (contracts.length === 0 && identificationStr.startsWith('V')) {
+    console.log(`[SISPROT_API] Re-intentando sin 'V' para: ${withoutV}`);
+    const secondTry = await executeFetch(withoutV);
+    if (secondTry.contracts.length > 0) {
+      contracts = secondTry.contracts;
+      debugUrl = `${secondTry.debugUrl} (Found on 2nd try without V)`;
+    }
+  } 
+  // Si no encontró nada y NO tenía 'V', intentamos con 'V'
+  else if (contracts.length === 0 && !identificationStr.startsWith('V')) {
+     console.log(`[SISPROT_API] Re-intentando con 'V' para: ${withV}`);
+     const secondTry = await executeFetch(withV);
+     if (secondTry.contracts.length > 0) {
+       contracts = secondTry.contracts;
+       debugUrl = `${secondTry.debugUrl} (Found on 2nd try with V)`;
+     }
+  }
+
+  return { contracts, debugUrl };
+}
+
+async function executeFetch(id: string): Promise<{ contracts: SisprotContract[], debugUrl: string }> {
   const params = new URLSearchParams({
-    client_identification: cleanId,
+    client_identification: id,
     page_size: "20"
   });
 
   const url = `${SISPROT_API_BASE}/contracts/?${params.toString()}`;
-  const debugUrl = `GET ${SISPROT_API_BASE}/contracts/?client_identification=${cleanId}&...`;
+  const debugUrl = `${url}`;
 
   try {
     const response = await fetch(url, {
@@ -45,7 +71,6 @@ export async function fetchClientContracts(identification: string): Promise<{ co
     });
 
     if (!response.ok) {
-      console.error(`Sisprot API error: ${response.status}`);
       return { contracts: [], debugUrl: `${debugUrl} (Error ${response.status})` };
     }
 
@@ -83,9 +108,8 @@ export async function fetchClientContracts(identification: string): Promise<{ co
       isActive: item.status_code === 'active' || item.status === 'activo' || !!item.is_active
     }));
 
-    return { contracts, debugUrl: `${debugUrl} (Found: ${contracts.length})` };
+    return { contracts, debugUrl: `${debugUrl} (${contracts.length} encontrados)` };
   } catch (error) {
-    console.error("Error fetching contracts from Sisprot API:", error);
     return { contracts: [], debugUrl: `${debugUrl} (Exception: ${error instanceof Error ? error.message : 'Unknown'})` };
   }
 }
