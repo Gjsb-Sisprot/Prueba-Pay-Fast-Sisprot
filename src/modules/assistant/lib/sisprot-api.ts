@@ -23,12 +23,24 @@ export async function fetchClientContracts(identification: string): Promise<Sisp
   if (!identification) return [];
 
   try {
-    const url = `${SISPROT_API_BASE}/contracts/?client_identification=${identification.toUpperCase()}&page_size=20`;
+    // Saneamiento: Quitamos la "V" inicial si existe, según sugerencia del usuario
+    const identificationStr = identification.trim().toUpperCase();
+    const cleanId = identificationStr.startsWith('V') 
+      ? identificationStr.slice(1) 
+      : identificationStr;
+
+    // Construcción robusta de parámetros (idéntica a n8n)
+    const params = new URLSearchParams({
+      client_identification: cleanId,
+      page_size: "20"
+    });
+
+    const url = `${SISPROT_API_BASE}/contracts/?${params.toString()}`;
     
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "X-API-KEY": process.env.SISPROT_API_KEY || SISPROT_API_KEY,
+        "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
         "Accept": "application/json",
       },
     });
