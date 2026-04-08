@@ -1,6 +1,6 @@
 
 import type { ClientContextData } from "./types";
-import type { MCPClientType, MCPClientContract, MCPClientStatusResponse } from "./mcp-types";
+import type { MCPClientType, MCPClientStatusResponse } from "./mcp-types";
 import { getClientFromCache, setClientInCache } from "./mcp-client-cache";
 import { fetchClientContracts, type SisprotContract } from "./sisprot-api";
 
@@ -38,7 +38,9 @@ export async function getClientFromMCP(
           // Aseguramos el cast a string del contenido del MCP para evitar errores de tipo
           const mcpText = String(mcpResult.contents[0].text || "");
           parsed = JSON.parse(mcpText);
-        } catch (e) {}
+        } catch {
+          // Ignore parsing errors
+        }
       }
 
       const clientData = buildEnhancedClientData(parsed, directContracts, frontendData, debugQuery);
@@ -51,7 +53,7 @@ export async function getClientFromMCP(
     }
 
     return null;
-  } catch (error) {
+  } catch {
     if (frontendData) {
       return frontendData;
     }
