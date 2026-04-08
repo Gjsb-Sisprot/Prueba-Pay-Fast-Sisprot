@@ -40,10 +40,25 @@ export async function fetchClientContracts(identification: string): Promise<Sisp
 
     const data = await response.json();
     
-    // Adaptación según el formato común de APIs paginadas de Sisprot
-    const results = Array.isArray(data) ? data : (data.results || []);
+    // Interface interna para mapear la respuesta de la API
+    interface RawSisprotContract {
+      id: number;
+      contract_id?: number;
+      client_name: string;
+      client_identification: string;
+      status: string;
+      status_code: string;
+      plan_name: string;
+      sector: string;
+      address: string;
+      onu_serial: string;
+      debt?: string | number;
+      is_active?: boolean;
+    }
 
-    return results.map((item: any) => ({
+    const results = (Array.isArray(data) ? data : (data.results || [])) as RawSisprotContract[];
+
+    return results.map((item) => ({
       id: item.id,
       contractId: item.contract_id || item.id,
       clientName: item.client_name,
