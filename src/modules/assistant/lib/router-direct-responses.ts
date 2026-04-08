@@ -58,7 +58,7 @@ export function buildNoToolDirectResponse(
     return "Me llamo Susana, soy tu asistente virtual de Sisprot Global Fiber. Estoy aqu\u00ed para ayudarte con tu servicio de internet, pagos y facturas.";
   }
 
-  if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)\s*[,.!?]*$/i.test(normalized)) {
+  if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)/i.test(normalized)) {
     const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
     
     // CASO MULTI-CONTRATO (INELUDIBLE): Si es el primer mensaje y hay varios, SIEMPRE preguntar.
