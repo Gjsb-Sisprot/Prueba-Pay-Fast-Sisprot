@@ -23,26 +23,6 @@ export function generateMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function buildWelcomeMessage(initialMessage?: string): ChatMessage {
-  return {
-    id: "welcome",
-    role: "assistant",
-    content:
-      initialMessage ||
-      "¡Hola! Soy Susana, tu asistente virtual de Sisprot. Estoy aquí para ayudarte con problemas de conexión a internet. ¿En qué puedo ayudarte hoy?",
-    timestamp: new Date(),
-  };
-}
-
-export function buildPersonalizedWelcome(clientName?: string, clientSector?: string): string {
-  if (!clientName) {
-    return "¡Hola! Soy Susana, tu asistente virtual de Sisprot. Estoy aquí para ayudarte con problemas de conexión a internet. ¿En qué puedo ayudarte hoy?";
-  }
-
-  const firstName = clientName.split(" ")[0];
-  return `¡Hola ${firstName}! Soy Susana, tu asistente virtual de Sisprot. Veo que estás en ${clientSector || "tu zona"}. ¿En qué puedo ayudarte hoy?`;
-}
-
 export function stripPaymentActionMarkers(content: string): string {
   return content
     .replace(PAYMENT_ACTION_MARKER_STRIP_REGEX, "")
