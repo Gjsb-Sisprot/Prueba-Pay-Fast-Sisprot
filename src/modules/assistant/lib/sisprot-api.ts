@@ -19,24 +19,23 @@ export interface SisprotContract {
 /**
  * Consulta los contratos de un cliente directamente a la API de Sisprot.
  */
-export async function fetchClientContracts(identification: string): Promise<SisprotContract[]> {
-  if (!identification) return [];
+export async function fetchClientContracts(identification: string): Promise<{ contracts: SisprotContract[], debugUrl: string }> {
+  if (!identification) return { contracts: [], debugUrl: "No identification provided" };
+
+  const identificationStr = identification.trim().toUpperCase();
+  const cleanId = identificationStr.startsWith('V') 
+    ? identificationStr.slice(1) 
+    : identificationStr;
+
+  const params = new URLSearchParams({
+    client_identification: cleanId,
+    page_size: "20"
+  });
+
+  const url = `${SISPROT_API_BASE}/contracts/?${params.toString()}`;
+  const debugUrl = `GET ${SISPROT_API_BASE}/contracts/?client_identification=${cleanId}&...`;
 
   try {
-    // Saneamiento: Quitamos la "V" inicial si existe, según sugerencia del usuario
-    const identificationStr = identification.trim().toUpperCase();
-    const cleanId = identificationStr.startsWith('V') 
-      ? identificationStr.slice(1) 
-      : identificationStr;
-
-    // Construcción robusta de parámetros (idéntica a n8n)
-    const params = new URLSearchParams({
-      client_identification: cleanId,
-      page_size: "20"
-    });
-
-    const url = `${SISPROT_API_BASE}/contracts/?${params.toString()}`;
-    
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -47,12 +46,11 @@ export async function fetchClientContracts(identification: string): Promise<Sisp
 
     if (!response.ok) {
       console.error(`Sisprot API error: ${response.status}`);
-      return [];
+      return { contracts: [], debugUrl: `${debugUrl} (Error ${response.status})` };
     }
 
     const data = await response.json();
     
-    // Interface interna para mapear la respuesta de la API
     interface RawSisprotContract {
       id: number;
       contract_id?: number;
@@ -70,7 +68,7 @@ export async function fetchClientContracts(identification: string): Promise<Sisp
 
     const results = (Array.isArray(data) ? data : (data.results || [])) as RawSisprotContract[];
 
-    return results.map((item) => ({
+    const contracts = results.map((item) => ({
       id: item.id,
       contractId: item.contract_id || item.id,
       clientName: item.client_name,
@@ -84,8 +82,10 @@ export async function fetchClientContracts(identification: string): Promise<Sisp
       debt: item.debt?.toString() || "0",
       isActive: item.status_code === 'active' || item.status === 'activo' || !!item.is_active
     }));
+
+    return { contracts, debugUrl: `${debugUrl} (Found: ${contracts.length})` };
   } catch (error) {
     console.error("Error fetching contracts from Sisprot API:", error);
-    return [];
+    return { contracts: [], debugUrl: `${debugUrl} (Exception: ${error instanceof Error ? error.message : 'Unknown'})` };
   }
 }
