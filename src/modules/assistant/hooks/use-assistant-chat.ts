@@ -52,9 +52,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   const [conversationStatus, setConversationStatus] = useState<ConversationStatus>("active");
   const [currentView, setCurrentView] = useState<ChatView>("chat");
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    buildWelcomeMessage(initialMessage),
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>(undefined);
@@ -106,6 +104,8 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     return () => { cancelled = true; };
   }, [identification]);
 
+  // El saludo automático ha sido desactivado para que sea 100% reactivo
+  /* 
   useEffect(() => {
     if (clientName) {
       setMessages((prev) => {
@@ -121,6 +121,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       });
     }
   }, [clientName, clientSector]);
+  */
 
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -261,10 +262,10 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   }, []);
 
   const clearMessages = useCallback(() => {
-    setMessages([buildWelcomeMessage(initialMessage)]);
+    setMessages([]);
     setError(undefined);
     media.resetMediaUsage();
-  }, [initialMessage, media]);
+  }, [media]);
 
   const closeConversation = useCallback(async () => {
     if (!sessionId) return;
