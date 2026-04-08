@@ -2,6 +2,7 @@
 import type { ClientContextData } from "./types";
 import type { MCPClientType, MCPClientContract, MCPClientStatusResponse } from "./mcp-types";
 import { getClientFromCache, setClientInCache } from "./mcp-client-cache";
+import { fetchClientContracts, type SisprotContract } from "./sisprot-api";
 
 export async function getClientFromMCP(
   mcpClient: MCPClientType,
@@ -21,23 +22,25 @@ export async function getClientFromMCP(
       }
     }
 
-    const result = await mcpClient.readResource({
-      uri: `client://${identification}/status`,
-    });
+    const [mcpResult, directContracts] = await Promise.all([
+      mcpClient.readResource({ uri: `client://${identification}/status` }).catch(() => null),
+      fetchClientContracts(identification).catch(() => [] as SisprotContract[])
+    ]);
 
-    if (result.contents && result.contents.length > 0) {
-      const content = result.contents[0];
-      if ("text" in content && typeof content.text === "string") {
-        const parsed: MCPClientStatusResponse = JSON.parse(content.text);
-
-        if (parsed.success && parsed.data?.contracts?.length) {
-          const clientData = buildClientData(parsed, frontendData);
-
-          setClientInCache(identification, clientData);
-
-          return clientData;
-        }
+    if (mcpResult?.contents?.length || directContracts.length > 0) {
+      let parsed: MCPClientStatusResponse | undefined;
+      
+      if (mcpResult?.contents?.[0] && "text" in mcpResult.contents[0]) {
+        try {
+          // Aseguramos el cast a string del contenido del MCP para evitar errores de tipo
+          const mcpText = String(mcpResult.contents[0].text || "");
+          parsed = JSON.parse(mcpText);
+        } catch (e) {}
       }
+
+      const clientData = buildEnhancedClientData(parsed, directContracts, frontendData);
+      setClientInCache(identification, clientData);
+      return clientData;
     }
 
     if (frontendData) {
@@ -54,69 +57,58 @@ export async function getClientFromMCP(
 }
 
 
-function buildClientData(
-  parsed: MCPClientStatusResponse,
+function buildEnhancedClientData(
+  parsed?: MCPClientStatusResponse,
+  directContracts: SisprotContract[] = [],
   frontendData?: ClientContextData
 ): ClientContextData {
-  const contracts = parsed.data!.contracts;
-  const summary = parsed.data!.summary;
+  // Combinar datos: priorizar los de la API directa para la lista de contratos
+  const mcpContracts = parsed?.data?.contracts || [];
+  
+  // Si no hay datos de MCP, construimos un objeto base desde la API directa o frontend
+  const identification = parsed?.data?.identification?.toUpperCase() || frontendData?.identification?.toUpperCase() || "";
+  const name = directContracts[0]?.clientName || parsed?.data?.contracts?.[0]?.clientName || frontendData?.name || "";
 
-  const totalDebt = contracts.reduce((sum, c) => sum + parseFloat(c.debt), 0);
+  // Unificar contratos (evitar duplicados por ID)
+  const unifiedContracts = directContracts.length > 0 
+    ? directContracts 
+    : mcpContracts.map(c => ({
+        contractId: c.contractId,
+        status: c.status,
+        isActive: c.isActive,
+        sector: c.sector,
+        debt: String(c.debt || "0"),
+        onuSerial: c.onuSerial,
+        planName: (c as any).planName || ""
+      }));
 
-  const activeContract = contracts.find(c => c.isActive);
-  const primaryContract = activeContract || contracts[0];
+  const activeContract = unifiedContracts.find(c => c.isActive);
+  const primaryContract = activeContract || unifiedContracts[0];
 
-  let serviceStatus: ClientContextData["serviceStatus"] = "active";
-  if (summary.suspendedContracts > 0) {
-    serviceStatus = summary.activeContracts > 0 ? "active" : "suspended";
-  }
+  const totalDebt = unifiedContracts.reduce((sum, c) => sum + parseFloat(String(c.debt || 0)), 0);
 
   return {
-    identification: parsed.data!.identification.toUpperCase(),
-    name: primaryContract.clientName,
+    identification,
+    name,
     email: frontendData?.email || undefined,
     phone: frontendData?.phone || undefined,
-    contract: frontendData?.contract || primaryContract.contractId.toString(),
-    order: frontendData?.order || undefined,
-    sector: primaryContract.sector,
-    parish: frontendData?.parish || undefined,
-    address: frontendData?.address || undefined,
-    planName: frontendData?.planName || undefined,
-    cycle: frontendData?.cycle || undefined,
-    serviceStatus,
-    hasDebt: summary.hasAnyDebt,
+    contract: frontendData?.contract || (unifiedContracts.length === 1 ? primaryContract?.contractId?.toString() : undefined),
+    sector: primaryContract?.sector,
+    serviceStatus: (activeContract ? "active" : "suspended") as any,
+    hasDebt: totalDebt > 0,
     debtAmount: totalDebt,
-    onuSerial: primaryContract.onuSerial,
-    totalContracts: summary.totalContracts,
-    activeContracts: summary.activeContracts,
-    suspendedContracts: summary.suspendedContracts,
-    allContracts: buildAllContracts(contracts, frontendData),
+    onuSerial: primaryContract?.onuSerial,
+    totalContracts: unifiedContracts.length,
+    activeContracts: unifiedContracts.filter(c => c.isActive).length,
+    suspendedContracts: unifiedContracts.filter(c => !c.isActive).length,
+    allContracts: unifiedContracts.map(c => ({
+      contractId: Number(c.contractId),
+      status: c.status,
+      hasDebt: parseFloat(String(c.debt || 0)) > 0,
+      debt: parseFloat(String(c.debt || 0)),
+      sector: c.sector,
+      planName: c.planName,
+      onuSerial: c.onuSerial
+    }))
   };
-}
-
-function buildAllContracts(
-  contracts: MCPClientContract[],
-  frontendData?: ClientContextData
-): ClientContextData["allContracts"] {
-  return contracts.map(mcpContract => {
-    const frontendContract = frontendData?.allContracts?.find(
-      fc => fc.contractId === mcpContract.contractId
-    );
-
-    return {
-      contractId: mcpContract.contractId,
-      installationOrder: frontendContract?.installationOrder,
-      status: mcpContract.status,
-      statusCode: mcpContract.statusCode,
-      debt: parseFloat(mcpContract.debt),
-      debtBs: frontendContract?.debtBs,
-      hasDebt: mcpContract.hasDebt,
-      sector: mcpContract.sector,
-      parish: frontendContract?.parish,
-      planName: frontendContract?.planName,
-      address: frontendContract?.address,
-      contractTag: frontendContract?.contractTag,
-      nextInvoiceValidationLog: frontendContract?.nextInvoiceValidationLog,
-    };
-  });
 }
