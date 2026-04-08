@@ -217,7 +217,7 @@ export async function POST(request: Request) {
         }).catch(() => {}) as Promise<void>;
       }
 
-    } catch (mcpError) {
+    } catch {
     }
 
 
@@ -240,9 +240,6 @@ export async function POST(request: Request) {
         routerHistory.length,
         routerHistory
       );
-
-      if (routerResult.retriedModel) {
-      }
 
       routerRetried = routerResult.retriedModel;
       selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
@@ -296,7 +293,7 @@ export async function POST(request: Request) {
           toolResults.push(newToolResult);
 
           persistToolResultsInBackground(tools, sessionId, [newToolResult], activeClientData);
-        } catch (linksError) {
+        } catch {
         }
       }
     }
@@ -317,7 +314,6 @@ export async function POST(request: Request) {
     };
 
     const currentSessionId = sessionId;
-    const currentClientData = clientData;
     const currentTools = tools;
 
     const hasToolContext = toolResults.length > 0;
@@ -368,7 +364,7 @@ export async function POST(request: Request) {
           contract: activeClientData?.contract,
           summaryPromise, mcpClient,
         });
-      } catch (err) {
+      } catch {
       }
     })();
 
