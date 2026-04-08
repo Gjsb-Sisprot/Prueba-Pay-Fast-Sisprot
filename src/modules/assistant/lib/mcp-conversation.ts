@@ -98,7 +98,7 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
       messages: [],
       toolCallId: `save-${Date.now()}`,
     });
-  } catch (error) {
+  } catch {
   }
 }
 
@@ -145,7 +145,7 @@ export async function updateConversationSummary(
       { sessionId, summary: summaryParts.join(" | ") },
       { messages: [], toolCallId: `update-summary-${Date.now()}` }
     );
-  } catch (error) {
+  } catch {
   }
 }
 
@@ -221,6 +221,6 @@ export async function updateSummaryFromHistory(
       { sessionId, summary: summaryParts.join(" | ") },
       { messages: [], toolCallId: `update-summary-history-${Date.now()}` }
     );
-  } catch (error) {
+  } catch {
   }
 }
