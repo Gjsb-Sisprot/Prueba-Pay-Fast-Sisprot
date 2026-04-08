@@ -61,20 +61,21 @@ export function buildNoToolDirectResponse(
   if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)/i.test(normalized)) {
     const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
     
-    // CASO MULTI-CONTRATO (INELUDIBLE): Si es el primer mensaje y hay varios, SIEMPRE preguntar.
+    // CASO MULTI-CONTRATO (INELUDIBLE): Si hay varios y NO se ha seleccionado uno aún, pedir elegir.
     const total = clientData?.totalContracts ?? 0;
-    if (total > 1 && conversationLength === 0) {
-      return `${greeting} He notado que tienes **${total} contratos** asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy? Aqu\u00ed tienes tus servicios activos: ${buildContractList(clientData)}.`;
-    }
-
-    // Caso de un solo contrato o si ya estamos en medio de una conversación
-    if (clientData?.contract) {
-      return `${greeting} Estoy lista para ayudarte con tu contrato de **${clientData.sector || clientData.contract}**. \u00bfQu\u00e9 necesitas saber hoy?`;
-    }
+    const hasSelectedContract = !!clientData?.contract;
 
     const debugNote = clientData?.debugQuery 
-      ? `\n\n---\n\u2699\ufe0f **DEBUG**: \`${clientData.debugQuery}\` | ID: \`${clientData.identification}\` | Total: **${total}**`
+      ? `\n\n---\n\u2699\ufe0f **Nota T\u00e9cnica**: ID \`${clientData.identification}\` | Contratos: **${total}** | URL: \`${clientData.debugQuery}\``
       : "";
+
+    if (total > 1 && !hasSelectedContract && clientData) {
+      const contractList = clientData.allContracts
+        ?.map(c => `- **${c.contractId}** (${c.planName}) - ${c.status}`)
+        .join("\n") || "";
+
+      return `${greeting}\n\nHe notado que tienes **${total} contratos** asociados a tu identidad. Para poder brindarte informaci\u00f3n precisa sobre tus pagos o estado del servicio, **por favor ind\u00edcame cu\u00e1l de estos n\u00fameros de contrato deseas consultar**:\n\n${contractList}${debugNote}`;
+    }
 
     return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?${debugNote}`;
   }
