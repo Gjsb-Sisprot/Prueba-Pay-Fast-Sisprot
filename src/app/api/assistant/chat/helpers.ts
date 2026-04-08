@@ -161,7 +161,7 @@ export function createResilientStreamResponse({
               } else {
                 enqueue(streamedContent || emptyFallback);
               }
-            } catch (err) {
+            } catch {
               enqueue(streamedContent || emptyFallback);
             }
           } else if (!trimmed) {
@@ -177,12 +177,12 @@ export function createResilientStreamResponse({
         }
 
         controller.close();
-      } catch (err) {
+      } catch {
         if (!clientReceived) {
           try {
             const recovery = await recoverBuffered();
             enqueue(recovery.text || emptyFallback);
-          } catch (recoveryErr) {
+          } catch {
             enqueue(streamedContent || emptyFallback);
           }
         } else {
@@ -244,6 +244,6 @@ export async function saveModelAndCleanup({
     if (mcpClient) {
       await mcpClient.close();
     }
-  } catch (err) {
+  } catch {
   }
 }
