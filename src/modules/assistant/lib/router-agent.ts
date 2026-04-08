@@ -228,8 +228,8 @@ export async function routeRequest(
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
 
   // OVERRIDE MULTICONTRACTO ESTÁTICO:
-  // Si es la primera interacción y hay múltiples contratos, FORZAMOS la respuesta estática sin excepciones.
-  if (conversationLength === 0 && (clientData?.totalContracts ?? 0) > 1) {
+  // Si hay múltiples contratos y NO se ha seleccionado uno, FORZAMOS la respuesta estática sin excepciones.
+  if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
     const forcedResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
     if (forcedResponse) {
       console.log(`[ROUTER_DECISION] ¡Multicontrato Detectado! Forzando respuesta determinista inmediata.`);
