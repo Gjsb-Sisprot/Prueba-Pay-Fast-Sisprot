@@ -61,13 +61,14 @@ export function buildNoToolDirectResponse(
   if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)\s*[,.!?]*$/i.test(normalized)) {
     const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
     
-    // Si tiene múltiples contratos y no ha especificado uno, forzar desambiguación
-    if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
-      return `${greeting} He notado que tienes m\u00faltiples contratos asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy? Aqu\u00ed tienes tus servicios activos: ${buildContractList(clientData)}.`;
+    // Si tiene múltiples contratos y es el inicio de la conversación, forzar elección
+    const total = clientData?.totalContracts ?? 0;
+    if (total > 1 && (conversationLength === 0 || !clientData?.contract)) {
+      return `${greeting} He notado que tienes **${total} contratos** asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy? Aqu\u00ed tienes tus servicios activos: ${buildContractList(clientData)}.`;
     }
     
-    // Si tiene múltiples contratos pero ya hay uno en el contexto, saludar normal pero mencionar el contrato
-    if ((clientData?.totalContracts ?? 0) > 1 && clientData?.contract) {
+    // Si ya hay un contrato en contexto o solo tiene uno, saludo normal
+    if (clientData?.contract) {
       return `${greeting} Estoy lista para ayudarte con tu contrato de **${clientData.sector || clientData.contract}**. \u00bfQu\u00e9 necesitas saber hoy?`;
     }
 
