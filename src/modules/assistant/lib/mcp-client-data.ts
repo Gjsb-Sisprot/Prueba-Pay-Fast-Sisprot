@@ -22,10 +22,13 @@ export async function getClientFromMCP(
       }
     }
 
-    const [mcpResult, directContracts] = await Promise.all([
+    const [mcpResult, sisprotResult] = await Promise.all([
       mcpClient.readResource({ uri: `client://${identification}/status` }).catch(() => null),
-      fetchClientContracts(identification).catch(() => [] as SisprotContract[])
+      fetchClientContracts(identification).catch(() => ({ contracts: [] as SisprotContract[], debugUrl: "API Fetch failed" }))
     ]);
+
+    const directContracts = sisprotResult.contracts;
+    const debugQuery = sisprotResult.debugUrl;
 
     if (mcpResult?.contents?.length || directContracts.length > 0) {
       let parsed: MCPClientStatusResponse | undefined;
@@ -38,7 +41,7 @@ export async function getClientFromMCP(
         } catch (e) {}
       }
 
-      const clientData = buildEnhancedClientData(parsed, directContracts, frontendData);
+      const clientData = buildEnhancedClientData(parsed, directContracts, frontendData, debugQuery);
       setClientInCache(identification, clientData);
       return clientData;
     }
@@ -70,7 +73,8 @@ interface UnifiedContract {
 function buildEnhancedClientData(
   parsed?: MCPClientStatusResponse,
   directContracts: SisprotContract[] = [],
-  frontendData?: ClientContextData
+  frontendData?: ClientContextData,
+  debugQuery?: string
 ): ClientContextData {
   const mcpContracts = parsed?.data?.contracts || [];
   
@@ -115,6 +119,7 @@ function buildEnhancedClientData(
     debtAmount: totalDebt,
     onuSerial: primaryContract?.onuSerial,
     totalContracts: unifiedContracts.length,
+    debugQuery,
     activeContracts: unifiedContracts.filter(c => c.isActive).length,
     suspendedContracts: unifiedContracts.filter(c => !c.isActive).length,
     allContracts: unifiedContracts.map(c => ({
