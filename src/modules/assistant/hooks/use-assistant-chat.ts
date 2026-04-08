@@ -23,8 +23,6 @@ import { useMediaAttachments } from "./use-media-attachments";
 import {
   generateSessionId,
   generateMessageId,
-  buildWelcomeMessage,
-  buildPersonalizedWelcome,
   buildAssistantStreamPatch,
   mapHistoryToMessages,
   normalizeSystemMessageContent,
@@ -93,7 +91,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           setMcpClientData(response.data);
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (!cancelled) {
         }
       })
@@ -103,25 +101,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
     return () => { cancelled = true; };
   }, [identification]);
-
-  // El saludo automático ha sido desactivado para que sea 100% reactivo
-  /* 
-  useEffect(() => {
-    if (clientName) {
-      setMessages((prev) => {
-        if (prev[0]?.id === "welcome" && prev.length === 1) {
-          return [
-            {
-              ...prev[0],
-              content: buildPersonalizedWelcome(clientName, clientSector),
-            },
-          ];
-        }
-        return prev;
-      });
-    }
-  }, [clientName, clientSector]);
-  */
 
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -316,7 +295,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           }] : []),
         ]);
       }
-    } catch (err) {
+    } catch {
     } finally {
       setIsLoading(false);
     }
@@ -355,7 +334,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           setIsHistoryLoaded(true);
         }
       }
-    } catch (err) {
+    } catch {
     } finally {
       setIsLoading(false);
     }
