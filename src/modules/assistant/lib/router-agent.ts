@@ -193,6 +193,24 @@ export async function routeRequest(
   const elapsed = () => Date.now() - startTime;
 
   const eagerDirectResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+  
+  // GUARDIA AGRESIVO DE MULTICONTRATOS: Si es saludo y tiene varios, FORZAR respuesta determinista.
+  if (/^(hola|buenas?|buenos?|hey|[ée]pale|saludos?)/i.test(message.trim().toLowerCase()) && (clientData?.totalContracts ?? 0) > 1) {
+    if (eagerDirectResponse && eagerDirectResponse.includes("notado que tienes")) {
+      return {
+        noToolNeeded: true,
+        toolCalls: [],
+        toolResults: [],
+        directResponse: eagerDirectResponse,
+        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+          reason: "Interceptación obligatoria de multicontratos en saludo",
+        }),
+        durationMs: elapsed(),
+        intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Fuerza Bruta Multicontrato" },
+      };
+    }
+  }
+
   if (eagerDirectResponse) {
     return {
       noToolNeeded: true,
@@ -603,7 +621,7 @@ export async function routeRequest(
       intentClassification: intent,
       retriedModel,
     };
-  } catch (_error) {
+  } catch {
     return buildErrorFallback(message, clientData, tools, intent, elapsed, sessionId, contextualEscalation.reason, explicitCloseRequest);
   }
 }
@@ -645,10 +663,9 @@ async function callGeminiWithFallback(
       return { result, retriedModel: i > 0 ? modelName : undefined };
     } catch (err) {
       if (timeoutId) clearTimeout(timeoutId);
-      const errorDetail = err instanceof Error ? err.message : String(err);
-      const isAbort = errorDetail.includes("abort") || (err instanceof Error && err.name === "AbortError");
-      const isNotFound = errorDetail.includes("not found") || errorDetail.includes("404");
-      const elapsed = Date.now() - attemptStart;
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      const isAbort = errorMsg.includes("abort") || (err instanceof Error && err.name === "AbortError");
+      const isNotFound = errorMsg.includes("not found") || errorMsg.includes("404");
 
       if ((isHighDemandError(err) || isAbort || isNotFound) && !isLast) {
         continue;
