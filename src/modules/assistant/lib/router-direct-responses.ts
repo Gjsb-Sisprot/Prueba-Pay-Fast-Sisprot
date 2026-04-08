@@ -60,9 +60,17 @@ export function buildNoToolDirectResponse(
 
   if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)\s*[,.!?]*$/i.test(normalized)) {
     const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
-    if ((clientData?.totalContracts ?? 0) > 1) {
-      return `${greeting} ${buildSupportContractDisambiguationMessage(clientData)}`;
+    
+    // Si tiene múltiples contratos y no ha especificado uno, forzar desambiguación
+    if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
+      return `${greeting} He notado que tienes m\u00faltiples contratos asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy? Aqu\u00ed tienes tus servicios activos: ${buildContractList(clientData)}.`;
     }
+    
+    // Si tiene múltiples contratos pero ya hay uno en el contexto, saludar normal pero mencionar el contrato
+    if ((clientData?.totalContracts ?? 0) > 1 && clientData?.contract) {
+      return `${greeting} Estoy lista para ayudarte con tu contrato de **${clientData.sector || clientData.contract}**. \u00bfQu\u00e9 necesitas saber hoy?`;
+    }
+
     return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?`;
   }
 
@@ -144,15 +152,19 @@ export function buildNoToolFallbackResponse(clientData?: ClientContextData): str
 }
 
 export function buildSupportContractDisambiguationMessage(clientData?: ClientContextData): string {
-  const contracts = clientData?.allContracts ?? [];
-  const contractsHint = contracts
-    .slice(0, 4)
-    .map((contract) => `#${contract.contractId}${contract.sector ? ` (${contract.sector})` : ""}`)
-    .join(", ");
+  const contractsHint = buildContractList(clientData);
 
   if (contractsHint) {
     return `He notado que tienes varios contratos activos, \u00bfde cu\u00e1l de ellos deseas consultar informaci\u00f3n? Actualmente tienes estos servicios: ${contractsHint}. Puedes responderme con el n\u00famero de contrato o el nombre del sector.`;
   }
 
   return "He notado que tienes m\u00faltiples contratos asociados a tu cuenta. \u00bfSobre cu\u00e1l de ellos deseas realizar tu consulta hoy?";
+}
+
+function buildContractList(clientData?: ClientContextData): string {
+  const contracts = clientData?.allContracts ?? [];
+  return contracts
+    .slice(0, 5)
+    .map((contract) => `**#${contract.contractId}**${contract.sector ? ` en ${contract.sector}` : ""}`)
+    .join(", ");
 }
