@@ -60,6 +60,7 @@ export interface ClientContextData {
   hasDebt?: boolean;
   debtAmount?: number;
   onuSerial?: string;
+  debugQuery?: string;
   contractTag?: "available" | "verify" | "with_debt";
   clientType?: string;
   totalContracts?: number;
