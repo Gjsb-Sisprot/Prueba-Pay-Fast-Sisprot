@@ -172,7 +172,7 @@ export async function generateResponseBuffered(
             }
 
             return { text: result.text || "", finishReason: reason, model: modelName, retried: i > 0 };
-        } catch (_err) {
+        } catch {
             // const isAbort = errorDetail(err).includes("abort") || (err instanceof Error && err.name === "AbortError");
             if (!isLast) {
                 continue;
