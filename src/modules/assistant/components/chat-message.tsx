@@ -9,7 +9,6 @@ import {
   User, 
   Video, 
   Maximize2, 
-  RotateCcw, 
   Info, 
   LogOut, 
   MessageSquarePlus, 
@@ -26,7 +25,6 @@ interface ChatMessageProps {
   content: string;
   isLoading?: boolean;
   attachments?: MediaAttachment[];
-  onReload?: () => void;
   closeOffer?: boolean;
   paymentOffer?: boolean;
   onCloseConversation?: () => void;
@@ -40,7 +38,6 @@ function ChatMessageComponent({
   content,
   isLoading,
   attachments,
-  onReload,
   closeOffer,
   paymentOffer,
   onCloseConversation,
@@ -107,6 +104,7 @@ function ChatMessageComponent({
                 >
                   {attachment.type === "image" ? (
                     <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={attachment.url}
                         alt="Archivo adjunto"
@@ -181,6 +179,7 @@ function ChatMessageComponent({
                                 </span>
                               </span>
                               <span className="p-1 bg-white flex items-center justify-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={rawSrc}
                                   alt={alt || "Oferta de planes"}
@@ -202,6 +201,7 @@ function ChatMessageComponent({
 
                       return (
                         <span className="block my-4 text-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={githubUrl}
                             alt={alt || "Imagen de Sisprot"}
@@ -335,6 +335,7 @@ function ChatMessageComponent({
           className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4"
           onClick={() => setExpandedImage(null)}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={expandedImage}
             alt="Imagen expandida"
