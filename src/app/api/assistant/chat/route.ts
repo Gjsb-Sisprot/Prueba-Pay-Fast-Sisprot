@@ -19,7 +19,7 @@ import {
 
 import { routeRequest, type ToolResult } from "@/modules/assistant/lib/router-agent";
 import { generateResponse, generateResponseBuffered } from "@/modules/assistant/lib/solver-agent";
-import { getClientFromMCP } from "@/modules/assistant/lib/mcp-client-data";
+import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
 
 import {
@@ -150,6 +150,9 @@ export async function POST(request: Request) {
     }
 
 
+    const lastMessage = getLastUserMessage(messages);
+    const userMessageText = lastMessage ? extractTextContent(lastMessage) : "";
+
     let tools: MCPToolSet = {};
     let conversationHistory: ConversationMessage[] = [];
     let userSavePromise: Promise<void> | null = null;
@@ -169,14 +172,6 @@ export async function POST(request: Request) {
 
       tools = await mcpClient.tools();
 
-      // Enriquecimiento Forzado: Si hay cédula, obtenemos los datos oficiales desde el backend
-      if (activeClientData?.identification) {
-        const enriched = await getClientFromMCP(mcpClient, activeClientData.identification, activeClientData, true);
-        if (enriched) {
-          activeClientData = enriched;
-        }
-      }
-
       conversationHistory = await loadConversationHistory(mcpClient!, sessionId);
 
       if (loadHistoryOnly) {
@@ -188,41 +183,64 @@ export async function POST(request: Request) {
         });
       }
 
-      const lastMessage = getLastUserMessage(messages);
-      const lastUserMessageText = lastMessage ? extractTextContent(lastMessage) : "";
-
-      if (activeClientData?.identification) {
-        summaryPromise = updateConversationSummary(tools, sessionId, activeClientData, lastUserMessageText).catch(() => {}) as Promise<void>;
-      }
-
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
         const historyPromise = updateSummaryFromHistory(tools, sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
         summaryPromise = summaryPromise
           ? Promise.all([summaryPromise, historyPromise]).then(() => { })
           : historyPromise;
       }
-
-      if (lastMessage) {
-        userSavePromise = saveInteraction({
-          tools,
-          sessionId,
-          role: "user",
-          content: lastUserMessageText,
-          identification: activeClientData?.identification,
-          contract: activeClientData?.contract,
-          sector: activeClientData?.sector,
-          contactName: activeClientData?.name,
-          contactEmail: activeClientData?.email,
-          contactPhone: activeClientData?.phone,
-        }).catch(() => {}) as Promise<void>;
-      }
-
     } catch {
+      // Ignoramos fallos del MCP para el flujo principal
     }
 
+    // Enriquecimiento Fuera de bloque MCP: Vital para que funcione aunque el server MCP no esté disponible
+    if (activeClientData?.identification) {
+      try {
+        const sisprotClient = await fetchClientContracts(activeClientData.identification).catch(() => null);
+        if (sisprotClient) {
+          activeClientData = {
+            ...activeClientData,
+            totalContracts: sisprotClient.contracts.length,
+            allContracts: sisprotClient.contracts.map(c => ({
+              contractId: c.contractId,
+              status: c.status,
+              hasDebt: parseFloat(c.debt) > 0,
+              debt: parseFloat(c.debt),
+              sector: c.sector,
+              planName: c.planName,
+              onuSerial: c.onuSerial,
+              isActive: c.isActive
+            })),
+            debugQuery: sisprotClient.debugUrl,
+            identification: activeClientData.identification.trim().toUpperCase().startsWith('V') 
+              ? activeClientData.identification.trim().toUpperCase().slice(1) 
+              : activeClientData.identification.trim().toUpperCase()
+          } as ClientContextData;
+        }
+      } catch {
+        // Fallback al dato original si falla la API
+      }
+    }
 
-    const lastMessage = getLastUserMessage(messages);
-    const userMessageText = lastMessage ? extractTextContent(lastMessage) : "";
+    // Persistencia del mensaje del usuario
+    if (lastMessage) {
+      userSavePromise = saveInteraction({
+        tools,
+        sessionId,
+        role: "user",
+        content: userMessageText,
+        identification: activeClientData?.identification,
+        contract: activeClientData?.contract,
+        sector: activeClientData?.sector,
+        contactName: activeClientData?.name,
+        contactEmail: activeClientData?.email,
+        contactPhone: activeClientData?.phone,
+      }).catch(() => {}) as Promise<void>;
+
+      if (activeClientData?.identification && tools.update_summary) {
+        updateConversationSummary(tools, sessionId, activeClientData, userMessageText).catch(() => {});
+      }
+    }
 
 
     let toolResults: ToolResult[] = [];
@@ -317,8 +335,6 @@ export async function POST(request: Request) {
     const currentTools = tools;
 
     const hasToolContext = toolResults.length > 0;
-    if (hasToolContext) {
-    }
 
     const result = generateResponse(
       userMessageText,
@@ -334,7 +350,7 @@ export async function POST(request: Request) {
       emptyFallback: EMPTY_RESPONSE_FALLBACK,
       retriedModel: routerRetried,
       recoverBuffered: async () => {
-        const recovery = await generateResponseBuffered(userMessageText, clientData, toolResults, solverOptions);
+        const recovery = await generateResponseBuffered(userMessageText, activeClientData, toolResults, solverOptions);
         return { text: recovery.text || EMPTY_RESPONSE_FALLBACK, model: recovery.model };
       },
     });
@@ -348,12 +364,6 @@ export async function POST(request: Request) {
         let toSave = stripUiControlTokens(contentSent.trim());
         if (!toSave) {
           toSave = EMPTY_RESPONSE_FALLBACK;
-        }
-
-        if (!contentSent.trim()) {
-        } else {
-          if (hasToolContext && contentSent.trim().length < 100) {
-          }
         }
 
         await saveModelAndCleanup({
