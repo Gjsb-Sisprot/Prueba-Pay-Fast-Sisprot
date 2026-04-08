@@ -196,8 +196,10 @@ export async function POST(request: Request) {
     // Enriquecimiento Fuera de bloque MCP: Vital para que funcione aunque el server MCP no esté disponible
     if (activeClientData?.identification) {
       try {
+        console.log(`[SISPROT_ENRICH] Buscando contratos para ID: ${activeClientData.identification}`);
         const sisprotClient = await fetchClientContracts(activeClientData.identification).catch(() => null);
         if (sisprotClient) {
+          console.log(`[SISPROT_ENRICH] ¡Éxito! Encontrados ${sisprotClient.contracts.length} contratos.`);
           activeClientData = {
             ...activeClientData,
             totalContracts: sisprotClient.contracts.length,
@@ -216,8 +218,11 @@ export async function POST(request: Request) {
               ? activeClientData.identification.trim().toUpperCase().slice(1) 
               : activeClientData.identification.trim().toUpperCase()
           } as ClientContextData;
+        } else {
+          console.log(`[SISPROT_ENRICH] No se obtuvieron resultados de la API.`);
         }
-      } catch {
+      } catch (err) {
+        console.log(`[SISPROT_ENRICH] Error en consulta:`, err);
         // Fallback al dato original si falla la API
       }
     }
