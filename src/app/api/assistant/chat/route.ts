@@ -19,6 +19,8 @@ import {
 
 import { routeRequest, type ToolResult } from "@/modules/assistant/lib/router-agent";
 import { generateResponse, generateResponseBuffered } from "@/modules/assistant/lib/solver-agent";
+import { getClientFromMCP } from "@/modules/assistant/lib/mcp-client-data";
+import type { ClientContextData } from "@/modules/assistant/lib/types";
 
 import {
   errorResponse,
@@ -137,6 +139,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ChatRequestBody;
     const { messages, sessionId, config, loadHistoryOnly, clientData } = body;
+    let activeClientData: ClientContextData | undefined = clientData;
 
     if (!messages || !Array.isArray(messages)) {
       return errorResponse("Mensajes requeridos", 400);
@@ -166,6 +169,14 @@ export async function POST(request: Request) {
 
       tools = await mcpClient.tools();
 
+      // Enriquecimiento Forzado: Si hay cédula, obtenemos los datos oficiales desde el backend
+      if (activeClientData?.identification) {
+        const enriched = await getClientFromMCP(mcpClient, activeClientData.identification, activeClientData, true);
+        if (enriched) {
+          activeClientData = enriched;
+        }
+      }
+
       conversationHistory = await loadConversationHistory(mcpClient!, sessionId);
 
       if (loadHistoryOnly) {
@@ -180,12 +191,12 @@ export async function POST(request: Request) {
       const lastMessage = getLastUserMessage(messages);
       const lastUserMessageText = lastMessage ? extractTextContent(lastMessage) : "";
 
-      if (clientData?.identification) {
-        summaryPromise = updateConversationSummary(tools, sessionId, clientData, lastUserMessageText).catch(() => {}) as Promise<void>;
+      if (activeClientData?.identification) {
+        summaryPromise = updateConversationSummary(tools, sessionId, activeClientData, lastUserMessageText).catch(() => {}) as Promise<void>;
       }
 
-      if (clientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
-        const historyPromise = updateSummaryFromHistory(tools, sessionId, conversationHistory, clientData).catch(() => {}) as Promise<void>;
+      if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
+        const historyPromise = updateSummaryFromHistory(tools, sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
         summaryPromise = summaryPromise
           ? Promise.all([summaryPromise, historyPromise]).then(() => { })
           : historyPromise;
@@ -197,12 +208,12 @@ export async function POST(request: Request) {
           sessionId,
           role: "user",
           content: lastUserMessageText,
-          identification: clientData?.identification,
-          contract: clientData?.contract,
-          sector: clientData?.sector,
-          contactName: clientData?.name,
-          contactEmail: clientData?.email,
-          contactPhone: clientData?.phone,
+          identification: activeClientData?.identification,
+          contract: activeClientData?.contract,
+          sector: activeClientData?.sector,
+          contactName: activeClientData?.name,
+          contactEmail: activeClientData?.email,
+          contactPhone: activeClientData?.phone,
         }).catch(() => {}) as Promise<void>;
       }
 
@@ -223,7 +234,7 @@ export async function POST(request: Request) {
       const routerHistory = buildRouterHistory(conversationHistory, messages);
       const routerResult = await routeRequest(
         userMessageText,
-        clientData,
+        activeClientData,
         tools,
         sessionId,
         routerHistory.length,
@@ -239,7 +250,7 @@ export async function POST(request: Request) {
       toolResults = routerResult.toolResults;
 
       if (toolResults.length > 0) {
-        persistToolResultsInBackground(tools, sessionId, toolResults, clientData);
+        persistToolResultsInBackground(tools, sessionId, toolResults, activeClientData);
       }
 
       const noToolResponse = routerResult.noToolNeeded
@@ -253,8 +264,8 @@ export async function POST(request: Request) {
         if (userSavePromise) await userSavePromise;
         await saveModelAndCleanup({
           tools, sessionId, content: saveContent,
-          identification: clientData?.identification,
-          contract: clientData?.contract,
+          identification: activeClientData?.identification,
+          contract: activeClientData?.contract,
           summaryPromise, mcpClient,
         });
 
@@ -284,7 +295,7 @@ export async function POST(request: Request) {
           
           toolResults.push(newToolResult);
 
-          persistToolResultsInBackground(tools, sessionId, [newToolResult], clientData);
+          persistToolResultsInBackground(tools, sessionId, [newToolResult], activeClientData);
         } catch (linksError) {
         }
       }
@@ -315,7 +326,7 @@ export async function POST(request: Request) {
 
     const result = generateResponse(
       userMessageText,
-      clientData,
+      activeClientData,
       toolResults,
       solverOptions
     );
@@ -353,8 +364,8 @@ export async function POST(request: Request) {
           tools: currentTools,
           sessionId: currentSessionId,
           content: toSave,
-          identification: currentClientData?.identification,
-          contract: currentClientData?.contract,
+          identification: activeClientData?.identification,
+          contract: activeClientData?.contract,
           summaryPromise, mcpClient,
         });
       } catch (err) {
