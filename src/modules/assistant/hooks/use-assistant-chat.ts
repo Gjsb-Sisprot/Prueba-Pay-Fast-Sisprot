@@ -41,7 +41,7 @@ interface UseAssistantChatOptions {
 type ChatView = "chat" | "conversations";
 
 export function useAssistantChat(options: UseAssistantChatOptions = {}) {
-  const { config, onError, initialMessage, identification, clientName, clientSector } = options;
+  const { config, onError, identification } = options;
 
   const [sessionId, setSessionId] = useState(() => generateSessionId());
   
@@ -109,6 +109,10 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     },
     []
   );
+
+  const toggleChat = useCallback(() => setIsOpen((prev) => !prev), []);
+  const openChat = useCallback(() => setIsOpen(true), []);
+  const closeChat = useCallback(() => setIsOpen(false), []);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -232,7 +236,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
-    [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification]
+    [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat]
   );
 
   const handleSubmit = useCallback(
@@ -375,9 +379,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     }
   }, [messages, sendMessage]);
 
-  const toggleChat = useCallback(() => setIsOpen((prev) => !prev), []);
-  const openChat = useCallback(() => setIsOpen(true), []);
-  const closeChat = useCallback(() => setIsOpen(false), []);
 
   return {
     messages,
