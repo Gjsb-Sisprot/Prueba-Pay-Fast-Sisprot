@@ -8,6 +8,34 @@ import {
   VERIFY_PENDING_PROMPT,
 } from "./system-prompt";
 
+const PLANES_RESIDENCIALES = `
+- **300 Megas**: $27.60
+- **450 Megas**: $34.50
+- **600 Megas**: $40.25
+- **650 Megas**: $46.00
+- **750 Megas**: $49.50
+- **800 Megas**: $55.00
+- **1 Giga**: $74.70
+`;
+
+const PLANES_PYMES = `
+- **150 Megas**: $27.60
+- **300 Megas**: $39.09
+- **400 Megas**: $51.74
+- **650 Megas**: $70.18
+- **800 Megas**: $110.40
+- **1 Giga**: $161.00
+`;
+
+const INFO_INSTALACION = `
+- **Instalación Sin WiFi**: $88 (Puede financiarse con el 30% inicial)
+- **Instalación Con WiFi 6**: $130 (Puede financiarse con el 30% inicial)
+- **Súper Promo**: 1er mes con 70% de descuento y 2do mes con 30% de descuento.
+`;
+
+const IMG_PLAN_RESIDENCIAL = '![Planes Residenciales](https://github.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot/blob/main/public/assets/images/plan/residenciales.png)';
+const IMG_PLAN_PYME = '![Planes PYMES](https://github.com/Gjsb-Sisprot/Prueba-Pay-Fast-Sisprot/blob/main/public/assets/images/plan/pymes.png)';
+
 
 const FULL_SYSTEM_PROMPT = SYSTEM_PROMPT_BASE;
 
@@ -222,10 +250,18 @@ function buildClientTypePlanInstruction(clientType?: string): string {
   const isResidential = clientType.toUpperCase().includes("RESIDENCIAL");
 
   return `
-### TIPO DE CLIENTE: ${clientType}
-Cuando pregunte por planes de internet:
-- Muestra los planes ${isResidential ? "RESIDENCIALES" : "COMERCIALES/PYMES"} (su tipo)
-- Si pregunta explicitamente por ${isResidential ? "planes PYMES/comerciales" : "planes residenciales"}, tambien muestralos
+### TARIFARIO Y PLANES DE INTERNET (ACTUALIZADO 2025):
+Cuando el usuario pregunte por planes, precios o tarifas:
+1. **INFORMACIÓN VISUAL (OBLIGATORIO)**: Cuando hables de los planes de su tipo, DEBES incluir el siguiente código markdown EXACTO para que se muestre la tarjeta visual:
+   - Para Residenciales: ${IMG_PLAN_RESIDENCIAL}
+   - Para PYMES: ${IMG_PLAN_PYME}
+2. **DATOS EXACTOS**:
+   - **Planes Residenciales**: ${PLANES_RESIDENCIALES}
+   - **Planes PYMES (Empresas)**: ${PLANES_PYMES}
+   - **Costos de Instalación**: ${INFO_INSTALACION}
+3. **CRITERIO**: Muestra primero los planes **${isResidential ? "RESIDENCIALES" : "PYMES/EMPRESAS"}**.
+4. **ARGUMENTO DE VENTA**: Menciona la **Súper Promo** (70% desc. primer mes) y que puede contratar con solo el **30% de inicial**.
+5. **ESTILO**: Sé persuasivo pero breve. No repitas toda la lista si vas a mostrar la imagen, solo destaca los puntos clave.
 `;
 }
 
