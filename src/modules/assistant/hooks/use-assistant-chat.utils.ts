@@ -13,6 +13,10 @@ const PORTAL_DOMAIN_STRIP_REGEX = /\bportal\.sisprotgf\.com\b/gi;
 const PORTAL_REDIRECT_PHRASE_REGEX = /\b(ingresa(?:r)?|entra(?:r)?|accede(?:r)?|dir[ií]gete|ve)\b[^\n.!?]{0,60}\b(?:al|a)\s+portal(?:\s+web)?\b/gi;
 const PAYMENT_CONTEXT_REGEX = /\b(pagar|pago|pagos|deuda|transferencia|transferencias|pago movil|pago móvil|zelle|binance|paypal|m[eé]todos de pago|reportar(?:\s+tu)?\s+pago)\b/i;
 
+export const CLOSE_CHAT_MARKER = "__CLOSE_CHAT__";
+const CLOSE_CHAT_MARKER_STRIP_REGEX = /__CLOSE_CHAT__/gi;
+const TICKET_ID_MARKER_STRIP_REGEX = /\[TICKET_ID:\d+\]/gi;
+
 export function generateSessionId(): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).slice(2, 11);
@@ -26,6 +30,8 @@ export function generateMessageId(): string {
 export function stripPaymentActionMarkers(content: string): string {
   return content
     .replace(PAYMENT_ACTION_MARKER_STRIP_REGEX, "")
+    .replace(CLOSE_CHAT_MARKER_STRIP_REGEX, "")
+    .replace(TICKET_ID_MARKER_STRIP_REGEX, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
