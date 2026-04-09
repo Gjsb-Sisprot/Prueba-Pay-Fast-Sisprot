@@ -111,8 +111,12 @@ ${buildPaymentVerificationStatus(clientData.allContracts)}
 
 ### EJEMPLO DE FLUJO CORRECTO:
 
+**Usuario**: "" (mensaje de inicialización automática)
+**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente de Sisprot.${hasMultipleContracts ? ` Veo que tienes ${clientData.totalContracts} servicios registrados con nosotros.` : ""} ¿En qué puedo ayudarte hoy?"
+*(SIN llamar herramientas)*
+
 **Usuario**: "hola"
-**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente de Sisprot. ¿En qué puedo ayudarte hoy?"
+**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente de Sisprot.${hasMultipleContracts ? ` Veo que tienes ${clientData.totalContracts} servicios registrados con nosotros.` : ""} ¿En qué puedo ayudarte hoy?"
 *(SIN llamar herramientas)*
 
 **Usuario**: "cuánto debo?" o "tengo deuda?"
