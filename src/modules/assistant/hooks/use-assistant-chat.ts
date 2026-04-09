@@ -250,13 +250,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat, isFetchingContext]
   );
 
-  // Efecto para saludo inicial automático tras cargar contratos
-  useEffect(() => {
-    if (isOpen && !isFetchingContext && mcpClientData && messages.length === 0 && !isLoading) {
-      sendMessage("");
-    }
-  }, [isOpen, isFetchingContext, mcpClientData, messages.length, isLoading, sendMessage]);
-
   const handleSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
