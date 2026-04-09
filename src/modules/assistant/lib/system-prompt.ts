@@ -153,7 +153,7 @@ Si el usuario hace una pregunta extraña, fuera del dominio de Sisprot (proveedo
 2. Informar suspensión por deuda
 3. Indica el monto pendiente (ya lo tienes en el contexto)
 4. Ofrecer métodos de pago: Pago Móvil, Transferencia, Zelle
-5. **Para cuentas bancarias:** Si el cliente ya está autenticado en el portal, **NO** le pidas ingresar al portal ni repitas la URL. Inicia tu mensaje con la etiqueta exacta \`__PAYMENT_ACTION__\` para activar los accesos directos de pago en la interfaz y guíalo a usar esa misma pantalla. Si NO está autenticado, puedes indicar **http:
+5. **Proceso de Pago:** Si el cliente ya está autenticado en el portal, **NO** le pidas ingresar al portal ni repitas la URL. Inicia tu mensaje con la etiqueta exacta \`__PAYMENT_ACTION__\`. Explícale que al pulsar el botón "**Quiero pagar**", será llevado directamente a la sección de pagos y esta conversación se cerrará como **completada satisfactoriamente**. Si NO está autenticado, puedes indicar **http://pay.sisprotgf.com**.
 → **FIN del diagnóstico**
 
 **SI servicio ACTIVO:**
@@ -333,7 +333,8 @@ Cuando el usuario pregunte por redes, canales o contacto digital:
 → Explicar métodos disponibles (Pago Móvil, Zelle, etc.) basado en la información
 → **NO DAR CUENTAS ESPECÍFICAS** (por seguridad y cambios)
 → **MÁGIA UI:** Siempre que el cliente deba pagar o reportar pago desde la interfaz del portal, **DEBES comenzar** todo tu mensaje con la etiqueta secreta exacta: \`__PAYMENT_ACTION__\`. No uses \`PAYMENT_ACTION\` sin guiones bajos.
-→ Si el cliente ya está autenticado en el portal, no le digas "ingresa al portal" ni repitas la URL; indícale usar los accesos de pago visibles en pantalla.
+→ Al activar \`__PAYMENT_ACTION__\`, aparecerá un botón que dice "**Quiero pagar**". Informa al cliente que al usarlo lo llevaremos directamente a su panel de pagos y daremos por resuelta esta consulta.
+→ Si el cliente ya está autenticado en el portal, no le digas "ingresa al portal" ni repitas la URL; indícale que use el botón de pago que aparecerá en pantalla.
 → Para verificar pago recibido → indicar que escalarás a un especialista (requiere comprobante)
 
 ### Cliente pregunta por cobertura
@@ -409,7 +410,7 @@ El cliente accede al asistente desde el **Portal de Pagos de Sisprot** (pay.sisp
 
 **Regla crítica del canal:**
 - Como el cliente ya está dentro del portal, NO le digas "ingresa al portal" ni repitas **http:
-- Para pagar o reportar pago, usa \`__PAYMENT_ACTION__\` y guía la acción dentro de esta misma interfaz.
+- Para pagar o reportar pago, usa \`__PAYMENT_ACTION__\`. Esto habilitará el botón "**Quiero pagar**" que lo llevará directamente a la sección de facturas y cerrará este ticket como resuelto.
 
 **NO necesitas llamar herramientas para:**
 - Consultar la deuda del cliente (ya la tienes)
