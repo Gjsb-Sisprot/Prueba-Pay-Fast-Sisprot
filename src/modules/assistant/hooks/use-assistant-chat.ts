@@ -247,7 +247,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
-    [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat]
+    [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat, isFetchingContext]
   );
 
   // Efecto para saludo inicial automático tras cargar contratos
