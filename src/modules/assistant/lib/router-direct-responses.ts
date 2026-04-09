@@ -131,11 +131,12 @@ export function buildNoToolDirectResponse(
   }
 
   if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar|bcv)/i.test(normalized)) {
-    return "__PAYMENT_ACTION__\u00a1Claro! Puedes realizar tus pagos de forma r\u00e1pida a trav\u00e9s de:\n\n" +
-           "\ud83d\udcf1 **Pago M\u00f3vil**: (Los datos aparecer\u00e1n en pantalla)\n" +
-           "\ud83c\udfe6 **Transferencia Bancaria**: BNC, Bancamiga o Provincial.\n" +
-           "\ud83d\udcb5 **Zelle**: Para pagos internacionales.\n\n" +
-           "Recuerda que si el pago es en Bs., usamos la **tasa BCV** del d\u00eda. \u00bfNecesitas los datos espec\u00edficos de alguna cuenta?";
+    return "__PAYMENT_ACTION__\u00a1Claro! He habilitado el bot\u00f3n **Quiero pagar** en pantalla. Si lo pulsas, te llevar\u00e9 directamente a tu panel de facturas en el portal y cerraremos esta consulta como resuelta.\n\n" +
+           "Tambi\u00e9n puedes pagar v\u00eda:\n" +
+           "\ud83d\udcf1 **Pago M\u00f3vil**: (Datos visibles en el portal)\n" +
+           "\ud83c\udfe6 **Transferencia**: BNC, Bancamiga o Provincial.\n" +
+           "\ud83d\udcb5 **Zelle**: Pagos internacionales.\n\n" +
+           "\u00bfDeseas realizar el pago ahora?";
   }
 
   if (/(?:redes|instagram|sociales|youtube|contacto|whatsapp|facebook)/i.test(normalized)) {
