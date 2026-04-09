@@ -103,6 +103,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     return () => { cancelled = true; };
   }, [identification]);
 
+
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
       setInput(e.target.value);
@@ -116,9 +117,19 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if ((!content.trim() && media.pendingAttachments.length === 0) || isLoading) {
+      // Si estamos cargando el contexto inicial (solo al principio), esperamos.
+      if (isFetchingContext && messages.length === 0) {
+        // Reintentamos en 500ms hasta que esté listo.
+        setTimeout(() => sendMessage(content), 500);
         return;
       }
+
+      if ((!content.trim() && media.pendingAttachments.length === 0) && !isLoading) {
+        // Permitir mensajes vacíos solo para inicialización automática
+        if (messages.length > 0) return;
+      }
+      
+      if (isLoading) return;
 
       const attachments = media.consumeAttachments();
 
@@ -238,6 +249,13 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     },
     [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat]
   );
+
+  // Efecto para saludo inicial automático tras cargar contratos
+  useEffect(() => {
+    if (isOpen && !isFetchingContext && mcpClientData && messages.length === 0 && !isLoading) {
+      sendMessage("");
+    }
+  }, [isOpen, isFetchingContext, mcpClientData, messages.length, isLoading, sendMessage]);
 
   const handleSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
