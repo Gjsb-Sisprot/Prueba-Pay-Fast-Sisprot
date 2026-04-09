@@ -71,7 +71,7 @@ Si el usuario NO ha reportado un problema técnico de internet:
 Responde SOLO a lo que el usuario preguntó.
 
 ### REGLA DE VERIFICACIÓN DE ESCALAMIENTO Y CIERRE:
-- Solo afirma "ya escalé el caso" si en [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS] existe un resultado de "escalate_to_specialist".
+- Solo afirma "ya escalé el caso" si en [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS] existe un resultado de "escalate_to_specialist". **MUY IMPORTANTE**: Si el resultado incluye un número de ticket, menciónalo explícitamente (ej: "Tu número de ticket es #1234").
 - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".
 - Si esos resultados no están presentes, NO afirmes acciones ya ejecutadas; pide confirmación o indica el siguiente paso.`;
 }
