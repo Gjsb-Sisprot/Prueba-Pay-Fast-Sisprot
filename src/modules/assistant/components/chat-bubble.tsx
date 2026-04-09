@@ -116,8 +116,14 @@ export function ChatBubble() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, closeChat]);
 
-  const handleAcceptPaymentOffer = () => {
+  const handleAcceptPaymentOffer = async () => {
+    // Primero cerramos la conversación de forma oficial (marcando el ticket como satisfecho)
+    await closeConversation();
+    
+    // Cerramos el chat visualmente
     closeChat();
+    
+    // Desplazamos al usuario a la sección de pagos
     const el = document.getElementById("contracts-container");
     if (el) {
       el.classList.add("ring-4", "ring-green-500", "animate-pulse", "shadow-xl");
