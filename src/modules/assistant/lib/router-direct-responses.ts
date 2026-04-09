@@ -115,19 +115,16 @@ export function buildNoToolDirectResponse(
     const total = clientData?.totalContracts ?? 0;
     const hasSelectedContract = !!clientData?.contract;
 
-    const debugNote = clientData?.debugQuery 
-      ? `\n\n---\n\u2699\ufe0f **Nota T\u00e9cnica**: ID \`${clientData.identification}\` | Contratos: **${total}** | URL: \`${clientData.debugQuery}\``
-      : "";
 
     if (total > 1 && !hasSelectedContract && clientData) {
       const contractList = clientData.allContracts
         ?.map(c => `- **${c.contractId}** (${c.sector || "Sector no disponible"})`)
         .join("\n") || "";
 
-      return `${greeting}\n\nHe notado que tienes **${total} contratos** asociados a tu identidad. Para poder brindarte informaci\u00f3n precisa, **\u00bfcon cu\u00e1l de estos servicios deseas continuar?**:\n\n${contractList}${debugNote}`;
+      return `${greeting}\n\nHe notado que tienes **${total} contratos** asociados a tu identidad. Para poder brindarte informaci\u00f3n precisa, **\u00bfcon cu\u00e1l de estos servicios deseas continuar?**:\n\n${contractList}`;
     }
 
-    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?${debugNote}`;
+    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?`;
   }
 
   if (isSocialCourtesy(normalized)) {
