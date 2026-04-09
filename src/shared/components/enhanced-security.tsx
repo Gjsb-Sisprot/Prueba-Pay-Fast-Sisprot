@@ -32,13 +32,14 @@ const isMobileDevice = (): boolean => {
 };
 
 // Función para calcular umbrales dinámicos según el dispositivo
+/*
 const getDevToolsThreshold = (): number => {
   if (isMobileDevice()) {
-    // Umbral mucho más alto para móviles (barras de navegación pueden ser grandes)
-    return Math.max(300, window.innerHeight * 0.3); // 30% de la altura o 300px
+    return Math.max(300, window.innerHeight * 0.3);
   }
-  return 160; // Umbral original para desktop
+  return 160;
 };
+*/
 
 export function EnhancedSecurity() {
   useEffect(() => {
