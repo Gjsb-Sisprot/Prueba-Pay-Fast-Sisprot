@@ -1,4 +1,4 @@
-const SISPROT_API_KEY = "v7R2mK9pXqWjL5bZ1nT8sH4dC6fV3gY0xm9aB2iE7uN1oP4rS5";
+const SISPROT_API_KEY = "v7R2mK9pXqWjL5bZ1nT8sH4dC6fV3gY0xM9aB2iE7uN1oP4rS5";
 const SISPROT_API_BASE = "https://api.sisprotgf.com/api/public";
 
 export interface SisprotContract {
