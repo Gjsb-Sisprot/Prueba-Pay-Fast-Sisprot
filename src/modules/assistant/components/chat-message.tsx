@@ -306,7 +306,7 @@ function ChatMessageComponent({
                 className="h-7 px-3 text-xs gap-1.5 bg-green-600 hover:bg-green-700 text-white"
               >
                 <CreditCard className="w-3 h-3" />
-                Ir a Pagar
+                Quiero pagar
               </Button>
               <Button
                 variant="ghost"
