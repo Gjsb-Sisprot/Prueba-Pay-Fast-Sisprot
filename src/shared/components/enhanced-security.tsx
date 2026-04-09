@@ -2,11 +2,10 @@
 
 import { useEffect } from "react";
 
-// Función para detectar dispositivos móviles
+/*
 const isMobileDevice = (): boolean => {
   if (typeof window === "undefined") return false;
 
-  // Detectar por user agent
   const userAgent = navigator.userAgent.toLowerCase();
   const mobileKeywords = [
     "mobile",
@@ -21,15 +20,14 @@ const isMobileDevice = (): boolean => {
     userAgent.includes(keyword)
   );
 
-  // Detectar por características del dispositivo
   const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   const isSmallScreen = window.innerWidth <= 768;
 
-  // Detectar por orientation API
   const hasOrientation = "orientation" in window;
 
   return isMobileUA || (hasTouch && isSmallScreen) || hasOrientation;
 };
+*/
 
 // Función para calcular umbrales dinámicos según el dispositivo
 /*
