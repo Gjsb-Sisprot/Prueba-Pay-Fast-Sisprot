@@ -26,6 +26,7 @@ import {
   buildAssistantStreamPatch,
   mapHistoryToMessages,
   normalizeSystemMessageContent,
+  CLOSE_CHAT_MARKER,
 } from "./use-assistant-chat.utils";
 
 interface UseAssistantChatOptions {
@@ -201,6 +202,15 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
               )
             );
           }
+        }
+
+        // Si detectamos el marcador de cierre automático (por escalamiento a especialista)
+        if (assistantContent.includes(CLOSE_CHAT_MARKER)) {
+          setTimeout(() => {
+            if (!closingByUserRef.current) {
+              closeChat();
+            }
+          }, 6000); // 6 segundos para que el usuario pueda leer su número de ticket
         }
 
         if (!assistantContent.trim()) {
