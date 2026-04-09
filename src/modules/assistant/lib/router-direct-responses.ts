@@ -52,7 +52,8 @@ export function buildNoToolDirectResponse(
     const isPyme = /pymes?|empresa|comercial/i.test(normalized);
     const isResidencial = /residencial|hogar|casa/i.test(normalized);
 
-    let response = "\u00a1Claro! Tenemos los mejores planes de fibra \u00f3ptica para ti con nuestra **Super Promo**: **70% de descuento** el primer mes y **30% el segundo**. \ud83d\ude80\n\n";
+    let response = "\u00a1Claro! Tenemos los mejores planes de fibra \u00f3ptica para ti con nuestra **Súper Promo**: **70% de descuento** el primer mes y **30% el segundo**. \ud83d\ude80\n\n";
+    response += "**Costos de Instalación**:\n- **Sin WiFi**: $88\n- **Con WiFi 6**: $130\n*(Puedes contratar con solo el **30% de inicial**)*\n\n";
 
     if (isPyme || (!isResidencial && !isPyme)) {
       response += "**Planes PYMES (Empresas):**\n";
