@@ -98,6 +98,7 @@ interface ResilientStreamParams {
   truncationThreshold: number;
   emptyFallback: string;
   retriedModel?: string;
+  suffix?: string;
   recoverBuffered: () => Promise<BufferedRecoveryResult>;
 }
 
@@ -113,6 +114,7 @@ export function createResilientStreamResponse({
   truncationThreshold,
   emptyFallback,
   retriedModel,
+  suffix = "",
   recoverBuffered,
 }: ResilientStreamParams): ResilientStreamResponse {
   let contentSent = "";
@@ -176,6 +178,9 @@ export function createResilientStreamResponse({
           }
         }
 
+        if (suffix) {
+          enqueue(suffix);
+        }
         controller.close();
       } catch {
         if (!clientReceived) {
@@ -186,6 +191,9 @@ export function createResilientStreamResponse({
             enqueue(streamedContent || emptyFallback);
           }
         } else {
+        }
+        if (suffix) {
+          enqueue(suffix);
         }
         controller.close();
       } finally {
