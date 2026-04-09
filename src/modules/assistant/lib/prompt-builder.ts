@@ -16,7 +16,7 @@ export function getBaseSystemPrompt(): string {
 }
 
 
-export function buildSystemPrompt(clientData?: ClientContextData): string {
+export function buildSystemPrompt(clientData?: ClientContextData, hasHistory: boolean = false): string {
   if (!clientData || !clientData.identification) {
     return FULL_SYSTEM_PROMPT + `
 
@@ -65,15 +65,20 @@ ${clientData.order ? `- Orden de instalación: ${clientData.order}` : ""}
 - Sector: ${clientData.sector || "No disponible"}
 ${clientData.parish ? `- Parroquia: ${clientData.parish}` : ""}
 ${clientData.planName ? `- Plan: ${clientData.planName}` : ""}${multiContractInfo}
-${clientData.clientType ? `- Tipo cliente: ${clientData.clientType}` : ""}
 - Estado: ${contractTagText}
 - **DEUDA TOTAL**: ${clientData.hasDebt ? `$${clientData.debtAmount?.toFixed(2) || "N/A"}` : "$0.00"}
 ${onuSerial ? `- Serial ONU: ${onuSerial}` : "- Serial ONU: No disponible"}
+
+${hasHistory ? `
+> [!NOTE]
+> Como hay historial de conversación, NO repitas el detalle completo de contratos ni la deuda a menos que el usuario lo pregunte de nuevo. La información ya fue presentada al inicio.
+` : `
 ${buildContractDetailsBlock(clientData.allContracts)}
+${buildPaymentVerificationStatus(clientData.allContracts)}
+`}
+
 ${serviceInstructions}
 ${buildClientTypePlanInstruction(clientData.clientType)}
-### ESTADO DE PAGOS EN VERIFICACION:
-${buildPaymentVerificationStatus(clientData.allContracts)}
 
 ### REGLAS CRÍTICAS DE COMPORTAMIENTO:
 
