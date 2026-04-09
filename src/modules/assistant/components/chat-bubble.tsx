@@ -97,7 +97,7 @@ export function ChatBubble() {
     identification,
     clientName,
     clientSector,
-    onError: (err) => {
+    onError: (_err) => {
     },
   });
 
