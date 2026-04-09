@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       allContracts: contracts.map(c => ({
         contractId: c.contractId,
         status: c.status,
-        statusCode: c.statusCode,
+        statusCode: parseInt(c.statusCode, 10) || 0,
         debt: parseFloat(c.debt || "0"),
         hasDebt: parseFloat(c.debt || "0") > 0,
         sector: c.sector,
