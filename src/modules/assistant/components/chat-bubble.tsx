@@ -92,6 +92,7 @@ export function ChatBubble() {
     showConversations,
     backToChat,
     sessionId,
+    isFetchingContext,
   } = useAssistantChat({
     identification,
     clientName,
@@ -286,6 +287,17 @@ export function ChatBubble() {
                   messages[messages.length - 1]?.role === "user" && (
                     <ThinkingIndicator />
                   )}
+
+                {isFetchingContext && messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
+                    </div>
+                    <p className="text-xs italic">Consultando tus servicios en Sisprot...</p>
+                  </div>
+                )}
 
                 { }
                 {error && (
