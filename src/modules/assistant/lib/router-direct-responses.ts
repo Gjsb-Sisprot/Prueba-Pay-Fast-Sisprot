@@ -130,13 +130,9 @@ export function buildNoToolDirectResponse(
     return response;
   }
 
-  if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar|bcv)/i.test(normalized)) {
-    return "__PAYMENT_ACTION__\u00a1Claro! He habilitado el bot\u00f3n **Quiero pagar** en pantalla. Si lo pulsas, te llevar\u00e9 directamente a tu panel de facturas en el portal y cerraremos esta consulta como resuelta.\n\n" +
-           "Tambi\u00e9n puedes pagar v\u00eda:\n" +
-           "\ud83d\udcf1 **Pago M\u00f3vil**: (Datos visibles en el portal)\n" +
-           "\ud83c\udfe6 **Transferencia**: BNC, Bancamiga o Provincial.\n" +
-           "\ud83d\udcb5 **Zelle**: Pagos internacionales.\n\n" +
-           "\u00bfDeseas realizar el pago ahora?";
+  if (/(?:pago|pagar|cuenta|banco|zelle|transferencia|movil|m\u00f3vil|reportar|bcv|afiliar|tarjeta|m\u00e9todo de pago)/i.test(normalized)) {
+    return "__PAYMENT_ACTION__\u00a1Claro! He habilitado el bot\u00f3n **Quiero pagar** en pantalla. Si lo pulsas, te llevar\u00e9 directamente a la sección correspondiente del portal para que puedas pagar, reportar tu pago o afiliar tu m\u00e9todo de pago, y cerraremos esta consulta como resuelta.\n\n" +
+           "Recuerda que puedes gestionar todo esto f\u00e1cilmente desde tu panel de usuario. \u00bfDeseas ir ahora?";
   }
 
   if (/(?:redes|instagram|sociales|youtube|contacto|whatsapp|facebook)/i.test(normalized)) {
