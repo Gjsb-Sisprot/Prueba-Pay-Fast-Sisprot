@@ -44,7 +44,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   const { config, onError, identification } = options;
 
   const [sessionId, setSessionId] = useState(() => generateSessionId());
-  
+
   const [mcpClientData, setMcpClientData] = useState<ClientContextData | undefined>(undefined);
   const [isFetchingContext, setIsFetchingContext] = useState(false);
 
@@ -91,31 +91,17 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (response.success && response.data) {
           setMcpClientData(response.data);
           console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
-          
+
           // Saludo proactivo si es una conversación nueva
           setMessages(prev => {
             if (prev.length === 0) {
               const fullName = response.data.name || "";
               const firstName = fullName.trim().split(/\s+/)[0] || "";
-              
-              let greetingContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
-              
-              if (response.data.totalContracts > 1) {
-                const contractList = response.data.allContracts
-                  ?.map((c) => {
-                    const statusIcon = c.isActive ? "✅" : "⚠️";
-                    const statusText = c.isActive ? "Al día" : "**Suspendido** por deuda";
-                    const debtText = `(Deuda: $${c.debt.toFixed(2)})`;
-                    return `- **Contrato #${c.contractId}** (${c.planName || "Sin plan"}): ${statusText} ${debtText} ${statusIcon}`;
-                  })
-                  .join("\n") || "";
-                greetingContent = `¡Hola${firstName ? ` ${firstName}` : ""}! He notado que tienes **${response.data.totalContracts} servicios** registrados con nosotros. Como cada contrato es independiente, aquí te detallo su estado actual:\n\n${contractList}\n\nPara poder brindarte información precisa, **¿con cuál de estos servicios deseas continuar hoy?** (Puedes escribirme el número de contrato o el sector).`;
-              }
 
               return [{
                 id: "welcome",
                 role: "assistant",
-                content: greetingContent,
+                content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
                 timestamp: new Date()
               }];
             }
@@ -159,7 +145,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         // Permitir mensajes vacíos solo para inicialización automática
         if (messages.length > 0) return;
       }
-      
+
       if (isLoading) return;
 
       const attachments = media.consumeAttachments();
