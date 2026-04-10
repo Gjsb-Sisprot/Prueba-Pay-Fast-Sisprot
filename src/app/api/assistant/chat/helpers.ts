@@ -226,6 +226,7 @@ interface SaveAndCleanupParams {
   contract?: string;
   summaryPromise: Promise<void> | null;
   mcpClient: MCPClient | null;
+  silent?: boolean;
 }
 
 export async function saveModelAndCleanup({
@@ -246,6 +247,7 @@ export async function saveModelAndCleanup({
         content,
         identification,
         contract,
+        silent: params.silent,
       });
     }
     if (summaryPromise) await summaryPromise;
