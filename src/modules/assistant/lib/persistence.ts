@@ -70,14 +70,6 @@ export async function loadConversationHistory(sessionId: string): Promise<Conver
     return [];
   }
 }
-
-    return transformToMessages(data as unknown as ChatLogResult[]);
-  } catch (error) {
-    console.error("[HISTORY_LOAD_ERROR]", error);
-    return [];
-  }
-}
-
 interface SaveInteractionParams {
   sessionId: string;
   role: "user" | "model" | "assistant" | "tool";
