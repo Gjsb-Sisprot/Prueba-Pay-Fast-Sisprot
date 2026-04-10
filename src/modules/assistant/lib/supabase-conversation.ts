@@ -96,13 +96,25 @@ export async function loadHistoryFromSupabase(sessionId: string): Promise<Conver
   return transformToMessages(data);
 }
 
-function transformToMessages(rows: any[]): ConversationMessage[] {
+function transformToMessages(rows: Record<string, any>[]): ConversationMessage[] {
   return (rows || []).map(row => ({
-    role: row.role as any,
+    role: row.role as ConversationMessage["role"],
     content: row.content,
+    timestamp: row.created_at,
     ...(row.tool_name ? { toolName: row.tool_name } : {}),
     ...(row.tool_call_id ? { toolCallId: row.tool_call_id } : {})
   }));
+}
+
+interface ConversationUpdates {
+  updated_at: Date;
+  summary?: string;
+  status?: string;
+  identification?: string;
+  user_id?: string;
+  contract?: string;
+  sector?: string;
+  contact_name?: string;
 }
 
 /**
@@ -116,7 +128,7 @@ export async function updateSupabaseConversationMetadata(params: {
 }) {
   const { sessionId, clientData, summary, status } = params;
   
-  const updates: any = { updated_at: new Date() };
+  const updates: ConversationUpdates = { updated_at: new Date() };
   if (summary) updates.summary = summary;
   if (status) updates.status = status;
   
