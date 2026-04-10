@@ -1,8 +1,5 @@
-
-import type { MCPClient } from "@ai-sdk/mcp";
-import type { MCPToolSet } from "@/modules/assistant/lib/mcp-services";
+import type { MCPToolSet } from "./mcp-types";
 import { buildCloseConversationMessage } from "@/modules/assistant/lib/channel-links";
-import { saveInteraction } from "@/modules/assistant/lib/mcp-services";
 
 interface TerminalToolResult {
   toolName: string;
@@ -215,46 +212,4 @@ export function createResilientStreamResponse({
     streamDone,
     getContentSent: () => contentSent,
   };
-}
-
-
-interface SaveAndCleanupParams {
-  tools: MCPToolSet;
-  sessionId: string;
-  content: string;
-  identification?: string;
-  contract?: string;
-  summaryPromise: Promise<void> | null;
-  mcpClient: MCPClient | null;
-  silent?: boolean;
-}
-
-export async function saveModelAndCleanup({
-  tools,
-  sessionId,
-  content,
-  identification,
-  contract,
-  summaryPromise,
-  mcpClient,
-  silent,
-}: SaveAndCleanupParams): Promise<void> {
-  try {
-    if (Object.keys(tools).length > 0) {
-      await saveInteraction({
-        tools,
-        sessionId,
-        role: "model",
-        content,
-        identification,
-        contract,
-        silent,
-      });
-    }
-    if (summaryPromise) await summaryPromise;
-    if (mcpClient) {
-      await mcpClient.close();
-    }
-  } catch {
-  }
 }
