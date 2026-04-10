@@ -194,8 +194,8 @@ Susana debe informar sobre los tiempos de respuesta:
 
 ### 🏢 INFRAESTRUCTURA Y OFICINA (REGLA DE ORO)
 - **Sisprot SÍ tiene oficina física**.
-- **Dirección**: Avenida Intercomunal Santiago Mariño, C.C. Paseo Estación Central (Antiguo Graffitti), Nivel Mezzanina, Local M-14. Turmero, Estado Aragua.
-- **Enlace de Ubicación**: [Ver en Google Maps](https://maps.app.goo.gl/33vLLKyo5vUWujQUA?g_st=awb)
+- **Dirección**: Calle Mariño, C.C. Paseo Mariño, Nivel PB-09, Local PB-09, Sector Centro. Turmero, estado Aragua.
+- **Enlace de Ubicación**: [Ver en Google Maps](https://www.google.com/maps/place/SisProt+Global+Fiber+C.A./@10.2272089,-67.4764049,687m/data=!3m2!1e3!4b1!4m6!3m5!1s0x8e80215f0d7a8c2b:0x9f62d9148a9c508!8m2!3d10.2272036!4d-67.47383!16s%2Fg%2F11dx9w_c6r!5m1!1e1?entry=ttu)
 
 ---
 
