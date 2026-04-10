@@ -98,10 +98,24 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
               const fullName = response.data.name || "";
               const firstName = fullName.trim().split(/\s+/)[0] || "";
               
+              let greetingContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
+              
+              if (response.data.totalContracts > 1) {
+                const contractList = response.data.allContracts
+                  ?.map((c) => {
+                    const statusIcon = c.isActive ? "✅" : "⚠️";
+                    const statusText = c.isActive ? "Al día" : "**Suspendido** por deuda";
+                    const debtText = `(Deuda: $${c.debt.toFixed(2)})`;
+                    return `- **Contrato #${c.contractId}** (${c.planName || "Sin plan"}): ${statusText} ${debtText} ${statusIcon}`;
+                  })
+                  .join("\n") || "";
+                greetingContent = `¡Hola${firstName ? ` ${firstName}` : ""}! He notado que tienes **${response.data.totalContracts} servicios** registrados con nosotros. Como cada contrato es independiente, aquí te detallo su estado actual:\n\n${contractList}\n\nPara poder brindarte información precisa, **¿con cuál de estos servicios deseas continuar hoy?** (Puedes escribirme el número de contrato o el sector).`;
+              }
+
               return [{
                 id: "welcome",
                 role: "assistant",
-                content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
+                content: greetingContent,
                 timestamp: new Date()
               }];
             }
