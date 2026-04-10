@@ -400,7 +400,7 @@ export async function POST(request: Request) {
         }
 
         await saveInteraction({
-          sessionId: currentSessionId,
+          sessionId: sessionId,
           role: "model",
           content: toSave,
           identification: activeClientData?.identification,
