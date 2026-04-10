@@ -90,6 +90,20 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (cancelled) return;
         if (response.success && response.data) {
           setMcpClientData(response.data);
+          
+          // Saludo proactivo si es una conversación nueva
+          setMessages(prev => {
+            if (prev.length === 0) {
+              const name = response.data.name?.split(" ")[0] || "";
+              return [{
+                id: "welcome",
+                role: "assistant",
+                content: `¡Hola${name ? ` ${name}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
+                timestamp: new Date()
+              }];
+            }
+            return prev;
+          });
         }
       })
       .catch(() => {
