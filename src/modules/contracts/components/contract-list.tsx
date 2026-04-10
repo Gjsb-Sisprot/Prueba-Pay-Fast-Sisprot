@@ -113,14 +113,7 @@ export function ContractList() {
   };
 
   // Ordenar contratos: primero los que tienen deuda, luego los que no
-  const allowedStatuses = [16, 19, 18]; // IDs de estados permitidos
   const sortedContracts = [...contractsResult.results]
-    .filter((contract) => {
-      // Filtrar contratos cancelados (status 34) y mantener solo los estados permitidos
-      return (
-        contract.status !== 34 && allowedStatuses.includes(contract.status)
-      );
-    })
     .sort((a, b) => {
       const aHasDebt = hasDebt(a);
       const bHasDebt = hasDebt(b);
