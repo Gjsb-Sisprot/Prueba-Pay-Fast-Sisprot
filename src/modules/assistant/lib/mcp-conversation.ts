@@ -1,41 +1,21 @@
 
-import type { ClientContextData } from "./types";
-import type { MCPClientType, MCPToolSet, ConversationMessage } from "./mcp-types";
-
+import { 
+  saveMessageToSupabase, 
+  loadHistoryFromSupabase, 
+  updateSupabaseConversationMetadata 
+} from "./supabase-conversation";
 
 export async function loadConversationHistory(
-  mcpClient: MCPClientType,
+  _mcpClient: MCPClientType,
   sessionId: string
 ): Promise<ConversationMessage[]> {
   try {
-    const result = await mcpClient.readResource({
-      uri: `conversation://${sessionId}/history`,
-    });
-
-    if (result.contents && result.contents.length > 0) {
-      const content = result.contents[0];
-      if ("text" in content && typeof content.text === "string") {
-        const parsed = JSON.parse(content.text);
-
-        let history: ConversationMessage[];
-        if (Array.isArray(parsed)) {
-          history = parsed;
-        } else if (parsed.messages && Array.isArray(parsed.messages)) {
-          history = parsed.messages;
-        } else {
-          return [];
-        }
-
-        return history;
-      }
-    }
-
-    return [];
-  } catch {
+    return await loadHistoryFromSupabase(sessionId);
+  } catch (error) {
+    console.error("[HISTORY_LOAD_ERROR]", error);
     return [];
   }
 }
-
 
 interface SaveInteractionParams {
   tools: MCPToolSet;
@@ -54,100 +34,73 @@ interface SaveInteractionParams {
 }
 
 export async function saveInteraction(params: SaveInteractionParams): Promise<void> {
-  const { tools, sessionId, role, content, ...optionalFields } = params;
+  const { sessionId, role, content, toolName, toolCallId, ...optionalFields } = params;
 
   try {
-    const saveInteractionTool = tools["save_interaction"];
-    if (!saveInteractionTool) return;
+    // 1. Guardar el mensaje en logs
+    await saveMessageToSupabase({
+      sessionId,
+      role,
+      content,
+      toolName,
+      toolCallId
+    });
 
-    const updateClientInfoTool = tools["update_client_info"];
+    // 2. Si hay datos de cliente o es una herramienta terminal, actualizar metadatos
+    const isEscalation = toolName === "escalate_to_specialist";
+    const isClose = toolName === "close_conversation";
+    
     const hasClientInfo = Boolean(
       optionalFields.identification ||
       optionalFields.contract ||
       optionalFields.sector ||
-      optionalFields.contactName ||
-      optionalFields.contactEmail ||
-      optionalFields.contactPhone
+      optionalFields.contactName 
     );
 
-    if (updateClientInfoTool && hasClientInfo) {
-      const clientInfoArgs: Record<string, unknown> = { sessionId };
-      if (optionalFields.identification) clientInfoArgs.identification = optionalFields.identification;
-      if (optionalFields.contract) clientInfoArgs.contract = optionalFields.contract;
-      if (optionalFields.sector) clientInfoArgs.sector = optionalFields.sector;
-      if (optionalFields.contactName) clientInfoArgs.contactName = optionalFields.contactName;
-      if (optionalFields.contactEmail) clientInfoArgs.contactEmail = optionalFields.contactEmail;
-      if (optionalFields.contactPhone) clientInfoArgs.contactPhone = optionalFields.contactPhone;
-
-      await updateClientInfoTool.execute(clientInfoArgs, {
-        messages: [],
-        toolCallId: `update-client-info-${Date.now()}`,
+    if (hasClientInfo || isEscalation || isClose) {
+      await updateSupabaseConversationMetadata({
+        sessionId,
+        status: isEscalation ? "waiting_specialist" : isClose ? "closed" : undefined,
+        clientData: {
+          identification: optionalFields.identification,
+          contract: optionalFields.contract,
+          sector: optionalFields.sector,
+          name: optionalFields.contactName
+        }
       });
     }
-
-    const args: Record<string, unknown> = { sessionId, role, content };
-    if (optionalFields.identification) args.identification = optionalFields.identification;
-    if (optionalFields.contract) args.contract = optionalFields.contract;
-    if (optionalFields.sector) args.sector = optionalFields.sector;
-    if (optionalFields.contactName) args.contactName = optionalFields.contactName;
-    if (optionalFields.contactEmail) args.contactEmail = optionalFields.contactEmail;
-    if (optionalFields.contactPhone) args.contactPhone = optionalFields.contactPhone;
-    if (optionalFields.toolCallId) args.toolCallId = optionalFields.toolCallId;
-    if (optionalFields.toolName) args.toolName = optionalFields.toolName;
-    if (optionalFields.silent) args.silent = optionalFields.silent;
-
-    await saveInteractionTool.execute(args, {
-      messages: [],
-      toolCallId: `save-${Date.now()}`,
-    });
-  } catch {
+  } catch (error) {
+    console.error("[SAVE_INTERACTION_ERROR]", error);
   }
 }
 
-
 export async function updateConversationSummary(
-  tools: MCPToolSet,
+  _tools: MCPToolSet,
   sessionId: string,
   clientData: ClientContextData,
   latestUserMessage?: string
 ): Promise<void> {
   try {
-    const updateSummaryTool = tools["update_summary"];
-    if (!updateSummaryTool) return;
-
     const normalizedLatestMessage = latestUserMessage?.trim() || "";
-
     const summaryParts: string[] = [];
+    
     if (clientData.name) summaryParts.push(`Cliente: ${clientData.name}`);
-    if (clientData.identification) summaryParts.push(`Cédula: ${clientData.identification}`);
     if (clientData.contract) summaryParts.push(`Contrato: ${clientData.contract}`);
-    if (clientData.sector) summaryParts.push(`Sector: ${clientData.sector}`);
-    if (clientData.serviceStatus) {
-      const statusText = clientData.serviceStatus === "active" ? "Activo"
-        : clientData.serviceStatus === "suspended" ? "Suspendido"
-          : clientData.serviceStatus;
-      summaryParts.push(`Estado: ${statusText}`);
-    }
-    if (clientData.hasDebt && clientData.debtAmount) {
-      summaryParts.push(`Deuda: $${clientData.debtAmount.toFixed(2)}`);
-    }
-
+    if (clientData.serviceStatus) summaryParts.push(`Estado: ${clientData.serviceStatus}`);
+    
     if (normalizedLatestMessage) {
-      summaryParts.push(`Solicitud: ${normalizedLatestMessage.substring(0, 180)}`);
+      summaryParts.push(`Última solicitud: ${normalizedLatestMessage.substring(0, 100)}...`);
     }
 
-    const explicitContract = extractRequestedContract(normalizedLatestMessage, clientData);
-    if (explicitContract) {
-      summaryParts.push(`Contrato solicitado: ${explicitContract}`);
-    }
-
-    if (summaryParts.length === 0) return;
-
-    await updateSummaryTool.execute(
-      { sessionId, summary: summaryParts.join(" | ") },
-      { messages: [], toolCallId: `update-summary-${Date.now()}` }
-    );
-  } catch {
+    const summary = summaryParts.join(" | ");
+    
+    await updateSupabaseConversationMetadata({
+      sessionId,
+      clientData,
+      summary
+    });
+  } catch (error) {
+    console.error("[UPDATE_SUMMARY_ERROR]", error);
   }
 }
 
@@ -178,51 +131,29 @@ function extractRequestedContract(message: string, clientData: ClientContextData
 }
 
 export async function updateSummaryFromHistory(
-  tools: MCPToolSet,
+  _tools: MCPToolSet,
   sessionId: string,
   history: ConversationMessage[],
   clientData?: ClientContextData
 ): Promise<void> {
   try {
-    const updateSummaryTool = tools["update_summary"];
-    if (!updateSummaryTool) return;
-
-    const recentMessages = history.slice(-10);
-    const topics: string[] = [];
-
-    for (const msg of recentMessages) {
-      if (msg.role === "user" && msg.content.length > 10) {
-        const content = msg.content.toLowerCase();
-        if (content.includes("onu") || content.includes("serial")) topics.push("ONU");
-        if (content.includes("factura") || content.includes("pago")) topics.push("Facturación");
-        if (content.includes("lento") || content.includes("velocidad")) topics.push("Velocidad");
-        if (content.includes("sin internet") || content.includes("no conecta")) topics.push("Conexión");
-        if (content.includes("técnico") || content.includes("visita")) topics.push("Soporte");
-      }
-    }
-
-    const uniqueTopics = [...new Set(topics)];
-    const lastUserMessage = [...recentMessages]
+    const lastUserMessage = [...history]
       .reverse()
       .find((msg) => msg.role === "user" && msg.content.trim().length > 0)?.content?.trim();
 
-    const summaryParts: string[] = [];
-    if (clientData?.identification) summaryParts.push(`Cliente: ${clientData.identification}`);
-    if (clientData?.contract) summaryParts.push(`Contrato: ${clientData.contract}`);
-    if (uniqueTopics.length > 0) summaryParts.push(`Temas: ${uniqueTopics.join(", ")}`);
-    if (lastUserMessage) {
-      summaryParts.push(`Última solicitud: ${lastUserMessage.substring(0, 180)}`);
-      if (clientData) {
-        const requested = extractRequestedContract(lastUserMessage, clientData);
-        if (requested) summaryParts.push(`Contrato solicitado: ${requested}`);
-      }
-    }
-    summaryParts.push(`Mensajes: ${history.length}`);
+    if (!lastUserMessage && !clientData) return;
 
-    await updateSummaryTool.execute(
-      { sessionId, summary: summaryParts.join(" | ") },
-      { messages: [], toolCallId: `update-summary-history-${Date.now()}` }
-    );
-  } catch {
+    const summaryParts: string[] = [];
+    if (clientData?.identification) summaryParts.push(`ID: ${clientData.identification}`);
+    if (clientData?.contract) summaryParts.push(`Contrato: ${clientData.contract}`);
+    if (lastUserMessage) summaryParts.push(`Tema: ${lastUserMessage.substring(0, 150)}`);
+
+    await updateSupabaseConversationMetadata({
+      sessionId,
+      clientData,
+      summary: summaryParts.join(" | ")
+    });
+  } catch (error) {
+    console.error("[UPDATE_SUMMARY_HISTORY_ERROR]", error);
   }
 }
