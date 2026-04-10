@@ -33,7 +33,7 @@ import {
 } from "@/modules/assistant/lib/channel-links";
 
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
@@ -231,17 +231,9 @@ export async function POST(request: Request) {
 
     // Persistencia del mensaje del usuario
     if (lastMessage) {
-      userSavePromise = saveInteraction({
-        tools,
-        sessionId,
-        role: "user",
-        content: userMessageText,
-        identification: activeClientData?.identification,
-        contract: activeClientData?.contract,
-        sector: activeClientData?.sector,
-        contactName: activeClientData?.name,
         contactEmail: activeClientData?.email,
         contactPhone: activeClientData?.phone,
+        silent: true,
       }).catch(() => {}) as Promise<void>;
 
       if (activeClientData?.identification && tools.update_summary) {
@@ -303,11 +295,9 @@ export async function POST(request: Request) {
         const saveContent = stripUiControlTokens(noToolResponse);
 
         if (userSavePromise) await userSavePromise;
-        await saveModelAndCleanup({
-          tools, sessionId, content: saveContent,
-          identification: activeClientData?.identification,
           contract: activeClientData?.contract,
           summaryPromise, mcpClient,
+          silent: true,
         });
 
         return createTextStreamResponse(
@@ -399,13 +389,9 @@ export async function POST(request: Request) {
           toSave = EMPTY_RESPONSE_FALLBACK;
         }
 
-        await saveModelAndCleanup({
-          tools: currentTools,
-          sessionId: currentSessionId,
-          content: toSave,
-          identification: activeClientData?.identification,
           contract: activeClientData?.contract,
           summaryPromise, mcpClient,
+          silent: true,
         });
       } catch {
       }
