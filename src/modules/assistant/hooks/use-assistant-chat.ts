@@ -90,15 +90,18 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (cancelled) return;
         if (response.success && response.data) {
           setMcpClientData(response.data);
+          console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
           
           // Saludo proactivo si es una conversación nueva
           setMessages(prev => {
             if (prev.length === 0) {
-              const name = response.data.name?.split(" ")[0] || "";
+              const fullName = response.data.name || "";
+              const firstName = fullName.trim().split(/\s+/)[0] || "";
+              
               return [{
                 id: "welcome",
                 role: "assistant",
-                content: `¡Hola${name ? ` ${name}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
+                content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
                 timestamp: new Date()
               }];
             }
