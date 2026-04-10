@@ -122,16 +122,26 @@ export function buildNoToolDirectResponse(
     return "Actualmente ofrecemos el mejor servicio de Fibra \u00d3ptica en todo el **Municipio Santiago Mari\u00f1o** (Turmero, Sam\u00e1n de G\u00fcre, etc.) y zonas aleda\u00f1as. \ud83d\udccd\n\n\u00bfEn qu\u00e9 sector te encuentras para confirmarte disponibilidad exacta?";
   }
 
-  // 6. IDENTIDAD PERSONAL
-  if (/c[oó]mo\s*me\s*llamo|cu[áa]l\s*es\s*mi\s*nombre|me\s*puedes\s*decir\s*mi\s*nombre|qui[ée]n\s*soy/i.test(normalized)) {
-    if (clientData?.name) {
-      return `Te llamas ${clientData.name}.`;
-    }
-    return "No tengo tu nombre en este momento. Si quieres, te ayudo con tu consulta de servicio o pagos.";
+  // 6. IDENTIDAD PERSONAL Y QUÉ PUEDES HACER
+  if (/qu[ée] (puedes?|eres\s*capaz\s*de)\s*hacer|en\s*qu[ée]\s*ayudas?|tus?\s*habilidades|cu[áa]les?\s*son\s*tus\s*funciones|para\s*qu[ée]\s*sirves/i.test(normalized)) {
+    return "¡Hola! Como tu asistente virtual de Sisprot, puedo ayudarte con:\n\n" +
+           "✅ **Soporte Técnico**: Diagnóstico de tu conexión y estado de tu equipo ONU.\n" +
+           "💰 **Pagos y Facturación**: Información sobre tu deuda actual y gestión de pagos.\n" +
+           "🚀 **Planes e Instalación**: Información sobre velocidades, precios y promociones de nuevos servicios.\n" +
+           "📍 **Información General**: Ubicación de nuestras oficinas, redes sociales y cobertura.\n" +
+           "🤝 **Atención Humana**: Si no puedo resolver tu duda, puedo escalarte con un especialista.\n\n" +
+           "¿En qué te gustaría que te ayude hoy?";
   }
 
-  if (/c[oó]mo\s*te\s*(llamas?|dicen|llaman)|cu[áa]l\s*es\s*tu\s*nombre|qui[ée]n\s*eres|eres\s*(un\s*)?(bot|robot|ia|asistente|humana?|persona|real)|^tu\s*nombre/i.test(normalized)) {
-    return "Me llamo Susana, soy tu asistente virtual de Sisprot Global Fiber. Estoy aqu\u00ed para ayudarte con tu servicio de internet, pagos y facturas.";
+  if (/c[oó]mo\s*me\s*llamo|cu[áa]l\s*es\s*mi\s*nombre|me\s*puedes\s*decir\s*mi\s*nombre|qui[ée]n\s*soy|mi\s*identidad/i.test(normalized)) {
+    if (clientData?.name) {
+      return `Te llamas **${clientData.name}**.`;
+    }
+    return "No tengo tu nombre registrado en este momento. Si estás en el portal, pronto podré identificarte.";
+  }
+
+  if (/c[oó]mo\s*te\s*(llamas?|dicen|llaman)|cu[áa]l\s*es\s*tu\s*nombre|qui[ée]n\s*eres|eres\s*(un?\s*)?(bot|robot|ia|inteligencia\s*artificial|asistente|humana?|persona|real)|^tu\s*nombre/i.test(normalized)) {
+    return "Me llamo **Susana**, soy el asistente virtual inteligente de **Sisprot Global Fiber**. Mi propósito es ayudarte a gestionar tu servicio de internet de forma rápida y sencilla.";
   }
 
   // 7. SALUDO Y MULTI-CONTRATO (Intercepción al final para no bloquear FAQs específicas)
