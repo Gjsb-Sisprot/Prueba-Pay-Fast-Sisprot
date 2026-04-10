@@ -368,6 +368,7 @@ export async function POST(request: Request) {
     const assistantConfig = {
       ...DEFAULT_ASSISTANT_CONFIG,
       ...config,
+      // Si el router sugiere un modelo, lo usamos. Si no, DEFAULT_ASSISTANT_CONFIG tiene gemini-1.5-flash
       ...(selectedSolverModel ? { model: selectedSolverModel } : {}),
     };
 
@@ -396,8 +397,13 @@ export async function POST(request: Request) {
       retriedModel: routerRetried,
       suffix: escalationMarker,
       recoverBuffered: async () => {
-        const recovery = await generateResponseBuffered(userMessageText, activeClientData, toolResults, solverOptions);
-        return { text: (recovery.text || EMPTY_RESPONSE_FALLBACK) + escalationMarker, model: recovery.model };
+        try {
+          const recovery = await generateResponseBuffered(userMessageText, activeClientData, toolResults, solverOptions);
+          return { text: (recovery.text || EMPTY_RESPONSE_FALLBACK) + escalationMarker, model: recovery.model };
+        } catch (recoveryErr) {
+          console.error(`[SOLVER_RECOVERY_CRITICAL] Fallo en recuperación con modelo ${assistantConfig.model}:`, recoveryErr);
+          return { text: EMPTY_RESPONSE_FALLBACK + escalationMarker };
+        }
       },
     });
 
