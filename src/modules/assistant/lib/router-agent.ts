@@ -196,17 +196,25 @@ export async function routeRequest(
   // GUARDIA AGRESIVO DE MULTICONTRATOS: Si es saludo y tiene varios, FORZAR respuesta determinista.
   if (/^(hola|buenas?|buenos?|hey|[ée]pale|saludos?)/i.test(message.trim().toLowerCase()) && (clientData?.totalContracts ?? 0) > 1) {
     if (eagerDirectResponse && eagerDirectResponse.includes("notado que tienes")) {
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse: eagerDirectResponse,
-        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-          reason: "Interceptación obligatoria de multicontratos en saludo",
-        }),
-        durationMs: elapsed(),
-        intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Fuerza Bruta Multicontrato" },
-      };
+      const lastAssistantMsg = conversationHistory
+        .filter(m => m.role === "assistant" || m.role === "model")
+        .slice(-1)[0]?.content;
+
+      if (lastAssistantMsg && lastAssistantMsg.trim() === eagerDirectResponse.trim()) {
+        console.log(`[ROUTER_DECISION] Ignorando guardia de multicontrato por duplicidad detectada.`);
+      } else {
+        return {
+          noToolNeeded: true,
+          toolCalls: [],
+          toolResults: [],
+          directResponse: eagerDirectResponse,
+          routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+            reason: "Interceptación obligatoria de multicontratos en saludo",
+          }),
+          durationMs: elapsed(),
+          intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Fuerza Bruta Multicontrato" },
+        };
+      }
     }
   }
 
@@ -367,7 +375,8 @@ export async function routeRequest(
   const shouldForceClose =
     Boolean(sessionId) &&
     allowCloseTool &&
-    (intent.category === "CIERRE_CONFIRMADO" || explicitCloseRequest);
+    intent.category === "CIERRE_CONFIRMADO" &&
+    explicitCloseRequest;
 
   if (shouldForceClose) {
     const closeResolution = buildCloseResolution(message);
@@ -416,6 +425,24 @@ export async function routeRequest(
   const isStandardFaq = ["CONVERSACIONAL", "CIERRE_CONFIRMADO", "INFO_EMPRESA", "INFO_COBERTURA", "INFO_PLANES"].includes(intent.category);
 
   if (isStandardFaq && directResponse) {
+    const lastAssistantMsg = conversationHistory
+      .filter(m => m.role === "assistant" || m.role === "model")
+      .slice(-1)[0]?.content;
+
+    if (lastAssistantMsg && lastAssistantMsg.trim() === directResponse.trim()) {
+      return {
+        noToolNeeded: true,
+        toolCalls: [],
+        toolResults: [],
+        routePolicy: buildRoutePolicy("solver", "fallback", {
+          solverModel: "flash",
+          reason: "Respuesta directa duplicada detectada, delegando al solver para variar",
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
+    }
+
     return {
       noToolNeeded: true,
       toolCalls: [],
