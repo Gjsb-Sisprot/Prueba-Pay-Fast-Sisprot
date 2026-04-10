@@ -19,7 +19,7 @@ import { routeRequest, type ToolResult } from "@/modules/assistant/lib/router-ag
 import { generateResponse, generateResponseBuffered } from "@/modules/assistant/lib/solver-agent";
 import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
-import type { ConversationMessage } from "@/modules/assistant/lib/mcp-types";
+import type { ConversationMessage, MCPToolSet } from "@/modules/assistant/lib/mcp-types";
 
 import {
   errorResponse,
