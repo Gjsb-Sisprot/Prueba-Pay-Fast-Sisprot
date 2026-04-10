@@ -8,7 +8,7 @@ import {
   buildCloseConversationMessage,
 } from "@/modules/assistant/lib/channel-links";
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 
 function parseMcpToolResult(raw: unknown): Record<string, unknown> | null {
