@@ -1,4 +1,5 @@
-
+import type { ClientContextData } from "./types";
+import type { MCPClientType, MCPToolSet, ConversationMessage } from "./mcp-types";
 import { 
   saveMessageToSupabase, 
   loadHistoryFromSupabase, 
