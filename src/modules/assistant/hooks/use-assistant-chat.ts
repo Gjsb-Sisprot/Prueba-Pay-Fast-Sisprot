@@ -118,7 +118,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       });
 
     return () => { cancelled = true; };
-  }, [identification]);
+  }, [identification, options.clientName]);
 
 
   const handleInputChange = useCallback(
