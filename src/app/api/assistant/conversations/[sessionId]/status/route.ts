@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -47,7 +48,7 @@ export async function GET(
       reason: data.escalationReason || data.reason || null,
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error interno" },
       { status: 500 }
