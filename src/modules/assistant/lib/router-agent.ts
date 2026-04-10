@@ -236,8 +236,26 @@ export async function routeRequest(
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
 
   // OVERRIDE MULTICONTRACTO ESTÁTICO:
-  // Si hay múltiples contratos y NO se ha seleccionado uno, FORZAMOS la respuesta estática sin excepciones.
   if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
+    // 1. Detección de selección numérica (ej: "4929")
+    const cleanMessage = message.trim().replace("#", "");
+    const matchingContract = clientData?.allContracts?.find(c => String(c.id || c.contractId) === cleanMessage);
+
+    if (matchingContract) {
+      console.log(`[ROUTER_DECISION] Selección de contrato detectada: ${cleanMessage}. Forzando confirmación.`);
+      return {
+        noToolNeeded: true,
+        toolCalls: [],
+        toolResults: [],
+        directResponse: `¡Perfecto! He seleccionado el **Contrato #${cleanMessage}** (${matchingContract.planName || "Servicio Activo"}). ¿En qué puedo ayudarte ahora con este servicio? 🛠️`,
+        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
+          reason: "Selección determinista de contrato por ID",
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
+    }
+
     const forcedResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
     if (forcedResponse) {
       console.log(`[ROUTER_DECISION] ¡Multicontrato Detectado! Forzando respuesta determinista inmediata.`);
