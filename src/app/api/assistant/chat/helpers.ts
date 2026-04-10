@@ -1,4 +1,3 @@
-import type { MCPToolSet } from "./mcp-types";
 import { buildCloseConversationMessage } from "@/modules/assistant/lib/channel-links";
 
 interface TerminalToolResult {
