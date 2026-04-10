@@ -74,7 +74,11 @@ export function buildNoToolDirectResponse(
   const normalized = message.toLowerCase().trim();
 
   // 1. CONSULTA DE PLANES (Prioridad Alta)
-  if (/(?:plan|precio|cu\u00e1nto\s*cuesta|tarifa|mensualidad|costo|megas|cat\u00e1logo|pyme|residencial)/i.test(normalized)) {
+    // EXCEPCIÓN: Si el mensaje contiene indicios de asesoría (dispositivos, uso específico),
+    // devolvemos undefined para que pase al Solver y de una respuesta personalizada.
+    const isAdvisoryQuery = /(?:televisor|tv|ps\d|xbox|consola|celular|dispositivo|equipo|conectado|recomienda|mejor)/i.test(normalized);
+    if (isAdvisoryQuery) return undefined;
+
     const isPyme = /pymes?|empresa|comercial/i.test(normalized);
     const isResidencial = /residencial|hogar|casa/i.test(normalized);
 
