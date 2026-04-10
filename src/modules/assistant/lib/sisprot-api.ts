@@ -79,7 +79,9 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
     interface RawSisprotContract {
       id: number;
       contract_id?: number;
-      client_name: string;
+      name?: string;
+      last_name?: string;
+      client_name?: string;
       client_identification: string;
       status: string;
       status_code: string;
@@ -96,7 +98,7 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
     const contracts = results.map((item) => ({
       id: item.id,
       contractId: item.contract_id || item.id,
-      clientName: item.client_name,
+      clientName: item.client_name || [item.name, item.last_name].filter(Boolean).join(" "),
       clientIdentification: item.client_identification,
       status: item.status,
       statusCode: item.status_code,
