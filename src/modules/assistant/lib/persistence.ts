@@ -33,6 +33,7 @@ interface ConversationUpdate {
  * Si no existe, la crea.
  */
 export async function getConversationUuid(sessionId: string): Promise<string | null> {
+  // 1. Intentar buscar primero
   const { data, error } = await supabase
     .from("conversations")
     .select("id")
@@ -40,13 +41,13 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
     .maybeSingle();
 
   if (error) {
-    console.error(`[PERSISTENCE_ERROR] Error al buscar conversación: ${error.message}`);
+    console.error(`[PERSISTENCE_ERROR] Error al buscar conversación ${sessionId}: ${error.message}`);
     return null;
   }
 
   if (data) return data.id;
 
-  // Si no existe, crearla
+  // 2. Si no existe, intentar crearla
   const { data: newData, error: createError } = await supabase
     .from("conversations")
     .insert([{ 
@@ -54,14 +55,25 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
       status: "active" 
     }])
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (createError) {
-    console.error(`[PERSISTENCE_ERROR] Error al crear conversación: ${createError.message}`);
+    // Si el error es de duplicado (carrera), intentamos buscar UNA VEZ MÁS antes de fallar
+    if (createError.code === '23505') {
+       console.log(`[PERSISTENCE_INFO] Race condition detectada para ${sessionId}. Reintentando búsqueda...`);
+       const { data: retryData } = await supabase
+         .from("conversations")
+         .select("id")
+         .eq("session_id", sessionId)
+         .maybeSingle();
+       if (retryData) return retryData.id;
+    }
+    
+    console.error(`[PERSISTENCE_ERROR] Error al crear conversación ${sessionId}: ${createError.message}`);
     return null;
   }
 
-  return newData.id;
+  return newData?.id || null;
 }
 
 /**
