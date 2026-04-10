@@ -280,7 +280,9 @@ export async function POST(request: Request) {
     };
 
 
-    const routerHistory = buildRouterHistory(conversationHistory, messages);
+    // Truncamos historial para el Router (máximo 4 mensajes previos)
+    const truncatedRouterHistory = conversationHistory.slice(-4);
+    const routerHistory = buildRouterHistory(truncatedRouterHistory, messages);
     const routerResult = await routeRequest(
       userMessageText,
       activeClientData,
@@ -372,7 +374,9 @@ export async function POST(request: Request) {
       ...(selectedSolverModel ? { model: selectedSolverModel } : {}),
     };
 
-    const solverHistory = buildSolverHistory(conversationHistory, messages);
+    // Truncamos historial para el Solver (máximo 4 mensajes previos)
+    const truncatedSolverHistory = conversationHistory.slice(-4);
+    const solverHistory = buildSolverHistory(truncatedSolverHistory, messages);
 
     const solverOptions = {
       config: assistantConfig,
