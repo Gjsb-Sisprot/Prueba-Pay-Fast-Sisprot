@@ -85,15 +85,15 @@ export async function loadHistoryFromSupabase(sessionId: string): Promise<Conver
     
     const { data: directData, error: directError } = await supabase
       .from("chat_logs")
-      .select("role, content, tool_name, tool_call_id")
+      .select("role, content, tool_name, tool_call_id, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
       
     if (directError) return [];
-    return transformToMessages(directData);
+    return transformToMessages(directData as any[]);
   }
 
-  return transformToMessages(data);
+  return transformToMessages(data as any[]);
 }
 
 interface ChatLogResult {
