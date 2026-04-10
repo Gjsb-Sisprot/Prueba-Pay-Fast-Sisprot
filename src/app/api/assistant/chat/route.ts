@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { after } from 'next/server';
+import { after } from 'next/server'
 
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
