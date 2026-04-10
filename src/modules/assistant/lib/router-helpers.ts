@@ -88,7 +88,7 @@ export async function executeForced(
       { messages: [], toolCallId }
     );
     return { toolName, toolCallId, result };
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -109,7 +109,7 @@ export async function executeForcedEscalation(
       { messages: [], toolCallId }
     );
     return { toolName, toolCallId, result };
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -135,7 +135,7 @@ export async function executeForcedClose(
       { messages: [], toolCallId }
     );
     return { toolName, toolCallId, result };
-  } catch (err) {
+  } catch {
     return null;
   }
 }
