@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
@@ -413,7 +414,7 @@ export async function POST(request: Request) {
 
     return response;
 
-  } catch (error) {
+  } catch {
     if (mcpClient) {
       await mcpClient.close();
     }
