@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
@@ -5,7 +7,10 @@ import type { ClientContextData } from "@/modules/assistant/lib/types";
 const clientCache = new Map<string, { data: ClientContextData; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{}> }
+) {
   const identification = request.nextUrl.searchParams.get("identification");
 
   if (!identification) {
