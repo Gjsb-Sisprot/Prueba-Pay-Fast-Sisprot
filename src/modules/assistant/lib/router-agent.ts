@@ -687,7 +687,6 @@ async function callGeminiWithFallback(
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
     const modelName = MODEL_CHAIN[i];
     const isLast = i === MODEL_CHAIN.length - 1;
-    const attemptStart = Date.now();
     let timeoutId: NodeJS.Timeout | undefined;
 
     try {
