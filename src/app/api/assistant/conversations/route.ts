@@ -1,65 +1,24 @@
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { createMCPClient } from "@ai-sdk/mcp";
-import {
-  SISPROT_NETWORKS_QUERY,
-  extractSisprotChannelLines,
-  buildCloseConversationMessage,
-} from "@/modules/assistant/lib/channel-links";
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 
-function parseMcpToolResult(raw: unknown): Record<string, unknown> | null {
-  if (!raw || typeof raw !== "object") return null;
-
-  const candidate = raw as { content?: Array<{ type?: string; text?: string }> };
-  const textChunk = candidate.content?.find((c) => c?.type === "text" && typeof c?.text === "string")?.text;
-  if (!textChunk) return null;
-
-  try {
-    const parsed = JSON.parse(textChunk);
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
-
-function extractTicketId(parsedResult: Record<string, unknown> | null): number | null {
-  if (!parsedResult) return null;
-
-  const direct = parsedResult.glpiTicketId ?? parsedResult.glpi_ticket_id;
-  if (typeof direct === "number") return direct;
-  if (typeof direct === "string" && /^\d+$/.test(direct)) return Number(direct);
-
-  const ticket = parsedResult.ticket;
-  if (ticket && typeof ticket === "object") {
-    const nested = ticket as { ticketId?: unknown };
-    if (typeof nested.ticketId === "number") return nested.ticketId;
-    if (typeof nested.ticketId === "string" && /^\d+$/.test(nested.ticketId)) return Number(nested.ticketId);
-  }
-
-  const message = parsedResult.message;
-  if (typeof message === "string") {
-    const m = message.match(/#(\d+)/);
-    if (m?.[1]) return Number(m[1]);
-  }
-
-  return null;
-}
-
-export async function POST(
+export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{}> }
 ) {
   try {
-    const { sessionId } = await params;
-    const body = await request.json();
-    const { action, summary, resolution } = body;
+    const { searchParams } = new URL(request.url);
+    const identification = searchParams.get("identification");
+    const includeAll = searchParams.get("includeAll") === "true";
 
-    if (!sessionId) {
+    if (!identification) {
       return NextResponse.json(
-        { error: "Se requiere sessionId" },
+        { error: "Se requiere el parámetro identification" },
         { status: 400 }
       );
     }
@@ -76,88 +35,91 @@ export async function POST(
 
     const tools = await mcpClient.tools();
 
-    let result;
-
-    switch (action) {
-      case "close": {
-        if (summary) {
-          const updateSummaryTool = tools["update_summary"];
-          if (updateSummaryTool) {
-            const finalSummary = `${summary} | Cerrada por el usuario`;
-            await updateSummaryTool.execute(
-              { sessionId, summary: finalSummary },
-              { messages: [], toolCallId: `close-summary-${Date.now()}` }
-            );
-          }
-        }
-
-        const closeConversationTool = tools["close_conversation"];
-        if (closeConversationTool) {
-          let closeMessage = buildCloseConversationMessage();
-
-          const closeResult = await closeConversationTool.execute(
-            {
-              sessionId,
-              resolution: resolution || "Conversaci\u00f3n cerrada por el usuario",
-              ticketSummary: summary || resolution || "Cierre solicitado por el usuario",
-              closedBy: "user",
-            },
-            { messages: [], toolCallId: `close-conv-${Date.now()}` }
-          );
-          const parsedCloseResult = parseMcpToolResult(closeResult);
-          const closeTicketId = extractTicketId(parsedCloseResult);
-
-          const searchKnowledgeTool = tools["search_knowledge_base"];
-          if (searchKnowledgeTool) {
-            try {
-              const channelsResult = await searchKnowledgeTool.execute(
-                { query: SISPROT_NETWORKS_QUERY },
-                { messages: [], toolCallId: `close-networks-${Date.now()}` }
-              );
-
-              const channelLines = extractSisprotChannelLines(channelsResult);
-              closeMessage = buildCloseConversationMessage(channelLines);
-            } catch {
-            }
-          }
-          
-          result = {
-            success: true,
-            newStatus: "closed",
-            closeMessage,
-            ticketId: closeTicketId,
-            ticketMessage: closeTicketId ? `Tu número de ticket es: #${closeTicketId}` : null,
-          };
-        } else {
-          result = { success: false, error: "Herramienta close_conversation no disponible" };
-        }
-        break;
-      }
-
-      case "resume": {
-        result = { 
-          success: false, 
-          error: "Las conversaciones cerradas no pueden reactivarse. Inicia una nueva conversación." 
-        };
-        break;
-      }
-
-      default:
-        await mcpClient.close();
-        return NextResponse.json(
-          { error: `Acción no soportada: ${action}` },
-          { status: 400 }
-        );
+    const listConversationsTool = tools["list_conversations"];
+    if (!listConversationsTool) {
+      await mcpClient.close();
+      return NextResponse.json(
+        { error: "Herramienta list_conversations no disponible" },
+        { status: 503 }
+      );
     }
+
+    const result = await listConversationsTool.execute(
+      { 
+        identification,
+        includeAll 
+      },
+      { messages: [], toolCallId: `list-conv-${Date.now()}` }
+    );
+
+    let conversations = [];
+    
+    if (result && typeof result === "object" && "content" in result) {
+      const content = (result as { content: Array<{ type: string; text?: string }> }).content;
+      if (content && content[0] && content[0].text) {
+        const parsed = JSON.parse(content[0].text);
+        conversations = parsed.data?.conversations || parsed.conversations || [];
+      }
+    }
+    else if (typeof result === "string") {
+      const parsed = JSON.parse(result);
+      conversations = parsed.data?.conversations || parsed.conversations || [];
+    }
+    else if (result && typeof result === "object") {
+      const data = result as { data?: { conversations?: unknown[] }; conversations?: unknown[] };
+      conversations = data.data?.conversations || data.conversations || [];
+    }
+
+    interface MCPConversation {
+      id: string;
+      sessionId: string;
+      status: string;
+      summary?: string;
+      messageCount?: number;
+      timestamps?: {
+        createdAt?: string;
+        updatedAt?: string;
+      };
+      client?: {
+        name?: string;
+        identification?: string;
+        contract?: string;
+        sector?: string;
+        email?: string;
+        phone?: string;
+      };
+      createdAt?: string;
+      updatedAt?: string;
+    }
+
+    const transformedConversations = conversations.map((conv: MCPConversation) => ({
+      id: conv.id,
+      sessionId: conv.sessionId,
+      status: conv.status,
+      summary: conv.summary,
+      messageCount: conv.messageCount,
+      createdAt: conv.timestamps?.createdAt || conv.createdAt || new Date().toISOString(),
+      updatedAt: conv.timestamps?.updatedAt || conv.updatedAt || new Date().toISOString(),
+      identification: conv.client?.identification,
+      contract: conv.client?.contract,
+      sector: conv.client?.sector,
+      contactName: conv.client?.name,
+      contactEmail: conv.client?.email,
+      contactPhone: conv.client?.phone,
+    }));
 
     await mcpClient.close();
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      success: true,
+      conversations: transformedConversations,
+      count: transformedConversations.length,
+    });
 
   } catch (error) {
     return NextResponse.json(
       { 
-        error: "Error al procesar la conversación",
+        error: "Error al obtener conversaciones",
         details: error instanceof Error ? error.message : "Error desconocido"
       },
       { status: 500 }
