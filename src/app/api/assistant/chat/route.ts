@@ -231,6 +231,15 @@ export async function POST(request: Request) {
 
     // Persistencia del mensaje del usuario
     if (lastMessage) {
+      userSavePromise = saveInteraction({
+        tools,
+        sessionId,
+        role: "user",
+        content: userMessageText,
+        identification: activeClientData?.identification,
+        contract: activeClientData?.contract,
+        sector: activeClientData?.sector,
+        contactName: activeClientData?.name,
         contactEmail: activeClientData?.email,
         contactPhone: activeClientData?.phone,
         silent: true,
@@ -295,6 +304,9 @@ export async function POST(request: Request) {
         const saveContent = stripUiControlTokens(noToolResponse);
 
         if (userSavePromise) await userSavePromise;
+        await saveModelAndCleanup({
+          tools, sessionId, content: saveContent,
+          identification: activeClientData?.identification,
           contract: activeClientData?.contract,
           summaryPromise, mcpClient,
           silent: true,
@@ -389,6 +401,11 @@ export async function POST(request: Request) {
           toSave = EMPTY_RESPONSE_FALLBACK;
         }
 
+        await saveModelAndCleanup({
+          tools: currentTools,
+          sessionId: currentSessionId,
+          content: toSave,
+          identification: activeClientData?.identification,
           contract: activeClientData?.contract,
           summaryPromise, mcpClient,
           silent: true,
