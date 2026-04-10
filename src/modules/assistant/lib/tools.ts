@@ -115,7 +115,7 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
       message: `La tasa de cambio actual es de ${rate} Bs por dólar.`,
       data: { rate, source: "BCV" },
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       message:
