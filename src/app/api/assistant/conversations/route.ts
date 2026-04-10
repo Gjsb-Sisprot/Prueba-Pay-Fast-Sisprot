@@ -1,4 +1,5 @@
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
@@ -7,10 +8,7 @@ import { createMCPClient } from "@ai-sdk/mcp";
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{}> }
-) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const identification = searchParams.get("identification");
