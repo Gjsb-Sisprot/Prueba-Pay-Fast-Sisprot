@@ -448,6 +448,12 @@ export async function POST(request: Request) {
       client: activeClientData?.identification
     });
 
-    return errorResponse(errorMsg, 500);
+    return new Response(JSON.stringify({ error: errorMsg }), {
+      status: 500,
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Error-Detail': errorMsg.substring(0, 100)
+      }
+    });
   }
 }
