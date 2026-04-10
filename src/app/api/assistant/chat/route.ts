@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { unstable_after as after } from 'next/server';
+import { after } from 'next/server';
 
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
@@ -306,6 +306,8 @@ export async function POST(request: Request) {
     if (noToolResponse) {
       console.log(`[CHAT_ROUTE] Intercepted Direct Response: ${noToolResponse.substring(0, 50)}...`);
 
+      const saveContent = stripUiControlTokens(noToolResponse);
+
       // Guardado bloqueante para respuestas directas
       await saveInteraction({
         sessionId,
@@ -403,7 +405,7 @@ export async function POST(request: Request) {
       try {
         await streamDone;
         const contentSent = getContentSent();
-        let toSave = stripUiControlTokens(contentSent.trim()) || EMPTY_RESPONSE_FALLBACK;
+        const toSave = stripUiControlTokens(contentSent.trim()) || EMPTY_RESPONSE_FALLBACK;
 
         await saveInteraction({
           sessionId: sessionId,
