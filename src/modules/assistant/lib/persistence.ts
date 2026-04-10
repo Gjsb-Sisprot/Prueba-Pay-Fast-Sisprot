@@ -148,7 +148,12 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
       }]);
 
     if (logError) {
-      console.error(`[SUPABASE_SAVE_ERROR] Error al guardar interacción (${role}):`, logError.message);
+      console.error(`[SUPABASE_SAVE_ERROR] Error al guardar interacción (${role}):`, {
+        code: logError.code,
+        message: logError.message,
+        details: logError.details,
+        hint: logError.hint
+      });
       throw logError;
     }
 
