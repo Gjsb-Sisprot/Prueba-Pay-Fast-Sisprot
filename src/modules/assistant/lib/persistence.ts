@@ -83,10 +83,11 @@ interface SaveInteractionParams {
 }
 
 /**
- * Guarda un mensaje y actualiza metadatos de forma atómica (lógica).
+ * Guarda un mensaje en la tabla chat_logs.
+ * Se encarga exclusivamente de la persistencia del historial.
  */
 export async function saveInteraction(params: SaveInteractionParams): Promise<void> {
-  const { sessionId, role, content, toolName, toolCallId, ...clientInfo } = params;
+  const { sessionId, role, content, toolName, toolCallId } = params;
 
   try {
     const conversationId = await getConversationUuid(sessionId);
@@ -104,39 +105,79 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
       }]);
 
     if (logError) throw logError;
-
-    // 2. Si hay datos de cliente o es una herramienta terminal, actualizar metadatos
-    const isEscalation = toolName === "escalate_to_specialist";
-    const isClose = toolName === "close_conversation";
     
-    const hasClientInfo = Boolean(
-      clientInfo.identification ||
-      clientInfo.contract ||
-      clientInfo.sector ||
-      clientInfo.contactName 
-    );
-
-    if (hasClientInfo || isEscalation || isClose) {
-      const updates: ConversationUpdate = { updated_at: new Date() };
-      
-      if (isEscalation) updates.status = "waiting_specialist";
-      if (isClose) updates.status = "closed";
-      
-      if (clientInfo.identification) {
-        updates.identification = clientInfo.identification;
-        updates.user_id = clientInfo.identification;
-      }
-      if (clientInfo.contract) updates.contract = clientInfo.contract;
-      if (clientInfo.sector) updates.sector = clientInfo.sector;
-      if (clientInfo.contactName) updates.contact_name = clientInfo.contactName;
-
-      await supabase
-        .from("conversations")
-        .update(updates)
-        .eq("id", conversationId);
+    // Si la interacción trae datos de cliente, sincronizamos los metadatos de forma asíncrona
+    if (params.identification || params.contract || params.sector || params.contactName) {
+      syncConversationMetadata(sessionId, {
+        identification: params.identification,
+        contract: params.contract,
+        sector: params.sector,
+        name: params.contactName
+      }).catch(() => {});
     }
+
   } catch (error) {
     console.error(`[SAVE_INTERACTION_ERROR] Para sessionId ${sessionId}:`, error);
+  }
+}
+
+/**
+ * Actualiza la información del cliente en la conversación.
+ * No afecta el estado (humano/bot) de la misma.
+ */
+export async function syncConversationMetadata(
+  sessionId: string, 
+  data: Partial<ClientContextData>
+): Promise<void> {
+  try {
+    const conversationId = await getConversationUuid(sessionId);
+    if (!conversationId) return;
+
+    const updates: any = { updated_at: new Date() };
+    
+    if (data.identification) {
+      updates.identification = data.identification;
+      updates.user_id = data.identification;
+    }
+    if (data.contract) updates.contract = data.contract;
+    if (data.sector) updates.sector = data.sector;
+    if (data.name) updates.contact_name = data.name;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update(updates)
+      .eq("id", conversationId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("[SYNC_METADATA_ERROR]", error);
+  }
+}
+
+/**
+ * Cambia explícitamente el estado de la conversación.
+ * Se usa para escalamiento a humano o cierre.
+ */
+export async function updateConversationStatus(
+  sessionId: string,
+  status: "active" | "waiting_specialist" | "closed"
+): Promise<void> {
+  try {
+    const conversationId = await getConversationUuid(sessionId);
+    if (!conversationId) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({ 
+        status, 
+        updated_at: new Date() 
+      })
+      .eq("id", conversationId);
+
+    if (error) throw error;
+    console.log(`[STATUS_UPDATE] Conversación ${sessionId} cambiada a: ${status}`);
+  } catch (error) {
+    console.error("[UPDATE_STATUS_ERROR]", error);
   }
 }
 
