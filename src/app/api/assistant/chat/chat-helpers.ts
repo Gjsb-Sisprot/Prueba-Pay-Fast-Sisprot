@@ -2,7 +2,7 @@
 import type { MCPClient } from "@ai-sdk/mcp";
 import type { MCPToolSet } from "@/modules/assistant/lib/mcp-types";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
-import { saveInteraction } from "@/modules/assistant/lib/mcp-conversation";
+import { saveInteraction } from "@/modules/assistant/lib/persistence";
 
 
 export function errorResponse(message: string, status: number): Response {
