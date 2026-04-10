@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabase } from "@/modules/assistant/lib/supabase";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +15,9 @@ export async function GET() {
     google_ai: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   };
 
-  const dbTests: Record<string, any> = {
-    connection: "pending",
-    write_test: "pending",
+  const dbTests: Record<string, { status: string; code?: string; message?: string; count?: number | null; id?: string }> = {
+    connection: { status: "pending" },
+    write_test: { status: "pending" },
   };
 
   try {
@@ -29,6 +30,7 @@ export async function GET() {
       dbTests.connection = { status: "error", code: connError.code, message: connError.message };
     } else {
       dbTests.connection = { status: "ok", count };
+      dbTests.connection = { status: "ok", count: count ?? 0 };
     }
 
     // Test 2: Intento de Inserción (Prueba de Escritura)
@@ -45,15 +47,16 @@ export async function GET() {
     if (writeError) {
       dbTests.write_test = { status: "error", code: writeError.code, message: writeError.message };
     } else {
-      dbTests.write_test = { status: "ok", id: writeData?.id };
+      dbTests.write_test = { status: "ok", id: writeData?.id ?? undefined };
       // Limpieza (opcional, borramos el test)
       if (writeData?.id) {
         await supabase.from("conversations").delete().eq("id", writeData.id);
       }
     }
 
-  } catch (err: any) {
-    dbTests.connection = { status: "critical_crash", message: err.message };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    dbTests.connection = { status: "critical_crash", message };
   }
 
   return NextResponse.json({
