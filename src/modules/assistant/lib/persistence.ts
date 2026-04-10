@@ -33,6 +33,11 @@ interface ConversationUpdate {
  * Si no existe, la crea.
  */
 export async function getConversationUuid(sessionId: string): Promise<string | null> {
+  if (!sessionId) {
+    console.error("[PERSISTENCE_CRITICAL] sessionId vacío o nulo.");
+    return null;
+  }
+
   // 1. Intentar buscar primero
   const { data, error } = await supabase
     .from("conversations")
@@ -41,39 +46,43 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
     .maybeSingle();
 
   if (error) {
-    console.error(`[PERSISTENCE_ERROR] Error al buscar conversación ${sessionId}: ${error.message}`);
+    console.error(`[SUPABASE_QUERY_ERROR] ${sessionId}:`, error.message);
     return null;
   }
 
-  if (data) return data.id;
+  if (data?.id) return data.id;
 
   // 2. Si no existe, intentar crearla
+  console.log(`[PERSISTENCE_INFO] Creando nueva sesión en DB: ${sessionId}`);
   const { data: newData, error: createError } = await supabase
     .from("conversations")
     .insert([{ 
       session_id: sessionId,
       status: "active" 
     }])
-    .select("id")
-    .maybeSingle();
+    .select("id");
 
   if (createError) {
-    // Si el error es de duplicado (carrera), intentamos buscar UNA VEZ MÁS antes de fallar
+    // Si el error es de duplicado (carrera), intentamos buscar por última vez
     if (createError.code === '23505') {
-       console.log(`[PERSISTENCE_INFO] Race condition detectada para ${sessionId}. Reintentando búsqueda...`);
        const { data: retryData } = await supabase
          .from("conversations")
          .select("id")
          .eq("session_id", sessionId)
          .maybeSingle();
-       if (retryData) return retryData.id;
+       if (retryData?.id) return retryData.id;
     }
     
-    console.error(`[PERSISTENCE_ERROR] Error al crear conversación ${sessionId}: ${createError.message}`);
+    console.error(`[SUPABASE_INSERT_ERROR] ${sessionId}:`, createError.message);
     return null;
   }
 
-  return newData?.id || null;
+  const newId = newData?.[0]?.id;
+  if (!newId) {
+    console.warn(`[PERSISTENCE_WARNING] Insert exitoso para ${sessionId} pero no devolvió ID.`);
+  }
+
+  return newId || null;
 }
 
 /**
@@ -122,7 +131,10 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
 
   try {
     const conversationId = await getConversationUuid(sessionId);
-    if (!conversationId) return;
+    if (!conversationId) {
+      console.warn(`[SAVE_INTERACTION_ABANDONED] No se pudo obtener UUID para sesión ${sessionId}. Mensaje de rol ${role} no guardado.`);
+      return;
+    }
 
     // 1. Guardar el mensaje en logs
     const { error: logError } = await supabase
@@ -135,7 +147,12 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
         tool_call_id: toolCallId
       }]);
 
-    if (logError) throw logError;
+    if (logError) {
+      console.error(`[SUPABASE_SAVE_ERROR] Error al guardar interacción (${role}):`, logError.message);
+      throw logError;
+    }
+
+    console.log(`[PERSISTENCE_SUCCESS] Mensaje (${role}) guardado en DB para convo ${conversationId}`);
     
     // Si la interacción trae datos de cliente, sincronizamos los metadatos de forma asíncrona
     if (params.identification || params.contract || params.sector || params.contactName) {
