@@ -157,7 +157,6 @@ export async function POST(request: Request) {
 
     let tools: MCPToolSet = {};
     let conversationHistory: ConversationMessage[] = [];
-    let userSavePromise: Promise<void> | null = null;
     let summaryPromise: Promise<void> | null = null;
 
     try {
