@@ -286,12 +286,15 @@ export async function POST(request: Request) {
         routerHistory
       );
 
+      console.log(`[CHAT_ROUTE] Router Action: ${routerResult.routePolicy.action}, NoTool: ${routerResult.noToolNeeded}, DirectResp: ${!!routerResult.directResponse}`);
+
       routerRetried = routerResult.retriedModel;
       selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
 
       toolResults = routerResult.toolResults;
 
       if (toolResults.length > 0) {
+        console.log(`[CHAT_ROUTE] Executing ${toolResults.length} tools`);
         persistToolResultsInBackground(tools, sessionId, toolResults, activeClientData);
       }
 
@@ -300,6 +303,7 @@ export async function POST(request: Request) {
         : undefined;
 
       if (noToolResponse) {
+        console.log(`[CHAT_ROUTE] Intercepted Direct Response: ${noToolResponse.substring(0, 50)}...`);
 
         const saveContent = stripUiControlTokens(noToolResponse);
 
@@ -421,9 +425,13 @@ export async function POST(request: Request) {
       await mcpClient.close();
     }
 
-    return errorResponse(
-      error instanceof Error ? error.message : "Error desconocido",
-      500
-    );
+    const errorMsg = error instanceof Error ? error.message : "Error desconocido";
+    console.error(`[CHAT_CRITICAL_ERROR] Session: ${sessionId}`, {
+      message: errorMsg,
+      stack: error instanceof Error ? error.stack : undefined,
+      client: activeClientData?.identification
+    });
+
+    return errorResponse(errorMsg, 500);
   }
 }
