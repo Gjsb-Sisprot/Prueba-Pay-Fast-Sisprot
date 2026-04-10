@@ -5,7 +5,6 @@ import * as React from "react";
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { 
-  Bot, 
   User, 
   Video, 
   Maximize2, 
