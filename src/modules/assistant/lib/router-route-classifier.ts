@@ -218,7 +218,7 @@ export async function classifyNativeRouteDecision(input: ClassifyRouteInput): Pr
     }
 
     return decision;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
