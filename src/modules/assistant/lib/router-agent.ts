@@ -239,7 +239,7 @@ export async function routeRequest(
   if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
     // 1. Detección de selección numérica (ej: "4929")
     const cleanMessage = message.trim().replace("#", "");
-    const matchingContract = clientData?.allContracts?.find(c => String(c.id || c.contractId) === cleanMessage);
+    const matchingContract = clientData?.allContracts?.find(c => String(c.contractId) === cleanMessage);
 
     if (matchingContract) {
       console.log(`[ROUTER_DECISION] Selección de contrato detectada: ${cleanMessage}. Forzando confirmación.`);
