@@ -102,7 +102,9 @@ export function generateResponse(
 
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
 
-    const messages = buildSolverMessages(message, toolResults, conversationHistory);
+    // Truncamos historial de forma agresiva (últimos 3 mensajes previos)
+    const truncatedHistory = conversationHistory.slice(-3);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory);
 
     const result = streamText({
         model: google(assistantConfig.model),
@@ -139,7 +141,8 @@ export async function generateResponseBuffered(
         : [primaryModel, ...MODEL_CHAIN.filter(m => m !== primaryModel)];
 
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
-    const messages = buildSolverMessages(message, toolResults, conversationHistory);
+    const truncatedHistory = conversationHistory.slice(-3);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory);
 
     for (let i = 0; i < chain.length; i++) {
         const modelName = chain[i];
@@ -339,12 +342,13 @@ function cleanKnowledgeBaseResult(result: unknown): string {
     if (documents.length === 0) return "No se encontró información relevante en la base de conocimientos.";
 
     return documents
+        .slice(0, 3) // Solo los 3 documentos más relevantes
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((doc: any, i: number) => {
             const title = doc.title || doc.metadata?.title || `Documento ${i + 1}`;
             const content = doc.content || doc.text || "";
-            // Limpiar saltos de línea excesivos y espacios
-            const cleanContent = content.replace(/\s+/g, " ").trim().substring(0, 3000);
+            // Limpiar saltos de línea excesivos y espacios, y reducir drásticamente a 800 chars
+            const cleanContent = content.replace(/\s+/g, " ").trim().substring(0, 800);
             return `DOC: ${title}\nCONTENIDO: ${cleanContent}`;
         })
         .join("\n\n");
