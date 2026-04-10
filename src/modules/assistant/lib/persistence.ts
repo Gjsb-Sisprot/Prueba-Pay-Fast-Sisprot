@@ -2,6 +2,25 @@ import { supabase } from "./supabase";
 import type { ClientContextData } from "./types";
 import type { ConversationMessage } from "./mcp-types";
 
+interface ChatLogResult {
+  role: string;
+  content: string;
+  created_at: string;
+  tool_name?: string;
+  tool_call_id?: string;
+}
+
+interface ConversationUpdate {
+  updated_at: Date;
+  status?: string;
+  identification?: string;
+  user_id?: string;
+  contract?: string;
+  sector?: string;
+  contact_name?: string;
+  summary?: string;
+}
+
 /**
  * Persistencia Directa en Supabase para el Asistente
  * ------------------------------------------------
@@ -258,23 +277,6 @@ export async function updateSummaryFromHistory(
   }
 }
 
-interface ChatLogResult {
-  role: string;
-  content: string;
-  created_at: string;
-  tool_name?: string;
-  tool_call_id?: string;
-}
-
-interface ConversationUpdate {
-  updated_at: Date;
-  status?: string;
-  identification?: string;
-  user_id?: string;
-  contract?: string;
-  sector?: string;
-  contact_name?: string;
-}
 
 function transformToMessages(rows: ChatLogResult[]): ConversationMessage[] {
   return (rows || []).map(row => ({
