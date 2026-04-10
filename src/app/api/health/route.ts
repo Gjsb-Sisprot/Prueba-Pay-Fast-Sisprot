@@ -53,7 +53,7 @@ export async function GET() {
     }
 
   } catch (err: any) {
-    dbTests.connection = { status: "critical_crash", message: err.message };
+    dbTests.connection = { status: "critical_crash", message: err.message }
   }
 
   return NextResponse.json({
