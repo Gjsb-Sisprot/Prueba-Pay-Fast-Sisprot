@@ -96,7 +96,15 @@ export async function loadHistoryFromSupabase(sessionId: string): Promise<Conver
   return transformToMessages(data);
 }
 
-function transformToMessages(rows: Record<string, any>[]): ConversationMessage[] {
+interface ChatLogResult {
+  role: string;
+  content: string;
+  created_at: string;
+  tool_name?: string;
+  tool_call_id?: string;
+}
+
+function transformToMessages(rows: ChatLogResult[]): ConversationMessage[] {
   return (rows || []).map(row => ({
     role: row.role as ConversationMessage["role"],
     content: row.content,
