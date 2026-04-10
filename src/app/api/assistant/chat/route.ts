@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { unstable_after as after } from 'next/server';
 
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
@@ -240,9 +241,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Persistencia del mensaje del usuario
+    // Persistencia del mensaje del usuario (BLOQUEANTE para asegurar registro en Vercel)
     if (lastMessage) {
-      saveInteraction({
+      await saveInteraction({
         sessionId,
         role: "user",
         content: userMessageText,
@@ -250,10 +251,10 @@ export async function POST(request: Request) {
         contract: activeClientData?.contract,
         sector: activeClientData?.sector,
         contactName: activeClientData?.name,
-      }).catch(() => {});
+      }).catch((err) => console.error("[SUPABASE_USER_SAVE_ERROR]", err));
       
       if (activeClientData?.identification) {
-        updateConversationSummary(sessionId, activeClientData, userMessageText).catch(() => {});
+        await updateConversationSummary(sessionId, activeClientData, userMessageText).catch(() => {});
       }
     }
 
@@ -305,16 +306,14 @@ export async function POST(request: Request) {
     if (noToolResponse) {
       console.log(`[CHAT_ROUTE] Intercepted Direct Response: ${noToolResponse.substring(0, 50)}...`);
 
-      const saveContent = stripUiControlTokens(noToolResponse);
-
-      // Guardado asíncrono, no bloqueamos el stream de respuesta
-      saveInteraction({
+      // Guardado bloqueante para respuestas directas
+      await saveInteraction({
         sessionId,
         role: "model",
         content: saveContent,
         identification: activeClientData?.identification,
         contract: activeClientData?.contract,
-      }).catch(() => {});
+      }).catch((err) => console.error("[SUPABASE_DIRECT_SAVE_ERROR]", err));
 
       if (summaryPromise) await summaryPromise;
       if (mcpClient) await mcpClient.close();
@@ -398,31 +397,28 @@ export async function POST(request: Request) {
       },
     });
 
-    (async () => {
+    // Usamos after() de Next.js 15 para garantizar que la persistencia ocurra
+    // INCLUSO después de que la respuesta se haya enviado al cliente.
+    after(async () => {
       try {
         await streamDone;
-
         const contentSent = getContentSent();
+        let toSave = stripUiControlTokens(contentSent.trim()) || EMPTY_RESPONSE_FALLBACK;
 
-        let toSave = stripUiControlTokens(contentSent.trim());
-        if (!toSave) {
-          toSave = EMPTY_RESPONSE_FALLBACK;
-        }
-
-        // Guardado no bloqueante al finalizar el stream
-        saveInteraction({
+        await saveInteraction({
           sessionId: sessionId,
           role: "model",
           content: toSave,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
-        }).catch(() => {});
+        });
 
         if (summaryPromise) await summaryPromise;
         if (mcpClient) await mcpClient.close();
-      } catch {
+      } catch (err) {
+        console.error("[AFTER_REQUEST_PERSISTENCE_ERROR]", err);
       }
-    })();
+    });
 
     return response;
 
