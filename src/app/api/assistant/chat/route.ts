@@ -152,6 +152,8 @@ export async function POST(request: Request) {
       return errorResponse("sessionId requerido", 400);
     }
 
+    const verifiedSessionId = sessionId;
+
 
     const lastMessage = getLastUserMessage(messages);
     const userMessageText = lastMessage ? extractTextContent(lastMessage) : "";
@@ -408,7 +410,7 @@ export async function POST(request: Request) {
         const toSave = stripUiControlTokens(contentSent.trim()) || EMPTY_RESPONSE_FALLBACK;
 
         await saveInteraction({
-          sessionId: sessionId,
+          sessionId: verifiedSessionId,
           role: "model",
           content: toSave,
           identification: activeClientData?.identification,
