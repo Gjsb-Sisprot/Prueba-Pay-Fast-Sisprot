@@ -50,6 +50,7 @@ interface SaveInteractionParams {
   contactPhone?: string;
   toolCallId?: string;
   toolName?: string;
+  silent?: boolean;
 }
 
 export async function saveInteraction(params: SaveInteractionParams): Promise<void> {
@@ -93,6 +94,7 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
     if (optionalFields.contactPhone) args.contactPhone = optionalFields.contactPhone;
     if (optionalFields.toolCallId) args.toolCallId = optionalFields.toolCallId;
     if (optionalFields.toolName) args.toolName = optionalFields.toolName;
+    if (optionalFields.silent) args.silent = optionalFields.silent;
 
     await saveInteractionTool.execute(args, {
       messages: [],
