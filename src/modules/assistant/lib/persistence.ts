@@ -133,7 +133,7 @@ export async function syncConversationMetadata(
     const conversationId = await getConversationUuid(sessionId);
     if (!conversationId) return;
 
-    const updates: any = { updated_at: new Date() };
+    const updates: Partial<ConversationUpdate> = { updated_at: new Date() };
     
     if (data.identification) {
       updates.identification = data.identification;
