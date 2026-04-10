@@ -7,6 +7,7 @@ import {
   saveInteraction,
   updateConversationSummary,
   updateSummaryFromHistory,
+  updateConversationStatus,
 } from "@/modules/assistant/lib/persistence";
 
 import {
@@ -242,7 +243,7 @@ export async function POST(request: Request) {
 
     // Persistencia del mensaje del usuario
     if (lastMessage) {
-      userSavePromise = saveInteraction({
+      saveInteraction({
         sessionId,
         role: "user",
         content: userMessageText,
@@ -250,8 +251,8 @@ export async function POST(request: Request) {
         contract: activeClientData?.contract,
         sector: activeClientData?.sector,
         contactName: activeClientData?.name,
-      }).catch(() => {}) as Promise<void>;
-
+      }).catch(() => {});
+      
       if (activeClientData?.identification) {
         updateConversationSummary(sessionId, activeClientData, userMessageText).catch(() => {});
       }
@@ -314,14 +315,14 @@ export async function POST(request: Request) {
 
         const saveContent = stripUiControlTokens(noToolResponse);
 
-        if (userSavePromise) await userSavePromise;
-        await saveInteraction({
+        // Guardado asíncrono, no bloqueamos el stream de respuesta
+        saveInteraction({
           sessionId,
           role: "model",
           content: saveContent,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
-        });
+        }).catch(() => {});
 
         if (summaryPromise) await summaryPromise;
         if (mcpClient) await mcpClient.close();
@@ -340,9 +341,14 @@ export async function POST(request: Request) {
       if (terminalResult.toolName === "escalate_to_specialist") {
         const ticketId = getTicketIdFromResult(terminalResult.result);
         escalationMarker = ` __CLOSE_CHAT__${ticketId ? ` [TICKET_ID:${ticketId}]` : ""}`;
+        
+        // Actualización de estado EXPLÍCITA y asíncrona
+        updateConversationStatus(sessionId, "waiting_specialist").catch(() => {});
       }
 
       if (terminalResult.toolName === "close_conversation" && tools.search_knowledge_base) {
+        // Actualización de estado EXPLÍCITA y asíncrona
+        updateConversationStatus(sessionId, "closed").catch(() => {});
         try {
           const closeLinksToolCallId = `close-links-${Date.now()}`;
           const closeLinksResult = await tools.search_knowledge_base.execute(
@@ -412,13 +418,14 @@ export async function POST(request: Request) {
           toSave = EMPTY_RESPONSE_FALLBACK;
         }
 
-        await saveInteraction({
+        // Guardado no bloqueante al finalizar el stream
+        saveInteraction({
           sessionId: sessionId,
           role: "model",
           content: toSave,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
-        });
+        }).catch(() => {});
 
         if (summaryPromise) await summaryPromise;
         if (mcpClient) await mcpClient.close();
