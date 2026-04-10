@@ -7,10 +7,7 @@ import type { ClientContextData } from "@/modules/assistant/lib/types";
 const clientCache = new Map<string, { data: ClientContextData; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{}> }
-) {
+export async function GET(request: NextRequest) {
   const identification = request.nextUrl.searchParams.get("identification");
 
   if (!identification) {
