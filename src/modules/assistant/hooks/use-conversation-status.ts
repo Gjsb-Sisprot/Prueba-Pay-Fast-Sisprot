@@ -246,7 +246,7 @@ export function useConversationStatus({
             specialistName: data.specialistName,
           });
         }
-      } catch (err) {
+      } catch {
       }
     };
 
