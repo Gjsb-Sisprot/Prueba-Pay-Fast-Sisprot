@@ -277,10 +277,6 @@ export async function POST(request: Request) {
     };
 
 
-    let toolResults: ToolResult[] = [];
-    let routerRetried: string | undefined;
-    let selectedSolverModel = SOLVER_FLASH_MODEL;
-
     const routerHistory = buildRouterHistory(conversationHistory, messages);
     const routerResult = await routeRequest(
       userMessageText,
@@ -293,10 +289,9 @@ export async function POST(request: Request) {
 
     console.log(`[CHAT_ROUTE] Router Action: ${routerResult.routePolicy.action}, NoTool: ${routerResult.noToolNeeded}, DirectResp: ${!!routerResult.directResponse}, Tools: ${Object.keys(tools).length}`);
 
-    routerRetried = routerResult.retriedModel;
-    selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
-
-    toolResults = routerResult.toolResults;
+    const routerRetried = routerResult.retriedModel;
+    const selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
+    const toolResults = routerResult.toolResults;
 
     if (toolResults.length > 0) {
       console.log(`[CHAT_ROUTE] Executing ${toolResults.length} tools`);
