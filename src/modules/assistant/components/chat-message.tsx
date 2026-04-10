@@ -332,7 +332,7 @@ function ChatMessageComponent({
 
       {expandedImage && (
         <div
-          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4
+          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4"
           onClick={() => setExpandedImage(null)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
