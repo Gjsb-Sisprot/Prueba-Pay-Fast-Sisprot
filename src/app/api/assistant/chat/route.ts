@@ -31,7 +31,7 @@ import {
 } from "@/modules/assistant/lib/channel-links";
 
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
+const MCP_SERVER_URL = (process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app").replace(/\/+$/, "");
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
@@ -171,17 +171,30 @@ export async function POST(request: Request) {
         });
       }
 
-      mcpClient = await createMCPClient({
-        transport: {
-          type: "http",
-          url: `${MCP_SERVER_URL}/mcp`,
-          headers: {
-            ...(MCP_API_KEY ? { Authorization: `Bearer ${MCP_API_KEY}` } : {}),
+      try {
+        mcpClient = await createMCPClient({
+          transport: {
+            type: "http",
+            url: `${MCP_SERVER_URL}/mcp`,
+            headers: {
+              ...(MCP_API_KEY ? { Authorization: `Bearer ${MCP_API_KEY}` } : {}),
+            },
           },
-        },
-      });
+        });
 
-      tools = await mcpClient.tools();
+        // Timeout de 8 segundos para obtener las herramientas y no bloquear el request
+        const toolsPromise = mcpClient.tools();
+        const timeoutPromise = new Promise<MCPToolSet>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout inicializando herramientas MCP")), 8000)
+        );
+        
+        tools = await Promise.race([toolsPromise, timeoutPromise]).catch(err => {
+          console.warn("[MCP_WARNING] Fallo al cargar herramientas:", err.message);
+          return {} as MCPToolSet;
+        });
+      } catch (err) {
+        console.warn("[MCP_CRITICAL] No se pudo conectar con el servidor MCP:", err instanceof Error ? err.message : String(err));
+      }
 
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
         const historyPromise = updateSummaryFromHistory(sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
