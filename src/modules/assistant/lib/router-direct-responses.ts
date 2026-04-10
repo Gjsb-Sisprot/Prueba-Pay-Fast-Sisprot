@@ -10,6 +10,23 @@ function personalize(template: string, clientData?: ClientContextData): string {
   return name ? template.replace("{name}", ` ${name}`) : template.replace("{name}", "");
 }
 
+function buildDetailedMulticontractGreeting(clientData: ClientContextData): string {
+  const total = clientData.totalContracts ?? 0;
+  const firstNameStr = firstName(clientData);
+  const greeting = `¡Hola${firstNameStr ? ` ${firstNameStr}` : ""}! He notado que tienes **${total} servicios** registrados con nosotros. Como cada contrato es independiente, aquí te detallo su estado actual:`;
+
+  const contractList = clientData.allContracts
+    ?.map(c => {
+      const statusIcon = c.isActive ? "✅" : "⚠️";
+      const statusText = c.isActive ? "Al día" : "**Suspendido** por deuda";
+      const debtText = `(Deuda: $${c.debt.toFixed(2)})`;
+      return `- **Contrato #${c.contractId}** (${c.planName || "Sin plan"}): ${statusText} ${debtText} ${statusIcon}`;
+    })
+    .join("\n") || "";
+
+  return `${greeting}\n\n${contractList}\n\nPara poder brindarte información precisa, **¿con cuál de estos servicios deseas continuar hoy?** (Puedes escribirme el número de contrato o el sector).`;
+}
+
 const GRATITUDE_PATTERNS = [
   /^(gracias?|muchas\s*gracias|genial|excelente)[\s,.!]*$/i,
   /^(perfecto|genial|excelente|ok|listo|dale|va|vale),?\s*(muchas\s*)?gracias[\s,.!]*/i,
@@ -110,21 +127,17 @@ export function buildNoToolDirectResponse(
 
   // 7. SALUDO Y MULTI-CONTRATO (Intercepción al final para no bloquear FAQs específicas)
   if (/^(hola|buenas?|buenos?\s*(d[ií]as?|tardes?|noches?)|hey|[ée]pale|qu[ée]\s*tal|saludos?)/i.test(normalized)) {
-    const greeting = personalize("\u00a1Hola{name}! Soy Susana, tu asistente de Sisprot.", clientData);
-    
     const total = clientData?.totalContracts ?? 0;
     const hasSelectedContract = !!clientData?.contract;
 
-
     if (total > 1 && !hasSelectedContract && clientData) {
-      const contractList = clientData.allContracts
-        ?.map(c => `- **${c.contractId}** (${c.sector || "Sector no disponible"})`)
-        .join("\n") || "";
-
-      return `${greeting}\n\nHe notado que tienes **${total} contratos** asociados a tu identidad. Para poder brindarte informaci\u00f3n precisa, **\u00bfcon cu\u00e1l de estos servicios deseas continuar?**:\n\n${contractList}`;
+      return buildDetailedMulticontractGreeting(clientData);
     }
 
-    return `${greeting} \u00bfEn qu\u00e9 puedo ayudarte hoy?`;
+    const name = firstName(clientData);
+    return name 
+      ? `¡Hola ${name}! ¿En qué puedo ayudarte hoy con tu servicio de internet?`
+      : "¡Hola! ¿En qué puedo ayudarte hoy con tu servicio de internet?";
   }
 
   if (isSocialCourtesy(normalized)) {
@@ -147,6 +160,12 @@ export function buildNoToolDirectResponse(
 
   if (isAcknowledgment(normalized)) {
     return personalize("¡Perfecto{name}! ¿Necesitas algo más?", clientData);
+  }
+
+  // CATCH-ALL MULTI-CONTRATO: Si llegamos aquí sin haber interceptado una FAQ específica 
+  // y hay más de un contrato sin seleccionar, FORZAMOS la elección.
+  if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract && clientData) {
+    return buildDetailedMulticontractGreeting(clientData);
   }
 
   return undefined;
