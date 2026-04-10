@@ -104,32 +104,6 @@ export async function updateConversationSummary(
   }
 }
 
-function extractRequestedContract(message: string, clientData: ClientContextData): string | null {
-  if (!message) return null;
-
-  const lower = message.toLowerCase();
-  const contracts = (clientData.allContracts || [])
-    .map((c) => String(c.contractId).trim())
-    .filter(Boolean);
-  if (contracts.length === 0) return null;
-
-  const directMatch = lower.match(/(?:contrato\s*#?\s*|#)(\d{3,})/i);
-  if (directMatch) {
-    const requested = directMatch[1];
-    const exact = contracts.find((c) => c === requested);
-    if (exact) return exact;
-  }
-
-  const prefixMatch = lower.match(/(?:empieza|comienza)\s+por\s+(\d{1,4})/i);
-  if (prefixMatch) {
-    const prefix = prefixMatch[1];
-    const byPrefix = contracts.find((c) => c.startsWith(prefix));
-    if (byPrefix) return byPrefix;
-  }
-
-  return null;
-}
-
 export async function updateSummaryFromHistory(
   _tools: MCPToolSet,
   sessionId: string,
