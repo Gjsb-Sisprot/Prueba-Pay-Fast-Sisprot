@@ -237,6 +237,7 @@ export async function saveModelAndCleanup({
   contract,
   summaryPromise,
   mcpClient,
+  silent,
 }: SaveAndCleanupParams): Promise<void> {
   try {
     if (Object.keys(tools).length > 0) {
@@ -247,7 +248,7 @@ export async function saveModelAndCleanup({
         content,
         identification,
         contract,
-        silent: params.silent,
+        silent,
       });
     }
     if (summaryPromise) await summaryPromise;
