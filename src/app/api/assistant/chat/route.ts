@@ -1,15 +1,12 @@
 
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
-import type { ConversationMessage } from "@/modules/assistant/lib/mcp-services";
-
 import {
-  type MCPToolSet,
   loadConversationHistory,
   saveInteraction,
   updateConversationSummary,
   updateSummaryFromHistory,
-} from "@/modules/assistant/lib/mcp-services";
+} from "@/modules/assistant/lib/persistence";
 
 import {
   type ChatRequestBody,
@@ -112,7 +109,6 @@ function buildRouterHistory(
 }
 
 function persistToolResultsInBackground(
-  tools: MCPToolSet,
   sessionId: string,
   toolResults: ToolResult[],
   clientData?: ChatRequestBody["clientData"]
@@ -121,7 +117,6 @@ function persistToolResultsInBackground(
     const resultStr = typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result);
 
     saveInteraction({
-      tools,
       sessionId,
       role: "tool",
       content: resultStr.substring(0, 5000),
@@ -165,6 +160,16 @@ export async function POST(request: Request) {
 
     try {
 
+      conversationHistory = await loadConversationHistory(sessionId);
+
+      if (loadHistoryOnly) {
+        return Response.json({
+          success: true,
+          history: conversationHistory,
+          sessionId,
+        });
+      }
+
       mcpClient = await createMCPClient({
         transport: {
           type: "http",
@@ -177,19 +182,8 @@ export async function POST(request: Request) {
 
       tools = await mcpClient.tools();
 
-      conversationHistory = await loadConversationHistory(mcpClient!, sessionId);
-
-      if (loadHistoryOnly) {
-        await mcpClient.close();
-        return Response.json({
-          success: true,
-          history: conversationHistory,
-          sessionId,
-        });
-      }
-
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
-        const historyPromise = updateSummaryFromHistory(tools, sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
+        const historyPromise = updateSummaryFromHistory(sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
         summaryPromise = summaryPromise
           ? Promise.all([summaryPromise, historyPromise]).then(() => { })
           : historyPromise;
@@ -235,7 +229,6 @@ export async function POST(request: Request) {
     // Persistencia del mensaje del usuario
     if (lastMessage) {
       userSavePromise = saveInteraction({
-        tools,
         sessionId,
         role: "user",
         content: userMessageText,
@@ -243,13 +236,10 @@ export async function POST(request: Request) {
         contract: activeClientData?.contract,
         sector: activeClientData?.sector,
         contactName: activeClientData?.name,
-        contactEmail: activeClientData?.email,
-        contactPhone: activeClientData?.phone,
-        silent: true,
       }).catch(() => {}) as Promise<void>;
 
-      if (activeClientData?.identification && tools.update_summary) {
-        updateConversationSummary(tools, sessionId, activeClientData, userMessageText).catch(() => {});
+      if (activeClientData?.identification) {
+        updateConversationSummary(sessionId, activeClientData, userMessageText).catch(() => {});
       }
     }
 
@@ -298,7 +288,7 @@ export async function POST(request: Request) {
 
       if (toolResults.length > 0) {
         console.log(`[CHAT_ROUTE] Executing ${toolResults.length} tools`);
-        persistToolResultsInBackground(tools, sessionId, toolResults, activeClientData);
+        persistToolResultsInBackground(sessionId, toolResults, activeClientData);
       }
 
       const noToolResponse = routerResult.noToolNeeded
@@ -311,13 +301,16 @@ export async function POST(request: Request) {
         const saveContent = stripUiControlTokens(noToolResponse);
 
         if (userSavePromise) await userSavePromise;
-        await saveModelAndCleanup({
-          tools, sessionId, content: saveContent,
+        await saveInteraction({
+          sessionId,
+          role: "model",
+          content: saveContent,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
-          summaryPromise, mcpClient,
-          silent: true,
         });
+
+        if (summaryPromise) await summaryPromise;
+        if (mcpClient) await mcpClient.close();
 
         return createTextStreamResponse(
           noToolResponse,
@@ -408,15 +401,16 @@ export async function POST(request: Request) {
           toSave = EMPTY_RESPONSE_FALLBACK;
         }
 
-        await saveModelAndCleanup({
-          tools: currentTools,
+        await saveInteraction({
           sessionId: currentSessionId,
+          role: "model",
           content: toSave,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
-          summaryPromise, mcpClient,
-          silent: true,
         });
+
+        if (summaryPromise) await summaryPromise;
+        if (mcpClient) await mcpClient.close();
       } catch {
       }
     })();
