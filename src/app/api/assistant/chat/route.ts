@@ -30,7 +30,7 @@ import {
 } from "@/modules/assistant/lib/channel-links";
 
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app/";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
@@ -414,7 +414,7 @@ export async function POST(request: Request) {
 
     return response;
 
-  } catch {
+  } catch (error) {
     if (mcpClient) {
       await mcpClient.close();
     }
