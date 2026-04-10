@@ -278,59 +278,56 @@ export async function POST(request: Request) {
 
 
     let toolResults: ToolResult[] = [];
-    const hasTools = Object.keys(tools).length > 0;
     let routerRetried: string | undefined;
     let selectedSolverModel = SOLVER_FLASH_MODEL;
 
-    if (hasTools) {
-      const routerHistory = buildRouterHistory(conversationHistory, messages);
-      const routerResult = await routeRequest(
-        userMessageText,
-        activeClientData,
-        tools,
+    const routerHistory = buildRouterHistory(conversationHistory, messages);
+    const routerResult = await routeRequest(
+      userMessageText,
+      activeClientData,
+      tools,
+      sessionId,
+      routerHistory.length,
+      routerHistory
+    );
+
+    console.log(`[CHAT_ROUTE] Router Action: ${routerResult.routePolicy.action}, NoTool: ${routerResult.noToolNeeded}, DirectResp: ${!!routerResult.directResponse}, Tools: ${Object.keys(tools).length}`);
+
+    routerRetried = routerResult.retriedModel;
+    selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
+
+    toolResults = routerResult.toolResults;
+
+    if (toolResults.length > 0) {
+      console.log(`[CHAT_ROUTE] Executing ${toolResults.length} tools`);
+      persistToolResultsInBackground(sessionId, toolResults, activeClientData);
+    }
+
+    const noToolResponse = routerResult.noToolNeeded
+      ? routerResult.directResponse?.trim() || undefined
+      : undefined;
+
+    if (noToolResponse) {
+      console.log(`[CHAT_ROUTE] Intercepted Direct Response: ${noToolResponse.substring(0, 50)}...`);
+
+      const saveContent = stripUiControlTokens(noToolResponse);
+
+      // Guardado asíncrono, no bloqueamos el stream de respuesta
+      saveInteraction({
         sessionId,
-        routerHistory.length,
-        routerHistory
+        role: "model",
+        content: saveContent,
+        identification: activeClientData?.identification,
+        contract: activeClientData?.contract,
+      }).catch(() => {});
+
+      if (summaryPromise) await summaryPromise;
+      if (mcpClient) await mcpClient.close();
+
+      return createTextStreamResponse(
+        noToolResponse,
+        routerRetried ? { retried: true, model: routerRetried } : undefined
       );
-
-      console.log(`[CHAT_ROUTE] Router Action: ${routerResult.routePolicy.action}, NoTool: ${routerResult.noToolNeeded}, DirectResp: ${!!routerResult.directResponse}`);
-
-      routerRetried = routerResult.retriedModel;
-      selectedSolverModel = routerResult.routePolicy.solverModel === "pro" ? SOLVER_PRO_MODEL : SOLVER_FLASH_MODEL;
-
-      toolResults = routerResult.toolResults;
-
-      if (toolResults.length > 0) {
-        console.log(`[CHAT_ROUTE] Executing ${toolResults.length} tools`);
-        persistToolResultsInBackground(sessionId, toolResults, activeClientData);
-      }
-
-      const noToolResponse = routerResult.noToolNeeded
-        ? routerResult.directResponse?.trim() || undefined
-        : undefined;
-
-      if (noToolResponse) {
-        console.log(`[CHAT_ROUTE] Intercepted Direct Response: ${noToolResponse.substring(0, 50)}...`);
-
-        const saveContent = stripUiControlTokens(noToolResponse);
-
-        // Guardado asíncrono, no bloqueamos el stream de respuesta
-        saveInteraction({
-          sessionId,
-          role: "model",
-          content: saveContent,
-          identification: activeClientData?.identification,
-          contract: activeClientData?.contract,
-        }).catch(() => {});
-
-        if (summaryPromise) await summaryPromise;
-        if (mcpClient) await mcpClient.close();
-
-        return createTextStreamResponse(
-          noToolResponse,
-          routerRetried ? { retried: true, model: routerRetried } : undefined
-        );
-      }
     }
 
     const terminalResult = toolResults.find(tr => TERMINAL_TOOLS.has(tr.toolName));
