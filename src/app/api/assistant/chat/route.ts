@@ -19,6 +19,7 @@ import { routeRequest, type ToolResult } from "@/modules/assistant/lib/router-ag
 import { generateResponse, generateResponseBuffered } from "@/modules/assistant/lib/solver-agent";
 import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
+import type { ConversationMessage } from "@/modules/assistant/lib/mcp-types";
 
 import {
   errorResponse,
@@ -30,7 +31,7 @@ import {
 } from "@/modules/assistant/lib/channel-links";
 
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app/";
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
