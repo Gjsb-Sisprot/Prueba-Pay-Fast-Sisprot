@@ -1,78 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabase, isSupabaseConfigured } from "@/modules/assistant/lib/supabase";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const diagnostics: {
-    timestamp: string;
-    env: {
-      url_present: boolean;
-      key_present: boolean;
-      is_configured: boolean;
-    };
-    tables: {
-      conversations: { status: string; code?: string; message?: string; count?: number | null } | string;
-      chat_logs: { status: string; code?: string; message?: string; count?: number | null } | string;
-    };
-  } = {
-    timestamp: new Date().toISOString(),
-    env: {
-      url_present: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      key_present: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      is_configured: isSupabaseConfigured,
-    },
-    tables: {
-      conversations: "pending",
-      chat_logs: "pending",
-    }
-  };
-
-  if (!isSupabaseConfigured) {
-    return NextResponse.json({
-      status: "error",
-      message: "Supabase environment variables are missing.",
-      diagnostics
-    }, { status: 500 });
-  }
-
-  try {
-    // Test 1: Query Conversations
-    const { count: convCount, error: convError } = await supabase
-      .from("conversations")
-      .select("*", { count: 'exact', head: true });
-
-    if (convError) {
-      diagnostics.tables.conversations = { status: "error", code: convError.code, message: convError.message };
-    } else {
-      diagnostics.tables.conversations = { status: "ok", count: convCount };
-    }
-
-    // Test 2: Query Chat Logs
-    const { count: logCount, error: logError } = await supabase
-      .from("chat_logs")
-      .select("*", { count: 'exact', head: true });
-
-    if (logError) {
-      diagnostics.tables.chat_logs = { status: "error", code: logError.code, message: logError.message };
-    } else {
-      diagnostics.tables.chat_logs = { status: "ok", count: logCount };
-    }
-
-    const hasErrors = diagnostics.tables.conversations.status === "error" || 
-                      diagnostics.tables.chat_logs.status === "error";
-
-    return NextResponse.json({
-      status: hasErrors ? "partial_error" : "ok",
-      diagnostics
-    });
-
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({
-      status: "critical_error",
-      message,
-      diagnostics
-    }, { status: 500 });
-  }
+  return NextResponse.json({
+    status: "ok",
+    message: "Health check simple is alive. If you see this, the route is working.",
+    env_keys: [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ].map(k => ({ key: k, present: !!process.env[k] }))
+  });
 }
