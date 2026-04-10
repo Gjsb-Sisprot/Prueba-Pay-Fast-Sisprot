@@ -1,6 +1,7 @@
 "use client";
 
 import { Star,  Store } from "lucide-react";
+import Image from "next/image";
 
 const ALLIES = [
   { id: 1, name: "Colbox", logo: "/assets/aliados/colbox.webp", bgColor: "bg-[#043310]" },
@@ -60,11 +61,12 @@ export function CommercialAllies() {
                 className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-full pr-6 pl-2 py-2 transition-all duration-300 hover:bg-white/10 hover:scale-105 shrink-0"
               >
                 <div className={`w-10 h-10 sm:w-12 sm:h-12 ${ally.bgColor} rounded-full flex items-center justify-center p-2 shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.1)]`}>
-                  <img 
+                  <Image 
                     src={ally.logo} 
                     alt={ally.name} 
+                    width={48}
+                    height={48}
                     className="w-full h-full object-contain filter grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
-                    loading="lazy"
                   />
                 </div>
                 <span className="text-white font-medium text-sm sm:text-base flex items-center gap-2">
