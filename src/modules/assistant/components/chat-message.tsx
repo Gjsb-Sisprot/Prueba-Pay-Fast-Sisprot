@@ -79,8 +79,8 @@ function ChatMessageComponent({
         )}
       >
         {isAssistant && (
-          <div className="shrink-0 w-7 h-7 rounded-full bg-black flex items-center justify-center">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="shrink-0 w-7 h-7 rounded-full overflow-hidden border border-gray-200">
+            <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
           </div>
         )}
 
