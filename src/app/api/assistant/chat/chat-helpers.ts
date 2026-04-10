@@ -41,7 +41,6 @@ export async function saveModelResponse(
   if (Object.keys(ctx.tools).length === 0) return;
 
   await saveInteraction({
-    tools: ctx.tools,
     sessionId: ctx.sessionId,
     role: "model",
     content,
