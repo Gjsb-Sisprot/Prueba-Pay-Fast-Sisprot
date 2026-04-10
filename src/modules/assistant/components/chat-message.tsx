@@ -339,7 +339,7 @@ function ChatMessageComponent({
           <img
             src={expandedImage}
             alt="Imagen expandida"
-            className="max-w-full max-h-full object-contain rounded-lg"
+            className="max-w-full max-h-full object-contain rounded-lg
           />
         </div>
       )}
