@@ -90,10 +90,10 @@ export async function loadHistoryFromSupabase(sessionId: string): Promise<Conver
       .order("created_at", { ascending: true });
       
     if (directError) return [];
-    return transformToMessages(directData as any[]);
+    return transformToMessages(directData as unknown as ChatLogResult[]);
   }
 
-  return transformToMessages(data as any[]);
+  return transformToMessages(data as unknown as ChatLogResult[]);
 }
 
 interface ChatLogResult {
