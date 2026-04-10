@@ -105,7 +105,10 @@ export function buildNoToolDirectResponse(
 
   // 3. UBICACIÓN Y OFICINAS
   if (/d[oó]nde\s*(est[áa]n?|quedan?|se\s*ubican?|est[áa]\s*la\s*oficina)|ubicacci[oó]n|ubicaci[oó]n|direcci[oó]n(\s*f[ií]sica)?|oficina\s*principal|ir\s*a\s*la\s*oficina|c[oó]mo\s*llegar|d[oó]nde\s*es/i.test(normalized)) {
-    return "Nuestra oficina principal de Sisprot Global Fiber se ubica en:\n\n📍 **Dirección**: Avenida Intercomunal Santiago Mariño, C.C. Paseo Estación Central (Antiguo Graffitti), Nivel Mezzanina, Local M-14. Turmero, Estado Aragua.\n🕒 **Horario**: Lunes a Viernes de 8:00 AM a 5:00 PM y Sábados de 9:00 AM a 1:00 PM.\n\n[Ver en Google Maps](https://maps.app.goo.gl/33vLLKyo5vUWujQUA?g_st=awb)";
+    return "Nuestra oficina principal de **Sisprot Global Fiber** se ubica en:\n\n" +
+           "📍 **Dirección**: Calle Mariño, C.C. Paseo Mariño, Nivel PB-09, Local PB-09, Sector Centro. Turmero, estado Aragua.\n" +
+           "🕒 **Horario**: Lunes a Viernes de 8:00 AM a 5:00 PM y Sábados de 9:00 AM a 1:00 PM.\n\n" +
+           "👉 [Guíame con Google Maps](https://www.google.com/maps/place/SisProt+Global+Fiber+C.A./@10.2272089,-67.4764049,687m/data=!3m2!1e3!4b1!4m6!3m5!1s0x8e80215f0d7a8c2b:0x9f62d9148a9c508!8m2!3d10.2272036!4d-67.47383!16s%2Fg%2F11dx9w_c6r!5m1!1e1?entry=ttu)";
   }
 
   // 4. REDES SOCIALES
@@ -124,13 +127,13 @@ export function buildNoToolDirectResponse(
 
   // 6. IDENTIDAD PERSONAL Y QUÉ PUEDES HACER
   if (/qu[ée] (puedes?|eres\s*capaz\s*de)\s*hacer|en\s*qu[ée]\s*ayudas?|tus?\s*habilidades|cu[áa]les?\s*son\s*tus\s*funciones|para\s*qu[ée]\s*sirves/i.test(normalized)) {
-    return "¡Hola! Como tu asistente virtual de Sisprot, puedo ayudarte con:\n\n" +
-           "✅ **Soporte Técnico**: Diagnóstico de tu conexión y estado de tu equipo ONU.\n" +
+    return "¡Hola! 👋 Como tu asistente virtual de **Sisprot**, estoy aquí para ayudarte con:\n\n" +
+           "🛠️ **Soporte Técnico**: Diagnóstico de tu conexión y estado de tu equipo ONU.\n" +
            "💰 **Pagos y Facturación**: Información sobre tu deuda actual y gestión de pagos.\n" +
            "🚀 **Planes e Instalación**: Información sobre velocidades, precios y promociones de nuevos servicios.\n" +
            "📍 **Información General**: Ubicación de nuestras oficinas, redes sociales y cobertura.\n" +
-           "🤝 **Atención Humana**: Si no puedo resolver tu duda, puedo escalarte con un especialista.\n\n" +
-           "¿En qué te gustaría que te ayude hoy?";
+           "👨‍💼 **Atención Humana**: Si no puedo resolver tu duda, puedo escalarte con un especialista.\n\n" +
+           "¿En qué te gustaría que te ayude hoy? ✨";
   }
 
   if (/c[oó]mo\s*me\s*llamo|cu[áa]l\s*es\s*mi\s*nombre|me\s*puedes\s*decir\s*mi\s*nombre|qui[ée]n\s*soy|mi\s*identidad/i.test(normalized)) {
