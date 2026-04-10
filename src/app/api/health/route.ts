@@ -4,7 +4,18 @@ import { supabase, isSupabaseConfigured } from "@/modules/assistant/lib/supabase
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const diagnostics: any = {
+  const diagnostics: {
+    timestamp: string;
+    env: {
+      url_present: boolean;
+      key_present: boolean;
+      is_configured: boolean;
+    };
+    tables: {
+      conversations: { status: string; code?: string; message?: string; count?: number | null } | string;
+      chat_logs: { status: string; code?: string; message?: string; count?: number | null } | string;
+    };
+  } = {
     timestamp: new Date().toISOString(),
     env: {
       url_present: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -56,10 +67,11 @@ export async function GET() {
       diagnostics
     });
 
-  } catch (err: any) {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({
       status: "critical_error",
-      message: err.message,
+      message,
       diagnostics
     }, { status: 500 });
   }
