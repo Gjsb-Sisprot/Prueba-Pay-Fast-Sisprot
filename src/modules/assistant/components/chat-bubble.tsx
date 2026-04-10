@@ -33,8 +33,8 @@ function ThinkingIndicator() {
 
   return (
     <div className="flex gap-2 w-full justify-start">
-      <div className="shrink-0 w-7 h-7 rounded-full bg-black flex items-center justify-center">
-        <Bot className="w-4 h-4 text-white" />
+      <div className="shrink-0 w-7 h-7 rounded-full overflow-hidden border border-gray-200">
+        <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
       </div>
       <div className="max-w-[80%]">
         <div className="rounded-2xl px-4 py-3 text-sm bg-gray-100 text-gray-900 rounded-tl-sm flex items-center justify-center">
@@ -158,7 +158,7 @@ export function ChatBubble() {
         )}
         aria-label="Abrir asistente virtual"
       >
-        <Bot className="w-6 h-6" />
+        <img src="/assets/images/assistant/susana.png" alt="Sisprot Asistente" className="w-full h-full object-cover rounded-full" />
 
         { }
 
@@ -184,8 +184,8 @@ export function ChatBubble() {
           { }
           <div className="flex items-center justify-between px-4 py-3 bg-black text-white rounded-t-2xl sm:rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center">
-                <Bot className="w-5 h-5" />
+              <div className="w-9 h-9 border border-white/20 rounded-full overflow-hidden">
+                <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="font-semibold text-sm">Susana </h3>
