@@ -137,11 +137,14 @@ function persistToolResultsInBackground(
 
 export async function POST(request: Request) {
   let mcpClient: MCPClient | null = null;
+  let sessionId: string | undefined;
+  let activeClientData: ClientContextData | undefined;
 
   try {
     const body = (await request.json()) as ChatRequestBody;
-    const { messages, sessionId, config, loadHistoryOnly, clientData } = body;
-    let activeClientData: ClientContextData | undefined = clientData;
+    const { messages, config, loadHistoryOnly, clientData } = body;
+    sessionId = body.sessionId;
+    activeClientData = clientData;
 
     if (!messages || !Array.isArray(messages)) {
       return errorResponse("Mensajes requeridos", 400);
