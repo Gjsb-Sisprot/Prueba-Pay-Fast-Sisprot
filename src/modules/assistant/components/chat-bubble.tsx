@@ -4,7 +4,6 @@
 import { useRef, useEffect, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import {
-  Bot,
   X,
   LogOut,
   Wifi,
