@@ -95,7 +95,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           // Saludo proactivo si es una conversación nueva
           setMessages(prev => {
             if (prev.length === 0) {
-              const fullName = response.data.name || "";
+              const fullName = response.data.name || options.clientName || "";
               const firstName = fullName.trim().split(/\s+/)[0] || "";
 
               return [{
