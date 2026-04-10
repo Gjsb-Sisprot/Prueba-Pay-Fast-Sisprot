@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { createMCPClient } from "@ai-sdk/mcp";
 
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-hono-production.up.railway.app";
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
 const MCP_API_KEY = process.env.MCP_API_KEY || "";
 
 export async function GET(request: NextRequest) {
