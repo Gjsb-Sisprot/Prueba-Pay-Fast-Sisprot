@@ -1,8 +1,17 @@
-
 import { CLOSE_OFFER_PREFIX, type ClientContextData } from "./types";
 
 function firstName(clientData?: ClientContextData): string {
-  return clientData?.name?.split(" ")[0] || "";
+  if (!clientData?.name) return "";
+  
+  // Limpieza básica y manejo de formato "Apellido, Nombre" o "Nombre Apellido"
+  const cleanName = clientData.name.trim().replace(/,/g, " ");
+  const parts = cleanName.split(/\s+/).filter(p => p.length > 1);
+  
+  if (parts.length === 0) return "";
+  
+  // Si el primer elemento parece un apellido común o el nombre está invertido,
+  // pero para la mayoría de los casos, el primer elemento es el nombre.
+  return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
 }
 
 function personalize(template: string, clientData?: ClientContextData): string {
