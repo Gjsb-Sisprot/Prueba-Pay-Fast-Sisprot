@@ -127,7 +127,7 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
     );
 
     if (hasClientInfo || isEscalation || isClose) {
-      const updates: any = { updated_at: new Date() };
+      const updates: ConversationUpdate = { updated_at: new Date() };
       
       if (isEscalation) updates.status = "waiting_specialist";
       if (isClose) updates.status = "closed";
@@ -227,13 +227,22 @@ export async function updateSummaryFromHistory(
   }
 }
 
-// Helpers de transformación internos
 interface ChatLogResult {
   role: string;
   content: string;
   created_at: string;
   tool_name?: string;
   tool_call_id?: string;
+}
+
+interface ConversationUpdate {
+  updated_at: Date;
+  status?: string;
+  identification?: string;
+  user_id?: string;
+  contract?: string;
+  sector?: string;
+  contact_name?: string;
 }
 
 function transformToMessages(rows: ChatLogResult[]): ConversationMessage[] {
