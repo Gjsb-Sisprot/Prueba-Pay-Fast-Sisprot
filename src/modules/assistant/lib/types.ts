@@ -73,6 +73,7 @@ export interface ClientContextData {
     statusCode?: number;
     debt: number;
     hasDebt: boolean;
+    isActive?: boolean;
     sector: string;
     parish?: string;
     planName?: string;
