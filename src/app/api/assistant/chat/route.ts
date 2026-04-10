@@ -345,7 +345,7 @@ export async function POST(request: Request) {
           
           toolResults.push(newToolResult);
 
-          persistToolResultsInBackground(tools, sessionId, [newToolResult], activeClientData);
+          persistToolResultsInBackground(sessionId, [newToolResult], activeClientData);
         } catch {
         }
       }
