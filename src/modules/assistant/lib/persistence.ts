@@ -50,28 +50,26 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
  */
 export async function loadConversationHistory(sessionId: string): Promise<ConversationMessage[]> {
   try {
+    const conversationId = await getConversationUuid(sessionId);
+    if (!conversationId) return [];
+
     const { data, error } = await supabase
       .from("chat_logs")
       .select("role, content, tool_name, tool_call_id, created_at")
-      .filter("conversation_id", "in", 
-        supabase.from("conversations").select("id").eq("session_id", sessionId)
-      )
+      .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
     if (error) {
-      // Intento directo por UUID si la subconsulta falla
-      const conversationId = await getConversationUuid(sessionId);
-      if (!conversationId) return [];
-      
-      const { data: directData, error: directError } = await supabase
-        .from("chat_logs")
-        .select("role, content, tool_name, tool_call_id, created_at")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-        
-      if (directError) return [];
-      return transformToMessages(directData as unknown as ChatLogResult[]);
+      console.error("[PERSISTENCE_ERROR] Error cargando historial:", error);
+      return [];
     }
+
+    return transformToMessages(data as unknown as ChatLogResult[]);
+  } catch (error) {
+    console.error("[PERSISTENCE_CRITICAL] Fallo en carga de historial:", error);
+    return [];
+  }
+}
 
     return transformToMessages(data as unknown as ChatLogResult[]);
   } catch (error) {
@@ -146,7 +144,7 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
         .eq("id", conversationId);
     }
   } catch (error) {
-    console.error("[SAVE_INTERACTION_ERROR]", error);
+    console.error(`[SAVE_INTERACTION_ERROR] Para sessionId ${sessionId}:`, error);
   }
 }
 
