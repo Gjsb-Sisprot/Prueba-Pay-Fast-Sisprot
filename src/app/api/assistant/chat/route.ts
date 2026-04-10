@@ -22,7 +22,6 @@ import type { ClientContextData } from "@/modules/assistant/lib/types";
 import {
   errorResponse,
   createTextStreamResponse,
-  saveModelAndCleanup,
   createResilientStreamResponse,
 } from "./helpers";
 import {
@@ -364,9 +363,6 @@ export async function POST(request: Request) {
       sessionId,
       conversationHistory: solverHistory,
     };
-
-    const currentSessionId = sessionId;
-    const currentTools = tools;
 
     const hasToolContext = toolResults.length > 0;
 
