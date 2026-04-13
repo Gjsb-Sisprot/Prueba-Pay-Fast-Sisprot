@@ -31,6 +31,7 @@ import {
 import {
   SISPROT_NETWORKS_QUERY,
 } from "@/modules/assistant/lib/channel-links";
+import { getLocalTools } from "@/modules/assistant/lib/tools";
 
 
 const MCP_SERVER_URL = (process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app").replace(/\/+$/, "");
@@ -70,8 +71,19 @@ function buildSolverHistory(
   conversationHistory: ConversationMessage[],
   frontendMessages: ChatRequestBody["messages"]
 ) {
+  // Priorizar el historial de la base de datos si está disponible, 
+  // ya que es la "fuente de verdad" persistida.
+  if (conversationHistory.length > 0) {
+    return conversationHistory
+      .filter(msg => msg.role !== "tool" && msg.role !== "system")
+      .map(msg => ({
+        role: msg.role === "model" ? "assistant" as const : "user" as const,
+        content: msg.content,
+      }));
+  }
+
+  // Si no hay historial en BD (conversación nueva), usar los mensajes del frontend
   if (frontendMessages && frontendMessages.length > 1) {
-    // The last message is the current user request, so we exclude it to prevent duplication
     const historySlice = frontendMessages.slice(0, -1);
     return historySlice
       .filter(msg => msg.role === "user" || msg.role === "assistant")
@@ -81,12 +93,7 @@ function buildSolverHistory(
       }));
   }
 
-  return conversationHistory
-    .filter(msg => msg.role !== "tool")
-    .map(msg => ({
-      role: msg.role === "model" ? "assistant" as const : "user" as const,
-      content: msg.content,
-    }));
+  return [];
 }
 
 function buildRouterHistory(
@@ -195,8 +202,15 @@ export async function POST(request: Request) {
           console.warn("[MCP_WARNING] Fallo al cargar herramientas:", err.message);
           return {} as MCPToolSet;
         });
+
+        // Combinar con herramientas locales (PRIORIDAD LOCAL)
+        const localTools = getLocalTools();
+        tools = { ...tools, ...localTools };
+
       } catch (err) {
         console.warn("[MCP_CRITICAL] No se pudo conectar con el servidor MCP:", err instanceof Error ? err.message : String(err));
+        // Si falla el MCP, al menos cargamos las herramientas locales
+        tools = getLocalTools();
       }
 
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
