@@ -3,10 +3,6 @@
 import { useForm } from "@tanstack/react-form";
 import {
   clientService,
-  Client,
-  ClientsResponse,
-  Contract,
-  ContractsResponse,
 } from "@/shared/lib/api-client";
 import { useClientStore } from "@/shared/lib/store/client-store";
 import {
