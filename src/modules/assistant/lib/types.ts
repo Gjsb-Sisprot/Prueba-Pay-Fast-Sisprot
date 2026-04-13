@@ -91,6 +91,8 @@ export interface ClientContextData {
     } | null;
   }>;
   glpiTicketId?: number;
+  summary?: string;
+  reason?: string;
 }
 
 
