@@ -52,7 +52,9 @@ async function killGlpiSession(sessionToken: string): Promise<void> {
       },
       signal: AbortSignal.timeout(5000),
     });
-  } catch (err) {}
+  } catch {
+    // Silently ignore session termination errors
+  }
 }
 
 async function createGlpiTicketInternal(input: GLPITicketInput): Promise<GLPITicketResult> {
@@ -276,7 +278,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
-export const getLocalTools = (): any => {
+export const getLocalTools = (): Record<string, any> => {
   return {
     getCurrencyRate: {
       name: "getCurrencyRate",
@@ -301,7 +303,7 @@ export const getLocalTools = (): any => {
         },
         required: ["name", "content"],
       },
-      execute: async (args: any) => {
+      execute: async (args: Record<string, any>) => {
         const res = await executeCreateGlpiTicket(args);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
