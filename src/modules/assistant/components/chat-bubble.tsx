@@ -11,6 +11,7 @@ import {
   Lock,
   Plus
 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import { useAssistantChat } from "@/modules/assistant/hooks/use-assistant-chat";
 import { ChatMessage } from "@/modules/assistant/components/chat-message";
@@ -33,7 +34,14 @@ function ThinkingIndicator() {
   return (
     <div className="flex gap-2 w-full justify-start">
       <div className="shrink-0 w-7 h-7 rounded-full overflow-hidden border border-gray-200">
-        <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
+        <Image
+          src="/assets/images/assistant/susana.png"
+          alt="Susana"
+          width={28}
+          height={28}
+          className="w-full h-full object-cover"
+          unoptimized
+        />
       </div>
       <div className="max-w-[80%]">
         <div className="rounded-2xl px-4 py-3 text-sm bg-gray-100 text-gray-900 rounded-tl-sm flex items-center justify-center">
@@ -157,7 +165,14 @@ export function ChatBubble() {
         )}
         aria-label="Abrir asistente virtual"
       >
-        <img src="/assets/images/assistant/susana.png" alt="Sisprot Asistente" className="w-full h-full object-cover rounded-full" />
+        <Image
+          src="/assets/images/assistant/susana.png"
+          alt="Sisprot Asistente"
+          width={56}
+          height={56}
+          className="w-full h-full object-cover rounded-full"
+          unoptimized
+        />
 
         { }
 
@@ -184,7 +199,14 @@ export function ChatBubble() {
           <div className="flex items-center justify-between px-4 py-3 bg-black text-white rounded-t-2xl sm:rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 border border-white/20 rounded-full overflow-hidden">
-                <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
+                <Image
+                  src="/assets/images/assistant/susana.png"
+                  alt="Susana"
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
               </div>
               <div>
                 <h3 className="font-semibold text-sm">Susana </h3>
