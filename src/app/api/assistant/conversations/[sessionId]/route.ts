@@ -17,7 +17,7 @@ export async function POST(
   try {
     const { sessionId } = await params;
     const body = await request.json();
-    const { action, summary, _resolution, role, content, attachments, specialistName } = body;
+    const { action, summary, role, content, attachments, specialistName } = body;
 
     if (!sessionId) {
       return NextResponse.json(
