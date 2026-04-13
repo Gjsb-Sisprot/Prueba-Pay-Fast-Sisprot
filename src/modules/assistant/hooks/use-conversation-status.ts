@@ -158,24 +158,42 @@ export function useConversationStatus({
           const data = JSON.parse(e.data);
           if (!data.content) return;
 
+          // IGNORAR ecos de mensajes del usuario (ya gestionados localmente)
+          if (data.role === "user") {
+            return;
+          }
+
           if (data.role === "system") {
             appendSystemMessage(setMessages, data.content, "sse");
             return;
           }
 
           if (data.role === "model" || data.role === "assistant") {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `sse-msg-${Date.now()}`,
-                role: "assistant" as const,
-                content: data.content,
-                timestamp: new Date(),
-              },
-            ]);
+            // DEDUPLICACIÓN: Evitar agregar el mensaje si ya está en el estado local 
+            // (vía streaming o inserción manual previa al cerrar stream)
+            setMessages((prev) => {
+              const isAlreadyPresent = prev.some(
+                (m) =>
+                  (m.role === "assistant" && m.content === data.content.trim()) ||
+                  (m.role === "assistant" && data.content.trim().startsWith(m.content) && m.content.length > 0)
+              );
+
+              if (isAlreadyPresent) return prev;
+
+              return [
+                ...prev,
+                {
+                  id: `sse-msg-${Date.now()}`,
+                  role: "assistant" as const,
+                  content: data.content,
+                  timestamp: new Date(),
+                },
+              ];
+            });
             return;
           }
 
+          // Si es un rol desconocido que no es usuario ni asistente, lo tratamos como sistema
           appendSystemMessage(setMessages, data.content, "sse-unknown");
         } catch {
         }
