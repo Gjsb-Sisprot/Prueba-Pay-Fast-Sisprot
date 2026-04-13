@@ -1,6 +1,6 @@
 
 
-export type MessageRole = "user" | "assistant" | "system" | "tool";
+export type MessageRole = "user" | "assistant" | "system" | "tool"
 
 export interface MediaAttachment {
   id: string;
