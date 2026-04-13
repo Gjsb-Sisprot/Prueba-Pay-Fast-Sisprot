@@ -19,13 +19,13 @@ export async function GET(
     async start(controller) {
       const encoder = new TextEncoder();
       let aborted = false;
-      let heartbeatInterval: any = null;
-      let pollingInterval: any = null;
+      let heartbeatInterval: NodeJS.Timeout | null = null;
+      let pollingInterval: NodeJS.Timeout | null = null;
 
       // Marcadores para detectar cambios
       let lastSeenMessageDate = new Date(Date.now() - 5000).toISOString(); // 5 seg de margen inicial
       let lastSeenStatus: string | null = null;
-      let lastSeenTicketId: any = null;
+      let lastSeenTicketId: string | number | null = null;
 
       const cleanup = () => {
         if (aborted) return;
