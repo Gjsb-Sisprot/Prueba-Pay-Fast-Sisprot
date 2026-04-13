@@ -215,7 +215,7 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
     }
 
     // 0. Subir adjuntos si existen
-    let processedAttachments = [];
+    let processedAttachments: import("./types").MediaAttachment[] = [];
     if (params.attachments && params.attachments.length > 0) {
       processedAttachments = await uploadAttachmentsToStorage(sessionId, params.attachments);
     }
