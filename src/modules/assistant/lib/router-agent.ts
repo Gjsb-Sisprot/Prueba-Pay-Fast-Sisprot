@@ -698,8 +698,7 @@ async function callGeminiWithFallback(
   routerTools: MCPToolSet,
   sessionId?: string,
   conversationHistory: RouterConversationMessage[] = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<{ result: any; retriedModel?: string }> {
+): Promise<{ result: unknown; retriedModel?: string }> {
   const promptWithHistory = buildRouterInputWithHistory(message, conversationHistory);
 
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
