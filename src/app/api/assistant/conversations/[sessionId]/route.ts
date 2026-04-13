@@ -33,18 +33,19 @@ function parseMcpToolResult(raw: unknown): Record<string, unknown> | null {
 function extractTicketId(parsedResult: Record<string, unknown> | null): number | null {
   if (!parsedResult) return null;
 
-  const direct = parsedResult.glpiTicketId ?? parsedResult.glpi_ticket_id;
+  const direct = parsedResult["glpiTicketId"] ?? parsedResult["glpi_ticket_id"];
   if (typeof direct === "number") return direct;
   if (typeof direct === "string" && /^\d+$/.test(direct)) return Number(direct);
 
-  const ticket = parsedResult.ticket;
-  if (ticket && typeof ticket === "object") {
-    const nested = ticket as { ticketId?: unknown };
-    if (typeof nested.ticketId === "number") return nested.ticketId;
-    if (typeof nested.ticketId === "string" && /^\d+$/.test(nested.ticketId)) return Number(nested.ticketId);
+  const ticket = parsedResult["ticket"];
+  if (ticket && typeof ticket === "object" && ticket !== null) {
+    const nested = ticket as Record<string, unknown>;
+    const ticketId = nested["ticketId"];
+    if (typeof ticketId === "number") return ticketId;
+    if (typeof ticketId === "string" && /^\d+$/.test(ticketId)) return Number(ticketId);
   }
 
-  const message = parsedResult.message;
+  const message = parsedResult["message"];
   if (typeof message === "string") {
     const m = message.match(/#(\d+)/);
     if (m?.[1]) return Number(m[1]);
@@ -135,9 +136,13 @@ export async function POST(
           };
 
           // Sincronizar con Supabase de forma asíncrona
-          updateConversationStatus(sessionId, "closed").catch(() => {});
-          if (closeTicketId) {
-            syncConversationMetadata(sessionId, { glpiTicketId: closeTicketId } as any).catch(() => {});
+          const newStatus: "closed" = "closed";
+          updateConversationStatus(sessionId, newStatus).catch(() => {});
+          
+          if (typeof closeTicketId === "number") {
+            syncConversationMetadata(sessionId, { 
+              glpiTicketId: closeTicketId 
+            }).catch(() => {});
           }
         } else {
           result = { success: false, error: "Herramienta close_conversation no disponible" };
