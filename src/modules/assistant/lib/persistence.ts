@@ -63,7 +63,17 @@ export async function getConversationUuid(
   // 2. Si no existe, intentar crearla
   console.log(`[PERSISTENCE_INFO] Creando nueva sesión en DB: ${sessionId}`);
   
-  const insertData: any = { 
+  const insertData: {
+    session_id: string;
+    status: string;
+    identification?: string;
+    user_id?: string;
+    contract?: string;
+    sector?: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+  } = { 
     session_id: sessionId,
     status: "active" 
   };
@@ -179,7 +189,7 @@ interface SaveInteractionParams {
   sessionId: string;
   role: "user" | "model" | "assistant" | "tool";
   content: string;
-  attachments?: any[];
+  attachments?: import("./types").MediaAttachment[];
   identification?: string;
   contract?: string;
   sector?: string;
@@ -274,6 +284,7 @@ export async function syncConversationMetadata(
     if (data.name) updates.contact_name = data.name;
     if (data.email) updates.contact_email = data.email;
     if (data.phone) updates.contact_phone = data.phone;
+    if (data.glpiTicketId) updates.glpi_ticket_id = data.glpiTicketId;
 
     const { error } = await supabase
       .from("conversations")
@@ -391,7 +402,14 @@ export async function updateSummaryFromHistory(
 }
 
 
-function transformToMessages(rows: any[]): ConversationMessage[] {
+function transformToMessages(rows: {
+  role: string;
+  content: string;
+  created_at: string;
+  attachments?: import("./types").MediaAttachment[];
+  tool_name?: string;
+  tool_call_id?: string;
+}[]): ConversationMessage[] {
   return (rows || []).map(row => ({
     role: (row.role === "model" ? "assistant" : row.role) as ConversationMessage["role"],
     content: row.content,
@@ -405,7 +423,10 @@ function transformToMessages(rows: any[]): ConversationMessage[] {
 /**
  * Sube adjuntos a Supabase Storage.
  */
-async function uploadAttachmentsToStorage(sessionId: string, attachments: any[]): Promise<any[]> {
+async function uploadAttachmentsToStorage(
+  sessionId: string, 
+  attachments: import("./types").MediaAttachment[]
+): Promise<import("./types").MediaAttachment[]> {
   const processed = [];
   
   for (const att of attachments) {
