@@ -18,7 +18,12 @@ interface ConversationUpdate {
   contract?: string;
   sector?: string;
   contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
   summary?: string;
+  specialist_name?: string;
+  escalation_reason?: string;
+  glpi_ticket_id?: number;
 }
 
 /**
@@ -32,7 +37,10 @@ interface ConversationUpdate {
  * Busca el UUID interno de una conversación basado en su session_id.
  * Si no existe, la crea.
  */
-export async function getConversationUuid(sessionId: string): Promise<string | null> {
+export async function getConversationUuid(
+  sessionId: string, 
+  initialMetadata?: Partial<ClientContextData>
+): Promise<string | null> {
   if (!sessionId) {
     console.error("[PERSISTENCE_CRITICAL] sessionId vacío o nulo.");
     return null;
@@ -54,12 +62,27 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
 
   // 2. Si no existe, intentar crearla
   console.log(`[PERSISTENCE_INFO] Creando nueva sesión en DB: ${sessionId}`);
+  
+  const insertData: any = { 
+    session_id: sessionId,
+    status: "active" 
+  };
+
+  if (initialMetadata) {
+    if (initialMetadata.identification) {
+      insertData.identification = initialMetadata.identification;
+      insertData.user_id = initialMetadata.identification;
+    }
+    if (initialMetadata.contract) insertData.contract = initialMetadata.contract;
+    if (initialMetadata.sector) insertData.sector = initialMetadata.sector;
+    if (initialMetadata.name) insertData.contact_name = initialMetadata.name;
+    if (initialMetadata.email) insertData.contact_email = initialMetadata.email;
+    if (initialMetadata.phone) insertData.contact_phone = initialMetadata.phone;
+  }
+
   const { data: newData, error: createError } = await supabase
     .from("conversations")
-    .insert([{ 
-      session_id: sessionId,
-      status: "active" 
-    }])
+    .insert([insertData])
     .select("id");
 
   if (createError) {
@@ -86,6 +109,48 @@ export async function getConversationUuid(sessionId: string): Promise<string | n
 }
 
 /**
+ * Obtiene el detalle de una conversación.
+ */
+export async function getConversationBySessionId(sessionId: string) {
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("*")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Lista conversaciones con filtros.
+ */
+export async function listConversations(params: { 
+  identification?: string; 
+  status?: string; 
+  limit?: number;
+}) {
+  let query = supabase
+    .from("conversations")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (params.identification) {
+    query = query.eq("identification", params.identification);
+  }
+  if (params.status) {
+    query = query.eq("status", params.status);
+  }
+  if (params.limit) {
+    query = query.limit(params.limit);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Carga el historial de mensajes desde Supabase.
  */
 export async function loadConversationHistory(sessionId: string): Promise<ConversationMessage[]> {
@@ -95,7 +160,7 @@ export async function loadConversationHistory(sessionId: string): Promise<Conver
 
     const { data, error } = await supabase
       .from("chat_logs")
-      .select("role, content, tool_name, tool_call_id, created_at")
+      .select("role, content, tool_name, tool_call_id, attachments, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
@@ -114,10 +179,13 @@ interface SaveInteractionParams {
   sessionId: string;
   role: "user" | "model" | "assistant" | "tool";
   content: string;
+  attachments?: any[];
   identification?: string;
   contract?: string;
   sector?: string;
   contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   toolCallId?: string;
   toolName?: string;
 }
@@ -129,11 +197,10 @@ interface SaveInteractionParams {
 export async function saveInteraction(params: SaveInteractionParams): Promise<void> {
   const { sessionId, role, content, toolName, toolCallId } = params;
 
-  try {
-    const conversationId = await getConversationUuid(sessionId);
-    if (!conversationId) {
-      console.warn(`[SAVE_INTERACTION_ABANDONED] No se pudo obtener UUID para sesión ${sessionId}. Mensaje de rol ${role} no guardado.`);
-      return;
+    // 0. Subir adjuntos si existen
+    let processedAttachments = [];
+    if (params.attachments && params.attachments.length > 0) {
+      processedAttachments = await uploadAttachmentsToStorage(sessionId, params.attachments);
     }
 
     // 1. Guardar el mensaje en logs
@@ -144,7 +211,8 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
         role: role === "assistant" ? "model" : role, // Normalizar roles para la BD
         content,
         tool_name: toolName,
-        tool_call_id: toolCallId
+        tool_call_id: toolCallId,
+        attachments: processedAttachments
       }]);
 
     if (logError) {
@@ -160,12 +228,14 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
     console.log(`[PERSISTENCE_SUCCESS] Mensaje (${role}) guardado en DB para convo ${conversationId}`);
     
     // Si la interacción trae datos de cliente, sincronizamos los metadatos de forma asíncrona
-    if (params.identification || params.contract || params.sector || params.contactName) {
+    if (params.identification || params.contract || params.sector || params.contactName || params.contactEmail || params.contactPhone) {
       syncConversationMetadata(sessionId, {
         identification: params.identification,
         contract: params.contract,
         sector: params.sector,
-        name: params.contactName
+        name: params.contactName,
+        email: params.contactEmail,
+        phone: params.contactPhone
       }).catch(() => {});
     }
 
@@ -195,6 +265,8 @@ export async function syncConversationMetadata(
     if (data.contract) updates.contract = data.contract;
     if (data.sector) updates.sector = data.sector;
     if (data.name) updates.contact_name = data.name;
+    if (data.email) updates.contact_email = data.email;
+    if (data.phone) updates.contact_phone = data.phone;
 
     const { error } = await supabase
       .from("conversations")
@@ -312,12 +384,68 @@ export async function updateSummaryFromHistory(
 }
 
 
-function transformToMessages(rows: ChatLogResult[]): ConversationMessage[] {
+function transformToMessages(rows: any[]): ConversationMessage[] {
   return (rows || []).map(row => ({
     role: (row.role === "model" ? "assistant" : row.role) as ConversationMessage["role"],
     content: row.content,
     timestamp: row.created_at,
+    attachments: row.attachments || [],
     ...(row.tool_name ? { toolName: row.tool_name } : {}),
     ...(row.tool_call_id ? { toolCallId: row.tool_call_id } : {})
   }));
+}
+
+/**
+ * Sube adjuntos a Supabase Storage.
+ */
+async function uploadAttachmentsToStorage(sessionId: string, attachments: any[]): Promise<any[]> {
+  const processed = [];
+  
+  for (const att of attachments) {
+    try {
+      if (!att.url || !att.url.startsWith("data:")) {
+        processed.push(att);
+        continue;
+      }
+
+      // Extraer base64
+      const matches = att.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        processed.push(att);
+        continue;
+      }
+
+      const contentType = matches[1];
+      const buffer = Buffer.from(matches[2], 'base64');
+      const fileName = att.fileName || `file_${Date.now()}`;
+      const filePath = `${sessionId}/${Date.now()}_${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from("chat-attachments")
+        .upload(filePath, buffer, {
+          contentType,
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(filePath);
+
+      processed.push({
+        ...att,
+        url: publicUrl,
+        storagePath: data.path
+      });
+      
+      console.log(`[STORAGE_SUCCESS] Archivo subido: ${filePath}`);
+    } catch (err) {
+      console.error("[STORAGE_UPLOAD_ERROR]", err);
+      processed.push(att); // Fallback al original si falla la subida
+    }
+  }
+  
+  return processed;
 }
