@@ -278,8 +278,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getLocalTools = (): Record<string, any> => {
+export const getLocalTools = (): Record<string, unknown> => {
   return {
     getCurrencyRate: {
       name: "getCurrencyRate",
@@ -303,10 +302,8 @@ export const getLocalTools = (): Record<string, any> => {
           requesterId: { type: "number", description: "ID de solicitante (opcional)" },
         },
         required: ["name", "content"],
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      execute: async (args: Record<string, any>) => {
-        const res = await executeCreateGlpiTicket(args as any);
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeCreateGlpiTicket(args as unknown as z.infer<typeof createGlpiTicketSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
