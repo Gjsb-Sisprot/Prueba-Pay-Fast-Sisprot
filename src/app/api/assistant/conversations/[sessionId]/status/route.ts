@@ -1,9 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
-
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
-const MCP_API_KEY = process.env.MCP_API_KEY || "";
+import { getConversationBySessionId } from "@/modules/assistant/lib/persistence";
 
 export async function GET(
   _request: NextRequest,
@@ -19,38 +17,28 @@ export async function GET(
       );
     }
 
-    const response = await fetch(
-      `${MCP_SERVER_URL}/api/tools/get_conversation_status`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(MCP_API_KEY ? { Authorization: `Bearer ${MCP_API_KEY}` } : {}),
-        },
-        body: JSON.stringify({ sessionId }),
-      }
-    );
+    const data = await getConversationBySessionId(sessionId);
 
-    if (!response.ok) {
+    if (!data) {
       return NextResponse.json(
-        { error: "Error consultando estado" },
-        { status: response.status }
+        { error: "Conversación no encontrada en Supabase" },
+        { status: 404 }
       );
     }
-
-    const data = await response.json();
     
     return NextResponse.json({
       status: data.status || "active",
-      closedBy: data.closedBy || null,
-      glpiTicketId: data.glpiTicketId || null,
-      specialistName: data.specialistName || null,
-      reason: data.escalationReason || data.reason || null,
+      closedBy: data.closed_by || null,
+      glpiTicketId: data.glpi_ticket_id || null,
+      specialistName: data.specialist_name || null,
+      reason: data.escalation_reason || data.reason || null,
+      updatedAt: data.updated_at,
     });
 
-  } catch {
+  } catch (error) {
+    console.error("[STATUS_FETCH_ERROR]", error);
     return NextResponse.json(
-      { error: "Error interno" },
+      { error: "Error interno al consultar Supabase" },
       { status: 500 }
     );
   }
