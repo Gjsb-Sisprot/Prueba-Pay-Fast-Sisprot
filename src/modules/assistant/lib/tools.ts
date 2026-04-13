@@ -306,7 +306,7 @@ export const getLocalTools = (): Record<string, any> => {
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       execute: async (args: Record<string, any>) => {
-        const res = await executeCreateGlpiTicket(args);
+        const res = await executeCreateGlpiTicket(args as any);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
