@@ -2,6 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { createMCPClient } from "@ai-sdk/mcp";
+import { 
+  updateConversationStatus, 
+  syncConversationMetadata 
+} from "@/modules/assistant/lib/persistence";
 import {
   SISPROT_NETWORKS_QUERY,
   extractSisprotChannelLines,
@@ -129,6 +133,12 @@ export async function POST(
             ticketId: closeTicketId,
             ticketMessage: closeTicketId ? `Tu número de ticket es: #${closeTicketId}` : null,
           };
+
+          // Sincronizar con Supabase de forma asíncrona
+          updateConversationStatus(sessionId, "closed").catch(() => {});
+          if (closeTicketId) {
+            syncConversationMetadata(sessionId, { glpiTicketId: closeTicketId } as any).catch(() => {});
+          }
         } else {
           result = { success: false, error: "Herramienta close_conversation no disponible" };
         }
