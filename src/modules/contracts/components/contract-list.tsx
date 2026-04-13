@@ -132,7 +132,6 @@ export function ContractList() {
     // Evitar ejecuciones rápidas consecutivas (doble click)
     if (isSelectingRef.current) return;
     const statusBadge = getStatusBadge(contract.status_name, contract.status);
-    const contractHasDebt = hasDebt(contract);
 
     // Permitir selección de contratos cancelados si vienen del badge, 
     // pero mantener la lógica de deuda para pagos si se requiere
