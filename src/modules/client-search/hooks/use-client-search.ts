@@ -15,8 +15,7 @@ import {
 } from "@/shared/lib/validation/client-schema";
 
 interface UseClientSearchReturn {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: any; // TanStack Form types are complex, simplified for maintainability
+  form: ReturnType<typeof useForm<{ documentType: string; documentNumber: string }>>;
   searchClient: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
