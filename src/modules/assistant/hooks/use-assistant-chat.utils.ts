@@ -122,9 +122,20 @@ export function mapHistoryToMessages(history: Array<{ role: string; content: str
   // Filtrar mensajes de sistema redundantes o de herramientas internas que no aportan al usuario
   return history
     .filter(msg => {
-      // No mostrar mensajes de herramientas ni sistemas que solo repiten información del usuario
+      // Ignorar mensajes de herramientas internas (uso técnico)
       if (msg.role === "tool") return false;
-      if (msg.role === "system" && (msg.content.includes("Identificación:") || msg.content.includes("Última solicitud:"))) return false;
+      
+      // Filtrar mensajes de sistema redundantes
+      if (msg.role === "system") {
+        const c = msg.content;
+        // Filtros exhaustivos para metadatos técnicos que no debe ver el usuario
+        if (c.includes("Identificación:") || c.includes("Contrato:") || c.includes("Última solicitud:")) return false;
+        if (c.includes("Categoría:") || c.includes("Intento:")) return false;
+        
+        // Si el mensaje de sistema es extremadamente corto o parece un residuo de log, ignorar
+        if (c.length < 2) return false;
+      }
+
       return true;
     })
     .map((msg, idx) => ({
