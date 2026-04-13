@@ -17,7 +17,21 @@ export async function GET(request: NextRequest) {
       limit
     });
 
-    const transformedConversations = conversations.map((conv: any) => ({
+    const transformedConversations = conversations.map((conv: {
+      id: string;
+      session_id: string;
+      status: string;
+      summary?: string;
+      message_count?: number;
+      created_at: string;
+      updated_at: string;
+      identification?: string;
+      contract?: string;
+      sector?: string;
+      contact_name?: string;
+      contact_email?: string;
+      contact_phone?: string;
+    }) => ({
       id: conv.id,
       sessionId: conv.session_id,
       status: conv.status,
