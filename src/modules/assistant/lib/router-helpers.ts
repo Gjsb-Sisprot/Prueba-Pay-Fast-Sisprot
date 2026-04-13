@@ -141,8 +141,7 @@ export async function executeForcedClose(
 }
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extractStepResults(steps: any[]) {
+export function extractStepResults(steps: unknown[]) {
   const toolCalls: ToolCall[] = [];
   const toolResults: ToolResult[] = [];
 
