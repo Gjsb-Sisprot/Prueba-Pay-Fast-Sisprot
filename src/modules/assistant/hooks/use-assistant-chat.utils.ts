@@ -119,12 +119,20 @@ export function buildAssistantStreamPatch(
 }
 
 export function mapHistoryToMessages(history: Array<{ role: string; content: string }>): ChatMessage[] {
-  return history.map((msg, idx) => ({
-    id: `history-${idx}`,
-    role: msg.role === "model" ? "assistant" : (msg.role as ChatMessage["role"]),
-    content: msg.role === "system" ? normalizeSystemMessageContent(msg.content) : msg.content,
-    timestamp: new Date(),
-  }));
+  // Filtrar mensajes de sistema redundantes o de herramientas internas que no aportan al usuario
+  return history
+    .filter(msg => {
+      // No mostrar mensajes de herramientas ni sistemas que solo repiten información del usuario
+      if (msg.role === "tool") return false;
+      if (msg.role === "system" && (msg.content.includes("Identificación:") || msg.content.includes("Última solicitud:"))) return false;
+      return true;
+    })
+    .map((msg, idx) => ({
+      id: `history-${idx}`,
+      role: msg.role === "model" ? "assistant" : (msg.role as ChatMessage["role"]),
+      content: msg.role === "system" ? normalizeSystemMessageContent(msg.content) : msg.content,
+      timestamp: new Date(),
+    }));
 }
 
 export function normalizeSystemMessageContent(content: string): string {
