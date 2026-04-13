@@ -559,9 +559,10 @@ export async function routeRequest(
 
   try {
     const { result, retriedModel } = await callGeminiWithFallback(message, clientData, routerTools, sessionId, conversationHistory);
+    const res = result as { text?: string; steps?: unknown[] };
 
-    const responseText = result.text?.trim() || "";
-    const { toolCalls, toolResults } = extractStepResults(result.steps);
+    const responseText = res.text?.trim() || "";
+    const { toolCalls, toolResults } = extractStepResults(res.steps || []);
 
     if (toolCalls.some(tc => tc.toolName === "close_conversation") && !explicitCloseRequest && intent.category !== "CIERRE_CONFIRMADO") {
     }
