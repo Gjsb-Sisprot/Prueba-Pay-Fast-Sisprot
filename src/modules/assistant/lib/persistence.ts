@@ -342,7 +342,7 @@ export async function getConversationEvents(sessionId: string, lastSeenDate: str
  */
 export async function updateConversationStatus(
   sessionId: string,
-  status: "active" | "waiting_specialist" | "closed"
+  status: "active" | "waiting_specialist" | "closed" | "handed_over"
 ): Promise<void> {
   try {
     const conversationId = await getConversationUuid(sessionId);
