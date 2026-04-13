@@ -83,7 +83,7 @@ export function ContractList() {
       return {
         variant: "error" as const,
         dotColor: "bg-red-500",
-        disabled: true,
+        disabled: false, // Habilitado por petición del usuario
       };
     }
 
@@ -134,8 +134,9 @@ export function ContractList() {
     const statusBadge = getStatusBadge(contract.status_name, contract.status);
     const contractHasDebt = hasDebt(contract);
 
-    // No permitir selección de contratos cancelados o sin deuda
-    if (statusBadge.disabled || !contractHasDebt) {
+    // Permitir selección de contratos cancelados si vienen del badge, 
+    // pero mantener la lógica de deuda para pagos si se requiere
+    if (statusBadge.disabled) {
       return;
     }
 
@@ -243,7 +244,7 @@ export function ContractList() {
           // When under verification, hide the debt block but keep selection logic unchanged
           const contractHasDebtVisible =
             contractHasDebt && !isUnderVerification;
-          const isDisabled = statusBadge.disabled || !contractHasDebt;
+          const isDisabled = statusBadge.disabled; // Eliminado !contractHasDebt para permitir ver/seleccionar
 
           return (
             <div
