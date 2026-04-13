@@ -31,7 +31,7 @@ export async function POST(
 
     switch (action) {
       case "close": {
-        const finalResolution = resolution || "Conversación cerrada por el agente";
+        const _finalResolution = resolution || "Conversación cerrada por el agente";
         const finalSummary = summary ? `${summary} | Cerrada por el agente` : "Cerrada por el agente";
         
         // 1. Actualizar estado en Supabase
