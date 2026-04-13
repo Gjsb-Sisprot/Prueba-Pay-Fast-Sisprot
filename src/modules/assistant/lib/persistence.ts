@@ -298,6 +298,43 @@ export async function syncConversationMetadata(
 }
 
 /**
+ * Obtiene eventos recientes de una conversación (mensajes y estado).
+ * Se usa para el polling de SSE.
+ */
+export async function getConversationEvents(sessionId: string, lastSeenDate: string) {
+  try {
+    const conversation = await getConversationBySessionId(sessionId);
+    if (!conversation) return { messages: [], status: "closed" };
+
+    const { data: messages, error } = await supabase
+      .from("chat_logs")
+      .select("role, content, attachments, created_at")
+      .eq("conversation_id", conversation.id)
+      .gt("created_at", lastSeenDate)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return {
+      messages: (messages || []).map(m => ({
+        role: m.role,
+        content: m.content,
+        attachments: m.attachments,
+        timestamp: m.created_at
+      })),
+      status: conversation.status,
+      glpiTicketId: conversation.glpi_ticket_id,
+      specialistName: conversation.specialist_name,
+      reason: conversation.escalation_reason,
+      updatedAt: conversation.updated_at
+    };
+  } catch (error) {
+    console.error("[GET_EVENTS_ERROR]", error);
+    return { messages: [], status: "active" };
+  }
+}
+
+/**
  * Cambia explícitamente el estado de la conversación.
  * Se usa para escalamiento a humano o cierre.
  */
