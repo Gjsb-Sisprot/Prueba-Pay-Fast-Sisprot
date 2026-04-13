@@ -284,7 +284,9 @@ export async function syncConversationMetadata(
     if (data.name) updates.contact_name = data.name;
     if (data.email) updates.contact_email = data.email;
     if (data.phone) updates.contact_phone = data.phone;
-    if (data.glpiTicketId) updates.glpi_ticket_id = data.glpiTicketId;
+    if (data.glpiTicketId) updates.glpi_ticket_id = typeof data.glpiTicketId === 'string' ? parseInt(data.glpiTicketId) : data.glpiTicketId;
+    if (data.summary) updates.summary = data.summary;
+    if (data.reason) updates.escalation_reason = data.reason;
 
     const { error } = await supabase
       .from("conversations")
