@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase } from "./supabase";
 import type { ClientContextData } from "./types";
 import type { ConversationMessage } from "./mcp-types";
 
