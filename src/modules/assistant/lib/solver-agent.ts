@@ -336,15 +336,24 @@ function cleanToolResult(toolName: string, result: unknown): string {
 }
 
 function cleanKnowledgeBaseResult(result: unknown): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = result as any;
-    const documents = Array.isArray(res) ? res : res.documents || res.results || [];
+    interface KBDocument {
+        title?: string;
+        content?: string;
+        text?: string;
+        metadata?: { title?: string };
+    }
+    interface KBResult {
+        documents?: KBDocument[];
+        results?: KBDocument[];
+    }
+
+    const res = result as (KBDocument[] | KBResult);
+    const documents = Array.isArray(res) ? res : (res.documents || res.results || []);
     if (documents.length === 0) return "No se encontró información relevante en la base de conocimientos.";
 
     return documents
         .slice(0, 3) // Solo los 3 documentos más relevantes
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((doc: any, i: number) => {
+        .map((doc, i) => {
             const title = doc.title || doc.metadata?.title || `Documento ${i + 1}`;
             const content = doc.content || doc.text || "";
             // Limpiar saltos de línea excesivos y espacios, y reducir drásticamente a 800 chars
@@ -355,10 +364,22 @@ function cleanKnowledgeBaseResult(result: unknown): string {
 }
 
 function cleanOnuDiagnosticResult(result: unknown): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = result as any;
-    const data = res.data || res;
-    if (!data || data.error) return `Error de diagnóstico: ${data.error || "Datos no encontrados"}`;
+    interface OnuData {
+        status?: string;
+        state?: string;
+        signal?: string;
+        rxPower?: string;
+        offlineCause?: string;
+        lastDyingGasp?: string;
+        uptime?: string;
+        serialNumber?: string;
+        sn?: string;
+        error?: string;
+        oltContext?: string;
+    }
+    const res = result as { data?: OnuData } | OnuData;
+    const data = ('data' in res && res.data) ? res.data : (res as OnuData);
+    if (!data || data.error) return `Error de diagnóstico: ${data?.error || "Datos no encontrados"}`;
 
     const status = data.status || data.state || "Desconocido";
     const signal = data.signal || data.rxPower || "N/A";
@@ -377,9 +398,17 @@ function cleanOnuDiagnosticResult(result: unknown): string {
 }
 
 function cleanClientStatusResult(result: unknown): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = result as any;
-    const data = res.client || res.data || res;
+    interface ClientStatusData {
+        name?: string;
+        identification?: string;
+        serviceStatus?: string;
+        debtAmount?: number | string;
+        totalContracts?: number | string;
+        planName?: string;
+        sector?: string;
+    }
+    const res = result as { client?: ClientStatusData, data?: ClientStatusData } | ClientStatusData;
+    const data = ('client' in res && res.client) ? res.client : (('data' in res && res.data) ? res.data : (res as ClientStatusData));
     if (!data) return "Datos de cliente inaccesibles.";
 
     return [
