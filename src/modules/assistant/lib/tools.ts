@@ -1,5 +1,5 @@
-
 import { z } from "zod";
+import { createTicket as createGlpiTicket } from "./glpi";
 
 
 export const TOOLS_ENABLED =
@@ -46,6 +46,14 @@ export const checkPaymentStatusSchema = z.object({
     .describe("Método de pago utilizado"),
 });
 
+export const createGlpiTicketSchema = z.object({
+  name: z.string().describe("Título corto y descriptivo del ticket"),
+  content: z.string().describe("Contenido detallado del problema u observación"),
+  categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
+  urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
+  requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
+});
+
 
 export interface ToolDefinition {
   name: string;
@@ -89,6 +97,13 @@ export const toolDefinitions: ToolDefinition[] = [
       "Útil para confirmar si un pago fue procesado correctamente.",
     schema: checkPaymentStatusSchema,
   },
+  {
+    name: "create_glpi_ticket",
+    description:
+      "Crea un ticket de soporte en GLPI para seguimiento técnico o administrativo. " +
+      "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera atención humana.",
+    schema: createGlpiTicketSchema,
+  },
 ];
 
 
@@ -124,6 +139,69 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
     };
   }
 }
+
+export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
+  try {
+    const result = await createGlpiTicket({
+      name: args.name,
+      content: args.content,
+      itilcategories_id: args.categoryId,
+      urgency: args.urgency,
+      _users_id_requester: args.requesterId,
+    });
+
+    if (result.success) {
+      return {
+        success: true,
+        message: `¡Listo! He creado el ticket de soporte en GLPI con el ID #${result.ticketId}. Un especialista revisará tu caso pronto.`,
+        data: { ticketId: result.ticketId },
+      };
+    } else {
+      throw new Error(result.error || result.message);
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: `Tuve un problema al intentar crear el ticket en GLPI: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+    };
+  }
+}
+
+/**
+ * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
+ */
+export const getLocalTools = (): any => {
+  return {
+    getCurrencyRate: {
+      name: "getCurrencyRate",
+      description: "Obtiene la tasa de cambio actual del BCV.",
+      inputSchema: { type: "object", properties: {}, required: [] },
+      execute: async () => {
+        const res = await executeCurrencyRate();
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    create_glpi_ticket: {
+      name: "create_glpi_ticket",
+      description: "Crea un ticket de soporte en GLPI.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Título del ticket" },
+          content: { type: "string", description: "Contenido detallado" },
+          categoryId: { type: "number", description: "ID de categoría (opcional)" },
+          urgency: { type: "number", description: "Urgencia 1-5 (opcional)" },
+          requesterId: { type: "number", description: "ID de solicitante (opcional)" },
+        },
+        required: ["name", "content"],
+      },
+      execute: async (args: any) => {
+        const res = await executeCreateGlpiTicket(args);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    }
+  };
+};
 
 export function getPlaceholderResponse(toolName: string): ToolResponse {
   return {
