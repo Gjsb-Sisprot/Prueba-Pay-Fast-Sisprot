@@ -398,24 +398,44 @@ function cleanOnuDiagnosticResult(result: unknown): string {
 }
 
 function cleanClientStatusResult(result: unknown): string {
+    interface ContractMini {
+        contractId: number | string;
+        status: string;
+        isActive: boolean;
+        debt: number | string;
+        planName?: string;
+    }
     interface ClientStatusData {
         name?: string;
         identification?: string;
         serviceStatus?: string;
         debtAmount?: number | string;
         totalContracts?: number | string;
+        allContracts?: ContractMini[];
         planName?: string;
         sector?: string;
     }
     const res = result as { client?: ClientStatusData, data?: ClientStatusData } | ClientStatusData;
     const data = ('client' in res && res.client) ? res.client : (('data' in res && res.data) ? res.data : (res as ClientStatusData));
+    
     if (!data) return "Datos de cliente inaccesibles.";
 
-    return [
+    const header = [
         `CLIENTE: ${data.name || "N/A"} (${data.identification || "N/A"})`,
-        `SERVICIO: ${data.serviceStatus || "N/A"}`,
-        `DEUDA_PENDIENTE: ${data.debtAmount ?? "0"} USD`,
-        `CONTRATOS: ${data.totalContracts || "1"}`,
+        `SERVICIO GLOBAL: ${data.serviceStatus === 'active' ? 'ACTIVO' : 'SUSPENDIDO/OTRO'}`,
+        `DEUDA TOTAL: ${data.debtAmount ?? "0"} USD`,
+        `TOTAL CONTRATOS: ${data.totalContracts || "1"}`
+    ];
+
+    if (data.allContracts && Array.isArray(data.allContracts) && data.allContracts.length > 0) {
+        const contractsList = data.allContracts.map(c => 
+            `- Contrato #${c.contractId}: ${c.status} (${c.isActive ? 'Activo' : 'No Activo'}) | Plan: ${c.planName || 'N/A'} | Deuda: $${c.debt}`
+        );
+        return [...header, "DETALLE DE CONTRATOS:", ...contractsList].join("\n");
+    }
+
+    return [
+        ...header,
         `PLAN: ${data.planName || "N/A"}`,
         `SECTOR: ${data.sector || "N/A"}`
     ].join("\n");
