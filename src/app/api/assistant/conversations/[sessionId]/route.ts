@@ -31,20 +31,23 @@ export async function POST(
 
     switch (action) {
       case "close": {
-        const _finalResolution = resolution || "Conversación cerrada por el agente";
         const finalSummary = summary ? `${summary} | Cerrada por el agente` : "Cerrada por el agente";
         
         // 1. Actualizar estado en Supabase
         await updateConversationStatus(sessionId, "closed");
         
         // 2. Sincronizar resumen
-        await updateConversationSummary(sessionId, { 
+        await syncConversationMetadata(sessionId, { 
           summary: finalSummary 
         });
 
         // 3. Guardar mensaje de cierre en el historial
         const closeMessage = buildCloseConversationMessage();
-        await saveInteraction(sessionId, "assistant", closeMessage);
+        await saveInteraction({
+          sessionId,
+          role: "assistant",
+          content: closeMessage
+        });
 
         result = {
           success: true,
@@ -62,7 +65,12 @@ export async function POST(
 
         const msgRole = role === "user" ? "user" : "assistant"; // Solo permitimos user o assistant (agente)
         
-        await saveInteraction(sessionId, msgRole, content || "", attachments);
+        await saveInteraction({
+          sessionId,
+          role: msgRole,
+          content: content || "",
+          attachments
+        });
         
         result = { success: true };
         break;
@@ -80,7 +88,11 @@ export async function POST(
           ? `La conversación ha sido tomada por el especialista: ${specialistName}.`
           : "Un especialista se ha unido a la conversación.";
           
-        await saveInteraction(sessionId, "assistant", message);
+        await saveInteraction({
+          sessionId,
+          role: "assistant",
+          content: message
+        });
 
         result = { success: true, newStatus: "handed_over" };
         break;
@@ -93,7 +105,11 @@ export async function POST(
         
         await syncConversationMetadata(sessionId, { reason });
         
-        await saveInteraction(sessionId, "assistant", "Tu caso ha sido escalado a un especialista humano. Por favor espera un momento.");
+        await saveInteraction({
+          sessionId,
+          role: "assistant",
+          content: "Tu caso ha sido escalado a un especialista humano. Por favor espera un momento."
+        });
 
         result = { success: true, newStatus: "waiting_specialist" };
         break;
