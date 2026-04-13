@@ -13,19 +13,6 @@ import {
   documentNumberValidator,
 } from "@/shared/lib/validation/client-schema";
 
-// Tipos para TanStack Form Field
-interface FieldApi {
-  state: {
-    value: string;
-    meta: {
-      errors: string[];
-      isTouched: boolean;
-      isValid: boolean;
-    };
-  };
-  handleChange: (value: string) => void;
-  handleBlur: () => void;
-}
 
 export function ClientSearchForm() {
   const { form, isLoading, error, hasClients, searchResult, searchClient } =
@@ -92,7 +79,7 @@ export function ClientSearchForm() {
                     documentTypeValidator(value),
                 }}
               >
-                {(field: FieldApi) => (
+                {field => (
                   <>
                     <SelectNative
                       value={field.state.value}
@@ -126,7 +113,7 @@ export function ClientSearchForm() {
                     documentNumberValidator(value),
                 }}
               >
-                {(field: FieldApi) => (
+                {field => (
                   <>
                     <Input
                       type="text"
