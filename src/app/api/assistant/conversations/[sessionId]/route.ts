@@ -1,58 +1,15 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
-import { createMCPClient } from "@ai-sdk/mcp";
 import { 
   updateConversationStatus, 
-  syncConversationMetadata 
+  syncConversationMetadata,
+  saveInteraction,
+  updateConversationSummary
 } from "@/modules/assistant/lib/persistence";
 import {
-  SISPROT_NETWORKS_QUERY,
-  extractSisprotChannelLines,
   buildCloseConversationMessage,
 } from "@/modules/assistant/lib/channel-links";
-
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app";
-const MCP_API_KEY = process.env.MCP_API_KEY || "";
-
-function parseMcpToolResult(raw: unknown): Record<string, unknown> | null {
-  if (!raw || typeof raw !== "object") return null;
-
-  const candidate = raw as { content?: Array<{ type?: string; text?: string }> };
-  const textChunk = candidate.content?.find((c) => c?.type === "text" && typeof c?.text === "string")?.text;
-  if (!textChunk) return null;
-
-  try {
-    const parsed = JSON.parse(textChunk);
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
-
-function extractTicketId(parsedResult: Record<string, unknown> | null): number | null {
-  if (!parsedResult) return null;
-
-  const direct = parsedResult["glpiTicketId"] ?? parsedResult["glpi_ticket_id"];
-  if (typeof direct === "number") return direct;
-  if (typeof direct === "string" && /^\d+$/.test(direct)) return Number(direct);
-
-  const ticket = parsedResult["ticket"];
-  if (ticket && typeof ticket === "object" && ticket !== null) {
-    const nested = ticket as Record<string, unknown>;
-    const ticketId = nested["ticketId"];
-    if (typeof ticketId === "number") return ticketId;
-    if (typeof ticketId === "string" && /^\d+$/.test(ticketId)) return Number(ticketId);
-  }
-
-  const message = parsedResult["message"];
-  if (typeof message === "string") {
-    const m = message.match(/#(\d+)/);
-    if (m?.[1]) return Number(m[1]);
-  }
-
-  return null;
-}
 
 export async function POST(
   request: NextRequest,
@@ -61,7 +18,7 @@ export async function POST(
   try {
     const { sessionId } = await params;
     const body = await request.json();
-    const { action, summary, resolution } = body;
+    const { action, summary, resolution, role, content, attachments, specialistName } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -70,110 +27,92 @@ export async function POST(
       );
     }
 
-    const mcpClient = await createMCPClient({
-      transport: {
-        type: "http",
-        url: `${MCP_SERVER_URL}/mcp`,
-        headers: {
-          ...(MCP_API_KEY ? { Authorization: `Bearer ${MCP_API_KEY}` } : {}),
-        },
-      },
-    });
-
-    const tools = await mcpClient.tools();
-
     let result;
 
     switch (action) {
       case "close": {
-        if (summary) {
-          const updateSummaryTool = tools["update_summary"];
-          if (updateSummaryTool) {
-            const finalSummary = `${summary} | Cerrada por el usuario`;
-            await updateSummaryTool.execute(
-              { sessionId, summary: finalSummary },
-              { messages: [], toolCallId: `close-summary-${Date.now()}` }
-            );
-          }
-        }
+        const finalResolution = resolution || "Conversación cerrada por el agente";
+        const finalSummary = summary ? `${summary} | Cerrada por el agente` : "Cerrada por el agente";
+        
+        // 1. Actualizar estado en Supabase
+        await updateConversationStatus(sessionId, "closed");
+        
+        // 2. Sincronizar resumen
+        await updateConversationSummary(sessionId, { 
+          summary: finalSummary 
+        });
 
-        const closeConversationTool = tools["close_conversation"];
-        if (closeConversationTool) {
-          let closeMessage = buildCloseConversationMessage();
+        // 3. Guardar mensaje de cierre en el historial
+        const closeMessage = buildCloseConversationMessage();
+        await saveInteraction(sessionId, "assistant", closeMessage);
 
-          const closeResult = await closeConversationTool.execute(
-            {
-              sessionId,
-              resolution: resolution || "Conversaci\u00f3n cerrada por el usuario",
-              ticketSummary: summary || resolution || "Cierre solicitado por el usuario",
-              closedBy: "user",
-            },
-            { messages: [], toolCallId: `close-conv-${Date.now()}` }
-          );
-          const parsedCloseResult = parseMcpToolResult(closeResult);
-          const closeTicketId = extractTicketId(parsedCloseResult);
-
-          const searchKnowledgeTool = tools["search_knowledge_base"];
-          if (searchKnowledgeTool) {
-            try {
-              const channelsResult = await searchKnowledgeTool.execute(
-                { query: SISPROT_NETWORKS_QUERY },
-                { messages: [], toolCallId: `close-networks-${Date.now()}` }
-              );
-
-              const channelLines = extractSisprotChannelLines(channelsResult);
-              closeMessage = buildCloseConversationMessage(channelLines);
-            } catch {
-            }
-          }
-          
-          result = {
-            success: true,
-            newStatus: "closed",
-            closeMessage,
-            ticketId: closeTicketId,
-            ticketMessage: closeTicketId ? `Tu número de ticket es: #${closeTicketId}` : null,
-          };
-
-          // Sincronizar con Supabase de forma asíncrona
-          const newStatus = "closed" as const;
-          updateConversationStatus(sessionId, newStatus).catch(() => {});
-          
-          if (typeof closeTicketId === "number") {
-            syncConversationMetadata(sessionId, { 
-              glpiTicketId: closeTicketId 
-            }).catch(() => {});
-          }
-        } else {
-          result = { success: false, error: "Herramienta close_conversation no disponible" };
-        }
-        break;
-      }
-
-      case "resume": {
-        result = { 
-          success: false, 
-          error: "Las conversaciones cerradas no pueden reactivarse. Inicia una nueva conversación." 
+        result = {
+          success: true,
+          newStatus: "closed",
+          closeMessage,
         };
         break;
       }
 
+      case "message": {
+        // Permitir que un agente envíe un mensaje
+        if (!content && (!attachments || attachments.length === 0)) {
+          return NextResponse.json({ error: "Contenido de mensaje requerido" }, { status: 400 });
+        }
+
+        const msgRole = role === "user" ? "user" : "assistant"; // Solo permitimos user o assistant (agente)
+        
+        await saveInteraction(sessionId, msgRole, content || "", attachments);
+        
+        result = { success: true };
+        break;
+      }
+
+      case "takeover": {
+        // El especialista toma control
+        await updateConversationStatus(sessionId, "handed_over");
+        if (specialistName) {
+          await syncConversationMetadata(sessionId, { specialistName });
+        }
+        
+        // Guardar mensaje de sistema opcional indicando que un agente tomó el control
+        const message = specialistName 
+          ? `La conversación ha sido tomada por el especialista: ${specialistName}.`
+          : "Un especialista se ha unido a la conversación.";
+          
+        await saveInteraction(sessionId, "assistant", message);
+
+        result = { success: true, newStatus: "handed_over" };
+        break;
+      }
+
+      case "escalate": {
+        // Escalar a especialista (por si el dashboard lo requiere)
+        await updateConversationStatus(sessionId, "waiting_specialist");
+        const reason = body.reason || "Escalado manual desde el panel";
+        
+        await syncConversationMetadata(sessionId, { reason });
+        
+        await saveInteraction(sessionId, "assistant", "Tu caso ha sido escalado a un especialista humano. Por favor espera un momento.");
+
+        result = { success: true, newStatus: "waiting_specialist" };
+        break;
+      }
+
       default:
-        await mcpClient.close();
         return NextResponse.json(
           { error: `Acción no soportada: ${action}` },
           { status: 400 }
         );
     }
 
-    await mcpClient.close();
-
     return NextResponse.json(result);
 
   } catch (error) {
+    console.error("[SESSION_ACTION_ERROR]", error);
     return NextResponse.json(
       { 
-        error: "Error al procesar la conversación",
+        error: "Error al procesar la acción en Supabase",
         details: error instanceof Error ? error.message : "Error desconocido"
       },
       { status: 500 }
