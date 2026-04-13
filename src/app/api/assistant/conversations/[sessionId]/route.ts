@@ -136,7 +136,7 @@ export async function POST(
           };
 
           // Sincronizar con Supabase de forma asíncrona
-          const newStatus: "closed" = "closed";
+          const newStatus = "closed" as const;
           updateConversationStatus(sessionId, newStatus).catch(() => {});
           
           if (typeof closeTicketId === "number") {
