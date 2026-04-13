@@ -93,6 +93,7 @@ export interface ClientContextData {
   glpiTicketId?: number;
   summary?: string;
   reason?: string;
+  specialistName?: string;
 }
 
 
