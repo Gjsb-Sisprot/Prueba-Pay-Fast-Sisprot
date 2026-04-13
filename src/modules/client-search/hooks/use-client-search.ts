@@ -14,31 +14,7 @@ import {
   documentNumberValidator,
 } from "@/shared/lib/validation/client-schema";
 
-interface UseClientSearchReturn {
-  form: ReturnType<typeof useForm<{ documentType: string; documentNumber: string }>>;
-  searchClient: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
-  hasClients: boolean;
-  isDocumentFound: boolean;
-  searchResult: ClientsResponse | null;
-  selectedClient: Client | null;
-  clearSearch: () => void;
-
-  // Nuevas propiedades para contratos
-  contractsResult: ContractsResponse | null;
-  selectedContract: Contract | null;
-  isLoadingContracts: boolean;
-  contractsError: string | null;
-  hasContracts: boolean;
-
-  // Nuevas propiedades para stepper
-  currentStep: number;
-  nextStep: () => void;
-  prevStep: () => void;
-}
-
-export function useClientSearch(): UseClientSearchReturn {
+export function useClientSearch() {
   const {
     searchResult,
     selectedClient,
