@@ -232,7 +232,9 @@ export async function POST(request: Request) {
             debugQuery: sisprotClient.debugUrl,
             identification: activeClientData.identification.trim().toUpperCase().startsWith('V') 
               ? activeClientData.identification.trim().toUpperCase().slice(1) 
-              : activeClientData.identification.trim().toUpperCase()
+              : activeClientData.identification.trim().toUpperCase(),
+            // AUTO-ENRIQUECIMIENTO DE NOMBRE: Si no tenemos nombre, usamos el de la API de Sisprot
+            name: activeClientData.name || sisprotClient.contracts[0]?.clientName || null
           } as ClientContextData;
         } else {
           console.log(`[SISPROT_ENRICH] No se obtuvieron resultados de la API.`);
