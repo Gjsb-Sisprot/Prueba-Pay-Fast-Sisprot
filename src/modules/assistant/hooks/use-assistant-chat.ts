@@ -92,9 +92,9 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           setMcpClientData(response.data);
           console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
 
-          // Saludo proactivo si es una conversación nueva
+          // Saludo proactivo si es una conversación nueva y no hay mensajes aún
           setMessages(prev => {
-            if (prev.length === 0) {
+            if (prev.length === 0 && !isHistoryLoaded) {
               const fullName = response.data.name || options.clientName || "";
               const firstName = fullName.trim().split(/\s+/)[0] || "";
 
