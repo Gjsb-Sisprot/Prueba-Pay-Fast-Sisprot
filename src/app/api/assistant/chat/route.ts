@@ -230,19 +230,29 @@ export async function POST(request: Request) {
         const sisprotClient = await fetchClientContracts(activeClientData.identification).catch(() => null);
         if (sisprotClient) {
           console.log(`[SISPROT_ENRICH] ¡Éxito! Encontrados ${sisprotClient.contracts.length} contratos.`);
+          
+          const allContracts = sisprotClient.contracts.map(c => ({
+            contractId: c.contractId,
+            status: c.status,
+            hasDebt: parseFloat(c.debt) > 0,
+            debt: parseFloat(c.debt),
+            sector: c.sector,
+            planName: c.planName,
+            onuSerial: c.onuSerial,
+            isActive: c.isActive
+          }));
+
+          const activeContractsCount = allContracts.filter(c => c.isActive).length;
+          const suspendedContractsCount = allContracts.length - activeContractsCount;
+          const hasActive = activeContractsCount > 0;
+
           activeClientData = {
             ...activeClientData,
-            totalContracts: sisprotClient.contracts.length,
-            allContracts: sisprotClient.contracts.map(c => ({
-              contractId: c.contractId,
-              status: c.status,
-              hasDebt: parseFloat(c.debt) > 0,
-              debt: parseFloat(c.debt),
-              sector: c.sector,
-              planName: c.planName,
-              onuSerial: c.onuSerial,
-              isActive: c.isActive
-            })),
+            totalContracts: allContracts.length,
+            activeContracts: activeContractsCount,
+            suspendedContracts: suspendedContractsCount,
+            serviceStatus: hasActive ? "active" : "suspended",
+            allContracts,
             debugQuery: sisprotClient.debugUrl,
             identification: activeClientData.identification.trim().toUpperCase().startsWith('V') 
               ? activeClientData.identification.trim().toUpperCase().slice(1) 
