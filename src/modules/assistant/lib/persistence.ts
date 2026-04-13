@@ -197,6 +197,13 @@ interface SaveInteractionParams {
 export async function saveInteraction(params: SaveInteractionParams): Promise<void> {
   const { sessionId, role, content, toolName, toolCallId } = params;
 
+  try {
+    const conversationId = await getConversationUuid(sessionId);
+    if (!conversationId) {
+      console.warn(`[SAVE_INTERACTION_ABANDONED] No se pudo obtener UUID para sesión ${sessionId}. Mensaje de rol ${role} no guardado.`);
+      return;
+    }
+
     // 0. Subir adjuntos si existen
     let processedAttachments = [];
     if (params.attachments && params.attachments.length > 0) {
