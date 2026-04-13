@@ -14,6 +14,7 @@ import {
   CreditCard, 
   X 
 } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -79,7 +80,14 @@ function ChatMessageComponent({
       >
         {isAssistant && (
           <div className="shrink-0 w-7 h-7 rounded-full overflow-hidden border border-gray-200">
-            <img src="/assets/images/assistant/susana.png" alt="Susana" className="w-full h-full object-cover" />
+            <Image
+              src="/assets/images/assistant/susana.png"
+              alt="Susana"
+              width={28}
+              height={28}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
           </div>
         )}
 
@@ -103,11 +111,13 @@ function ChatMessageComponent({
                 >
                   {attachment.type === "image" ? (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={attachment.url}
                         alt="Archivo adjunto"
+                        width={80}
+                        height={80}
                         className="w-full h-full object-cover"
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -178,11 +188,13 @@ function ChatMessageComponent({
                                 </span>
                               </span>
                               <span className="p-1 bg-white flex items-center justify-center">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
+                                <Image
                                   src={rawSrc}
                                   alt={alt || "Oferta de planes"}
+                                  width={400}
+                                  height={300}
                                   className="w-full h-auto object-cover rounded-xl"
+                                  unoptimized
                                 />
                               </span>
                               <a 
@@ -200,11 +212,13 @@ function ChatMessageComponent({
 
                       return (
                         <span className="block my-4 text-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={githubUrl}
                             alt={alt || "Imagen de Sisprot"}
+                            width={500}
+                            height={300}
                             className="rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] max-w-full inline-block"
+                            unoptimized
                           />
                           {alt && <span className="text-[10px] text-gray-400 mt-2 block font-medium">{alt}</span>}
                         </span>
@@ -334,11 +348,12 @@ function ChatMessageComponent({
           className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4"
           onClick={() => setExpandedImage(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={expandedImage}
             alt="Imagen expandida"
-            className="max-w-full max-h-full object-contain rounded-lg"
+            fill
+            className="object-contain rounded-lg p-2"
+            unoptimized
           />
         </div>
       )}
