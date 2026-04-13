@@ -249,10 +249,13 @@ export async function POST(request: Request) {
         sessionId,
         role: "user",
         content: userMessageText,
+        attachments: lastMessage.attachments,
         identification: activeClientData?.identification,
         contract: activeClientData?.contract,
         sector: activeClientData?.sector,
         contactName: activeClientData?.name,
+        contactEmail: activeClientData?.email,
+        contactPhone: activeClientData?.phone,
       }).catch((err) => console.error("[SUPABASE_USER_SAVE_ERROR]", err));
       
       if (activeClientData?.identification) {
@@ -425,6 +428,8 @@ export async function POST(request: Request) {
           content: toSave,
           identification: activeClientData?.identification,
           contract: activeClientData?.contract,
+          sector: activeClientData?.sector,
+          contactName: activeClientData?.name,
         });
 
         if (summaryPromise) await summaryPromise;
