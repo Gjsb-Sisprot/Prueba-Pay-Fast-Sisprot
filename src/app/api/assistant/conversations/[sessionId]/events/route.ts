@@ -63,8 +63,8 @@ export async function GET(
           // A. Notificar nuevos mensajes (especialmente del asistente/agente)
           if (events.messages.length > 0) {
             for (const msg of events.messages) {
-              // Solo enviamos mensajes que no hayamos visto (basado en timestamp)
-              if (msg.timestamp > lastSeenMessageDate) {
+              // Solo enviamos mensajes que no hayamos visto y que NO sean del usuario (evitar eco)
+              if (msg.timestamp > lastSeenMessageDate && msg.role !== "user") {
                 const eventData = JSON.stringify({
                   role: msg.role,
                   content: msg.content,
