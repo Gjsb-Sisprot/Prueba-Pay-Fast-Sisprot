@@ -160,20 +160,27 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 
 function buildServiceInstructions(clientData: ClientContextData): string {
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
+  const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
+  
   const multiContractWarning = hasMultipleContracts 
-    ? `\n**ATENCION - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Cada contrato tiene su deuda INDEPENDIENTE. Consulta la tabla de contratos para dar informacion precisa por contrato.\n`
+    ? `\n**ATENCION - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Algunos pueden estar activos y otros suspendidos. Consulta la tabla de contratos para dar informacion precisa por contrato y NO generalices un estado de suspension si hay contratos activos.\n`
     : "";
 
+  // Si tiene al menos uno activo, tratamos el servicio como ACTIVO para permitir soporte
+  if (hasAtLeastOneActive) {
+    if (clientData.hasDebt) {
+      return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
+    }
+    return ACTIVE_SERVICE_PROMPT + multiContractWarning;
+  }
+
+  // Solo si TODOS están suspendidos o no hay activos
   if (clientData.contractTag === "with_debt" || clientData.serviceStatus === "suspended") {
     return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
   }
 
   if (clientData.contractTag === "verify") {
     return VERIFY_PENDING_PROMPT + multiContractWarning;
-  }
-
-  if (clientData.hasDebt) {
-    return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
   }
 
   return ACTIVE_SERVICE_PROMPT;
