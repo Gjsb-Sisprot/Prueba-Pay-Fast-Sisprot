@@ -148,20 +148,25 @@ export function extractStepResults(steps: unknown[]) {
   if (!steps) return { toolCalls, toolResults };
 
   for (const step of steps) {
-    if (step.toolCalls?.length) {
-      for (const tc of step.toolCalls) {
+    const s = step as {
+      toolCalls?: Array<{ toolName: string; input?: Record<string, unknown> }>;
+      toolResults?: Array<{ toolName: string; toolCallId: string; output?: unknown }>;
+    };
+
+    if (s.toolCalls?.length) {
+      for (const tc of s.toolCalls) {
         toolCalls.push({
           toolName: tc.toolName,
-          args: (tc as { input?: Record<string, unknown> }).input || {},
+          args: tc.input || {},
         });
       }
     }
-    if (step.toolResults?.length) {
-      for (const tr of step.toolResults) {
+    if (s.toolResults?.length) {
+      for (const tr of s.toolResults) {
         toolResults.push({
           toolName: tr.toolName,
           toolCallId: tr.toolCallId,
-          result: (tr as { output?: unknown }).output,
+          result: tr.output,
         });
       }
     }
