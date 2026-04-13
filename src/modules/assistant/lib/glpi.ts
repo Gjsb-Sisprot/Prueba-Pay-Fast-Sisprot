@@ -50,7 +50,7 @@ async function killSession(sessionToken: string): Promise<void> {
       },
       signal: AbortSignal.timeout(5000),
     });
-  } catch (err) {}
+  } catch {}
 }
 
 export async function createTicket(input: GLPITicketInput): Promise<GLPITicketResult> {
