@@ -205,12 +205,12 @@ export async function POST(request: Request) {
 
         // Combinar con herramientas locales (PRIORIDAD LOCAL)
         const localTools = getLocalTools();
-        tools = { ...tools, ...localTools };
+        tools = { ...tools, ...(localTools as unknown as MCPToolSet) };
 
       } catch (err) {
         console.warn("[MCP_CRITICAL] No se pudo conectar con el servidor MCP:", err instanceof Error ? err.message : String(err));
         // Si falla el MCP, al menos cargamos las herramientas locales
-        tools = getLocalTools();
+        tools = getLocalTools() as unknown as MCPToolSet;
       }
 
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
