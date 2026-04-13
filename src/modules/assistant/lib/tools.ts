@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTicket as createGlpiTicket } from "./glpi";
+import { createTicket as createGlpiTicket } from "@/modules/assistant/lib/glpi";
 
 
 export const TOOLS_ENABLED =
