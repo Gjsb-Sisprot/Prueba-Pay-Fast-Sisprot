@@ -302,6 +302,7 @@ export const getLocalTools = (): Record<string, unknown> => {
           requesterId: { type: "number", description: "ID de solicitante (opcional)" },
         },
         required: ["name", "content"],
+      },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeCreateGlpiTicket(args as unknown as z.infer<typeof createGlpiTicketSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
