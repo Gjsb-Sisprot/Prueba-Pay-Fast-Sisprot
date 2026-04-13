@@ -90,6 +90,7 @@ export interface ClientContextData {
       canceled?: number;
     } | null;
   }>;
+  glpiTicketId?: number;
 }
 
 
