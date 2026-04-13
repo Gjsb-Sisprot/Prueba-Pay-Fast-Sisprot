@@ -75,7 +75,7 @@ function buildSolverHistory(
   // ya que es la "fuente de verdad" persistida.
   if (conversationHistory.length > 0) {
     return conversationHistory
-      .filter(msg => msg.role !== "tool" && msg.role !== "system")
+      .filter(msg => msg.role !== "tool")
       .map(msg => ({
         role: msg.role === "model" ? "assistant" as const : "user" as const,
         content: msg.content,
