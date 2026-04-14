@@ -66,10 +66,12 @@ export interface ClientContextData {
   totalContracts?: number;
   activeContracts?: number;
   suspendedContracts?: number;
+  cancelledContracts?: number;
   allContracts?: Array<{
     contractId: number;
     installationOrder?: string;
     status: string;
+    statusName?: string;
     statusCode?: number;
     debt: number;
     hasDebt: boolean;
