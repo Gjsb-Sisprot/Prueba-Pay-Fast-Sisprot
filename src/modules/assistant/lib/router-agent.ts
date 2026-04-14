@@ -1,4 +1,4 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, stepCountIs } from "ai";
 import type { ClientContextData } from "./types";
 import type { MCPToolSet } from "./mcp-types";
