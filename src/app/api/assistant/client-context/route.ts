@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
 
     const firstContract = contracts[0];
     const totalDebt = contracts.reduce((sum, c) => sum + parseFloat(c.debt || "0"), 0);
-    const activeCount = contracts.filter(c => c.isActive).length;
-    const suspendedCount = contracts.length - activeCount;
+    const activeCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("activo")).length;
+    const suspendedCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("suspendido")).length;
+    const cancelledCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("cancelado")).length;
 
     const clientData: ClientContextData = {
       identification: normalizedId,
@@ -53,9 +54,11 @@ export async function GET(request: NextRequest) {
       totalContracts: contracts.length,
       activeContracts: activeCount,
       suspendedContracts: suspendedCount,
+      cancelledContracts: cancelledCount,
       allContracts: contracts.map(c => ({
         contractId: c.contractId,
         status: c.status,
+        statusName: c.statusName,
         statusCode: parseInt(c.statusCode, 10) || 0,
         debt: parseFloat(c.debt || "0"),
         hasDebt: parseFloat(c.debt || "0") > 0,
