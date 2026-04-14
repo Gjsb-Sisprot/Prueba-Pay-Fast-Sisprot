@@ -214,7 +214,9 @@ SESSION_ID: ${sessionId}
 
       return {
         success: true,
-        message: `He escalado tu caso con un especialista humano. Tu número de ticket de seguimiento en GLPI es # ${ticketResult.ticketId}. Pronto te contactaremos.`,
+        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket en GLPI es el **#${ticketResult.ticketId}**. 📝
+
+A partir de este momento, un especialista humano revisará tu caso y se pondrá en contacto contigo a la brevedad posible. Esta conversación ha sido transferida al área técnica. ¡Que tengas un excelente día! 🤖👋`,
         data: { 
           glpiTicketId: ticketResult.ticketId,
           ticketId: ticketResult.ticketId,
