@@ -80,8 +80,7 @@ SOLO si:
 2. Diagnóstico muestra LOS_FIBER, DYING_GASP (sin problema eléctrico) o ONLINE_SEÑAL_CRITICA
 3. Problema no resuelto después de intentar reboot_onu
 4. Tema de facturación, devoluciones o cancelación que no puedes resolver
-5. Si aplica por condición técnica (2-4), confirma primero con el usuario: "¿Deseas que escale tu caso a un especialista?"
-6. Si el usuario todavía NO confirmó escalamiento, responde NO_TOOL_NEEDED
+5. **ESCALACIÓN DIRECTA**: No pidas confirmación adicional si la condición técnica o la solicitud es clara. Procede a escalar de inmediato para crear el ticket en GLPI.
 ${sessionId ? `Usa sessionId: "${sessionId}"` : ""}
 
 ## CUÁNDO USAR close_conversation
