@@ -13,7 +13,11 @@ const EXPLICIT_ESCALATION_PATTERNS: RegExp[] = [
   /p[aá]same\s*(con\s*)?(un\s|una\s)?(human[oa]|agente|operador|asesor|t[eé]cnico|especialista|alguien)/i,
   /escalar|escalamiento|escalame|escalarlo/i,
   /atenci[oó]n\s*(de\s*)?(un\s|una\s)?(human[oa]|agente|operador|asesor|t[eé]cnico|especialista)/i,
-  /comunicarme\s+con\s+(asesor|agente|operador|alguien|human[oa])/i
+  /comunicarme\s+con\s+(asesor|agente|operador|alguien|human[oa])/i,
+  /crear?\s*(un\s*)?(ticket|reporte|incidencia|folio)/i,
+  /agendar\s*(la\s*)?(visita|cita|t[eé]cnico)/i,
+  /abre\s*(el\s*)?reporte/i,
+  /genera\s*(el\s*)?ticket/i
 ];
 
 const ESCALATION_NEGATION_PATTERNS: RegExp[] = [
@@ -238,8 +242,14 @@ const DETAIL_SELECTION_PATTERNS: RegExp[] = [
 ];
 
 function isAffirmativeEscalationConfirmation(message: string): boolean {
-  const normalized = message.trim();
   if (!normalized) return false;
+  
+  // Si contiene una intención de escalamiento explícita (ej: "creame el ticket"), 
+  // ignoramos si empieza con "no" (porque puede ser respuesta a una pregunta anterior).
+  if (EXPLICIT_ESCALATION_PATTERNS.some(p => p.test(normalized))) {
+    return true;
+  }
+
   if (/^no\b/i.test(normalized)) return false;
 
   const words = normalized.split(/\s+/).filter(Boolean);
