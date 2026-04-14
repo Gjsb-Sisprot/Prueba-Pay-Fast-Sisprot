@@ -242,6 +242,7 @@ const DETAIL_SELECTION_PATTERNS: RegExp[] = [
 ];
 
 function isAffirmativeEscalationConfirmation(message: string): boolean {
+  const normalized = message.trim();
   if (!normalized) return false;
   
   // Si contiene una intención de escalamiento explícita (ej: "creame el ticket"), 
