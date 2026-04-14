@@ -7,6 +7,7 @@ export interface SisprotContract {
   clientName: string;
   clientIdentification: string;
   status: string;
+  statusName: string;
   statusCode: string;
   planName: string;
   sector: string;
@@ -84,6 +85,7 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       client_name?: string;
       client_identification: string;
       status: string;
+      status_name: string;
       status_code: string;
       plan_name: string;
       sector: string;
@@ -101,13 +103,18 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       clientName: item.client_name || [item.name, item.last_name].filter(Boolean).join(" "),
       clientIdentification: item.client_identification,
       status: item.status,
+      statusName: item.status_name || item.status,
       statusCode: item.status_code,
       planName: item.plan_name,
       sector: item.sector,
       address: item.address,
       onuSerial: item.onu_serial,
       debt: item.debt?.toString() || "0",
-      isActive: item.status_code === 'active' || item.status === 'activo' || !!item.is_active
+      debt: item.debt?.toString() || "0",
+      isActive: (item.status_name || "").toLowerCase().includes('activo') || 
+                (item.status_code || "").toLowerCase() === 'active' || 
+                (item.status || "").toString() === '16' || // Based on user JSON
+                !!item.is_active
     }));
 
     return { contracts, debugUrl: `${debugUrl} (${contracts.length} encontrados)` };
