@@ -110,7 +110,6 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       address: item.address,
       onuSerial: item.onu_serial,
       debt: item.debt?.toString() || "0",
-      debt: item.debt?.toString() || "0",
       isActive: (item.status_name || "").toLowerCase().includes('activo') || 
                 (item.status_code || "").toLowerCase() === 'active' || 
                 (item.status || "").toString() === '16' || // Based on user JSON
