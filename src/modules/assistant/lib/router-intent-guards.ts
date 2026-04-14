@@ -165,6 +165,13 @@ const AFFIRMATIVE_ESCALATION_PATTERNS: RegExp[] = [
   /^(s[ií]|si),?\s*est[aá] bien$/i,
   /^est[aá] bien$/i,
   /^avanza$/i,
+  /^usa?lo$/i,
+  /^usa?la$/i,
+  /^usa(lo|la)$/i,
+  /^ese\s+mismo$/i,
+  /^esa\s+misma$/i,
+  /^los\s+mismos$/i,
+  /^las\s+mismas$/i,
 ];
 
 const ASSISTANT_ESCALATION_CONFIRM_PATTERNS: RegExp[] = [
@@ -172,6 +179,8 @@ const ASSISTANT_ESCALATION_CONFIRM_PATTERNS: RegExp[] = [
   /(confirm(?:ar|es|a|o)).{0,120}(escal|transferi|especialista|agente|humano)/i,
   /(?:\bescalar\b|\bescalarte\b|\btransferirte\b|\btransferir\b|\bpasarte\b).{0,80}\?/i,
   /transferir[eé]?\s+tu\s+solicitud\s+a\s+(?:uno\s+de\s+)?nuestros\s+especialistas/i,
+  /confirmas?.{0,50}(usar|utilizar).{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil)/i,
+  /deseas?.{0,50}dejar.{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil).{0,50}(alternativo|diferente)/i,
 ];
 
 const ASSISTANT_ESCALATION_PROMISE_PATTERNS: RegExp[] = [
@@ -207,6 +216,10 @@ const FLOW_ESCALATION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
     pattern: /cambio\s*(de\s*)?plan|cambiar(me)?\s*(de\s*)?plan|migrar\s*(de\s*)?plan|subir(me)?\s*(de\s*)?plan|bajar(me)?\s*(de\s*)?plan/i,
     reason: "gestion de cambio de plan",
+  },
+  {
+    pattern: /falla\s*(de\s*)?(encendido|conexi[oó]n)|no\s*enciende|sin\s*internet|luz\s*roja|problema\s*t[eé]cnico/i,
+    reason: "soporte tecnico por falla",
   },
   {
     pattern: /cancel(ar|aci[oó]n)|dar\s*(de\s*)?baja|suspender\s*mi\s*servicio/i,
@@ -245,8 +258,6 @@ function isAffirmativeEscalationConfirmation(message: string): boolean {
   const normalized = message.trim();
   if (!normalized) return false;
   
-  // Si contiene una intención de escalamiento explícita (ej: "creame el ticket"), 
-  // ignoramos si empieza con "no" (porque puede ser respuesta a una pregunta anterior).
   if (EXPLICIT_ESCALATION_PATTERNS.some(p => p.test(normalized))) {
     return true;
   }
@@ -376,17 +387,33 @@ export interface ContextualEscalationSignal {
   source: "none" | "confirmation" | "flow_completion";
 }
 
+function cleanTextForMatching(text: string): string {
+  if (!text) return "";
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
+    .replace(/:[a-z0-9_-]+:/gi, "") // Iconos de MD
+    .replace(/[¿?¡!.*_#\[\]()]/g, "") // Puntuación y MD
+    .trim()
+    .toLowerCase();
+}
+
 export function detectContextualEscalationSignal(
   message: string,
   conversationHistory: RouterConversationMessage[] = [],
   clientData?: ClientContextData
 ): ContextualEscalationSignal {
-  const normalized = message.trim();
-  if (!normalized || conversationHistory.length === 0) {
+  if (conversationHistory.length === 0) {
     return { shouldEnableEscalation: false, source: "none" };
   }
 
-  const lastAssistantMessage = getLastAssistantMessage(conversationHistory);
+  const normalized = cleanTextForMatching(message);
+  const lastAssistantMessageRaw = conversationHistory
+    .filter((entry) => entry.role === "assistant" || entry.role === "model")
+    .slice(-1)[0]?.content || "";
+  const lastAssistantMessage = cleanTextForMatching(lastAssistantMessageRaw);
+
   if (!lastAssistantMessage) {
     return { shouldEnableEscalation: false, source: "none" };
   }
