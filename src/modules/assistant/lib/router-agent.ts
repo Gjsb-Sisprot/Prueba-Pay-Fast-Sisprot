@@ -277,7 +277,6 @@ export async function routeRequest(
     };
   }
 
-  const contextualEscalation = detectContextualEscalationSignal(message, conversationHistory, clientData);
   const explicitCloseRequest = isExplicitCloseRequest(message);
   
   const allowEscalationTool = true;
@@ -288,12 +287,6 @@ export async function routeRequest(
     allowClose: allowCloseTool,
   });
   
-  if (contextualEscalation.shouldEnableEscalation) {
-  }
-
-  if (explicitCloseRequest) {
-  }
-
   const isAmbiguousSupportIssue =
     (intent.category === "PROBLEMA_TECNICO" || 
      intent.category === "ESCALACION" || 
