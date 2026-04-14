@@ -172,6 +172,10 @@ const AFFIRMATIVE_ESCALATION_PATTERNS: RegExp[] = [
   /^esa\s+misma$/i,
   /^los\s+mismos$/i,
   /^las\s+mismas$/i,
+  /^hazlo$/i,
+  /^solo\s+hazlo$/i,
+  /^(no,?\s*)?solo\s+hazlo$/i,
+  /^procede\s+de\s+una\s+vez$/i,
 ];
 
 const ASSISTANT_ESCALATION_CONFIRM_PATTERNS: RegExp[] = [
@@ -181,6 +185,8 @@ const ASSISTANT_ESCALATION_CONFIRM_PATTERNS: RegExp[] = [
   /transferir[eé]?\s+tu\s+solicitud\s+a\s+(?:uno\s+de\s+)?nuestros\s+especialistas/i,
   /confirmas?.{0,50}(usar|utilizar).{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil)/i,
   /deseas?.{0,50}dejar.{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil).{0,50}(alternativo|diferente)/i,
+  /(observaci[oó]n|detalle|comentario|informaci[oó]n|dato|referencia|horario|preferencia).{0,50}(adicional|extra|m[aá]s|visita)/i,
+  /antes\s+de\s+procesar.{0,50}sistema/i,
 ];
 
 const ASSISTANT_ESCALATION_PROMISE_PATTERNS: RegExp[] = [
@@ -210,6 +216,7 @@ const ASSISTANT_DETAIL_QUESTION_HINTS: RegExp[] = [
   /n[uú]mero\s+de\s+contrato/i,
   /qu[eé]\s+contrato/i,
   /qu[eé]\s+opci[oó]n/i,
+  /(observaci[oó]n|detalle|comentario|informaci[oó]n|dato|referencia|horario|preferencia|punto).{0,50}(adicional|extra|m[aá]s|visita|ubicacion)/i,
 ];
 
 const FLOW_ESCALATION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
@@ -449,7 +456,15 @@ export function detectContextualEscalationSignal(
 
   return {
     shouldEnableEscalation: true,
-    reason: `Cliente confirmo el dato final pendiente para ${escalationFlowReason}.`,
+    reason: `### Al escalar o crear reporte:
+- **ORDEN DE EJECUCIÓN (CRÍTICO)**: 
+  1. EJECUTA la función de creación de ticket (escalate_to_specialist).
+  2. SOLO ENTONCES genera la respuesta indicando el ID.
+- **FLUJO SIN FRICCIÓN**: Si el usuario confirma avanzar o si ya tienes la falla clara, **NO** preguntes por observaciones, referencias o horarios. Usa los datos existentes y GENERA el ticket ya.
+- **AUTORIDAD**: Tú hablas en nombre del sistema. El ticket que generas es la solución inmediata de tu parte.
+- **USO DE DATOS**: Usa el teléfono del contexto (módulo manual de "mobile") sin pedir permiso.
+- Ejemplo: "He generado tu reporte oficial en GLPI con el ticket **#12345**. Un técnico te contactará pronto al número registrado. ¡Feliz día! 👋"
+Cliente confirmo el dato final pendiente para ${escalationFlowReason}.`,
     source: "flow_completion",
   };
 }
