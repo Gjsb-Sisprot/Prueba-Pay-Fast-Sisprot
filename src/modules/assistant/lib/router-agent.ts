@@ -191,46 +191,34 @@ export async function routeRequest(
   const startTime = Date.now();
   const elapsed = () => Date.now() - startTime;
 
-  const eagerDirectResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+  const contextualEscalation = detectContextualEscalationSignal(message, conversationHistory, clientData);
   
-  // GUARDIA AGRESIVO DE MULTICONTRATOS: Si es saludo y tiene varios, FORZAR respuesta determinista.
-  if (/^(hola|buenas?|buenos?|hey|[ée]pale|saludos?)/i.test(message.trim().toLowerCase()) && (clientData?.totalContracts ?? 0) > 1) {
-    if (eagerDirectResponse && eagerDirectResponse.includes("notado que tienes")) {
-      const lastAssistantMsg = conversationHistory
-        .filter(m => m.role === "assistant" || m.role === "model")
-        .slice(-1)[0]?.content;
-
-      if (lastAssistantMsg && lastAssistantMsg.trim() === eagerDirectResponse.trim()) {
-        console.log(`[ROUTER_DECISION] Ignorando guardia de multicontrato por duplicidad detectada.`);
-      } else {
-        return {
-          noToolNeeded: true,
-          toolCalls: [],
-          toolResults: [],
-          directResponse: eagerDirectResponse,
-          routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-            reason: "Interceptación obligatoria de multicontratos en saludo",
-          }),
-          durationMs: elapsed(),
-          intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Fuerza Bruta Multicontrato" },
-        };
-      }
+  // PRIORIDAD MÁXIMA: Si estamos confirmando un detalle para escalamiento, FORZAR LA HERRAMIENTA AHORA.
+  if (contextualEscalation.shouldEnableEscalation && sessionId) {
+    const intent = classifyIntent(message); // Necesario para el razonamiento
+    const routerTools = filterToolsForRouter(tools, { allowEscalation: true, allowClose: true });
+    const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
+    const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
+    
+    if (forcedEscalation) {
+      console.log(`[ROUTER_DECISION] ESCALAMIENTO FORZADO POR CONTEXTO: ${escalationReason}`);
+      return {
+        noToolNeeded: false,
+        toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
+        toolResults: [forcedEscalation],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+          solverModel: "pro",
+          reason: "Forzado por confirmación contextual (Finalización de flujo)",
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
     }
   }
 
-  if (eagerDirectResponse) {
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse: eagerDirectResponse,
-      routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-        reason: "Respuesta directa (FAQ/Cortesía) interceptada tempranamente",
-      }),
-      durationMs: elapsed(),
-      intentClassification: { category: "CONVERSACIONAL", confidence: "alta", suggestedTool: null, suggestedQuery: null, reasoning: "Intercepción directa temprana" },
-    };
-  }
+  const eagerDirectResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
+  
+  // GUARDIA AGRESIVO DE MULTICONTRATOS...
 
   const intent = classifyIntent(message);
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
@@ -312,7 +300,9 @@ export async function routeRequest(
      intent.category === "CONSULTA_PERSONAL" || 
      contextualEscalation.shouldEnableEscalation) &&
     (clientData?.totalContracts ?? 0) > 1 &&
-    !hasExplicitContractReference(message, clientData);
+    !clientData?.contract &&
+    !hasExplicitContractReference(message, clientData) &&
+    contextualEscalation.source !== "confirmation";
 
   if (isAmbiguousSupportIssue) {
     return {
@@ -597,9 +587,29 @@ export async function routeRequest(
       const isExcludedCategory = FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category);
 
       const directResponse = undefined;
+      
+      // PRIORIDAD: Señal contextual (confirmación de detalles o flujo activo)
+      if (contextualEscalation.shouldEnableEscalation && sessionId) {
+        const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
+        const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
+        if (forcedEscalation) {
+          return {
+            noToolNeeded: false,
+            toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
+            toolResults: [forcedEscalation],
+            routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+              solverModel: "pro",
+              reason: "Forzado por señal contextual (continuidad del flujo)",
+            }),
+            durationMs: elapsed(),
+            intentClassification: intent,
+            retriedModel,
+          };
+        }
+      }
 
       if (intent.confidence === "alta" && intent.suggestedTool) {
-        if (intent.suggestedTool === "escalate_to_specialist" && sessionId) {
+        if ((intent.suggestedTool === "escalate_to_specialist" || contextualEscalation.shouldEnableEscalation) && sessionId) {
           const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
           const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
           if (forcedEscalation) {
@@ -609,7 +619,7 @@ export async function routeRequest(
               toolResults: [forcedEscalation],
               routePolicy: buildRoutePolicy("tool_call", "deterministic", {
                 solverModel: "pro",
-                reason: "Override de escalamiento por regex",
+                reason: contextualEscalation.shouldEnableEscalation ? "Forzado por señal contextual (confirmación)" : "Override de escalamiento por regex",
               }),
               durationMs: elapsed(),
               intentClassification: intent,
