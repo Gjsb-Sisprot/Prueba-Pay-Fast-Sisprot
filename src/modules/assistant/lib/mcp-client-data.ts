@@ -65,6 +65,7 @@ export async function getClientFromMCP(
 interface UnifiedContract {
   contractId: number;
   status: string;
+  statusName: string;
   isActive: boolean;
   sector: string;
   debt: string;
@@ -88,6 +89,7 @@ function buildEnhancedClientData(
     ? directContracts.map(c => ({
         contractId: c.contractId,
         status: c.status,
+        statusName: c.statusName,
         isActive: c.isActive,
         sector: c.sector,
         debt: c.debt,
@@ -97,6 +99,7 @@ function buildEnhancedClientData(
     : mcpContracts.map(c => ({
         contractId: c.contractId,
         status: c.status,
+        statusName: c.status,
         isActive: c.isActive,
         sector: c.sector,
         debt: String(c.debt || "0"),
@@ -123,10 +126,12 @@ function buildEnhancedClientData(
     totalContracts: unifiedContracts.length,
     debugQuery,
     activeContracts: unifiedContracts.filter(c => c.isActive).length,
-    suspendedContracts: unifiedContracts.filter(c => !c.isActive).length,
+    suspendedContracts: unifiedContracts.filter(c => (c.statusName || "").toLowerCase().includes("suspendido")).length,
+    cancelledContracts: unifiedContracts.filter(c => (c.statusName || "").toLowerCase().includes("cancelado")).length,
     allContracts: unifiedContracts.map(c => ({
       contractId: c.contractId,
       status: c.status,
+      statusName: c.statusName,
       hasDebt: parseFloat(c.debt) > 0,
       debt: parseFloat(c.debt),
       sector: c.sector,
