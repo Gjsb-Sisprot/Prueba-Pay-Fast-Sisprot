@@ -1,7 +1,5 @@
-
 const GLPI_BASE_URL = process.env.NEXT_PUBLIC_GLPI_BASE_URL || 'http://137.184.87.234/glpi/apirest.php';
-const GLPI_APP_TOKEN_INIT = process.env.GLPI_APP_TOKEN_INIT || 'ytIQci5MfhFE33ribqFzM40CPJyGPaeIr4sscvBp';
-const GLPI_APP_TOKEN_TICKET = process.env.GLPI_APP_TOKEN_TICKET || 'RycGNOH0qetlfv0nCLgPY693WfW4nr3UR4ClvtJG';
+const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || 'OP77CDhNT1ywRuzmbnmHfo6iiZBwhhcTmsN0Mqnw';
 const GLPI_AUTH_BASIC = process.env.GLPI_AUTH_BASIC || 'Basic Z2xwaTo5UVpRU0d1SGZGckJhNnk=';
 const GLPI_TIMEOUT = 15000;
 
@@ -25,7 +23,7 @@ async function initSession(): Promise<string> {
   const response = await fetch(`${GLPI_BASE_URL}/initSession`, {
     method: 'POST',
     headers: {
-      'App-Token': GLPI_APP_TOKEN_INIT,
+      'App-Token': GLPI_APP_TOKEN,
       'Authorization': GLPI_AUTH_BASIC,
     },
     signal: AbortSignal.timeout(GLPI_TIMEOUT),
@@ -45,7 +43,7 @@ async function killSession(sessionToken: string): Promise<void> {
     await fetch(`${GLPI_BASE_URL}/killSession`, {
       method: 'GET',
       headers: {
-        'App-Token': GLPI_APP_TOKEN_TICKET,
+        'App-Token': GLPI_APP_TOKEN,
         'Session-Token': sessionToken,
       },
       signal: AbortSignal.timeout(5000),
@@ -73,7 +71,7 @@ export async function createTicket(input: GLPITicketInput): Promise<GLPITicketRe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'App-Token': GLPI_APP_TOKEN_TICKET,
+        'App-Token': GLPI_APP_TOKEN,
         'Session-Token': sessionToken,
       },
       body: JSON.stringify(body),
