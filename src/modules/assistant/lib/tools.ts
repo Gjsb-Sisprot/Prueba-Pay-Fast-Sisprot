@@ -287,9 +287,6 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
   }
 }
 
-    };
-  }
-}
 
 export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
   try {
