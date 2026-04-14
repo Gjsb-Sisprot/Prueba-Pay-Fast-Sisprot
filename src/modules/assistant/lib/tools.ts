@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getConversationBySessionId, updateConversationStatus } from "./persistence";
 
 // --- GLPI INTEGRATION (Consolidated to avoid build resolution issues) ---
 const GLPI_BASE_URL = process.env.NEXT_PUBLIC_GLPI_BASE_URL || 'http://137.184.87.234/glpi/apirest.php';
@@ -162,6 +163,17 @@ export const createGlpiTicketSchema = z.object({
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
 });
 
+export const escalateToSpecialistSchema = z.object({
+  sessionId: z.string().describe("ID de la sesión de chat"),
+  reason: z.string().describe("Razón detallada del escalamiento"),
+});
+
+export const closeConversationSchema = z.object({
+  sessionId: z.string().describe("ID de la sesión de chat"),
+  resolution: z.string().min(10).describe("Resumen de cómo se resolvió la consulta"),
+  closedBy: z.enum(["user", "assistant", "system"]).default("user"),
+});
+
 
 export interface ToolDefinition {
   name: string;
@@ -275,6 +287,78 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
   }
 }
 
+    };
+  }
+}
+
+export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
+  try {
+    const { sessionId, reason } = args;
+    
+    // 1. Obtener contexto del cliente desde la DB
+    const conversation = await getConversationBySessionId(sessionId).catch(() => null);
+    
+    const clientName = conversation?.contact_name || "Cliente Desconocido";
+    const identification = conversation?.identification || "N/A";
+    
+    // 2. Crear ticket en GLPI
+    const ticketResult = await createGlpiTicketInternal({
+      name: `Escalamiento: ${reason.substring(0, 50)}...`,
+      content: `
+ASUNTO: Escalamiento solicitado desde el Asistente AI.
+CLIENTE: ${clientName}
+ID/RIF: ${identification}
+RAZÓN: ${reason}
+SESSION_ID: ${sessionId}
+      `.trim(),
+      urgency: 5, // Alta urgencia para escalamientos
+    });
+
+    if (ticketResult.success) {
+      // 3. Cambiar estado en la base de datos
+      await updateConversationStatus(sessionId, "waiting_specialist").catch(err => {
+        console.error("[TOOLS_ERROR] Falló actualización de estado al escalar:", err);
+      });
+
+      return {
+        success: true,
+        message: `He escalado tu caso con un especialista humano. Tu número de ticket de seguimiento en GLPI es # ${ticketResult.ticketId}. Pronto te contactaremos.`,
+        data: { 
+          glpiTicketId: ticketResult.ticketId,
+          ticketId: ticketResult.ticketId,
+          status: "waiting_specialist"
+        },
+      };
+    } else {
+      throw new Error(ticketResult.error || ticketResult.message);
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: `Tuve un problema al intentar escalar tu caso: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+    };
+  }
+}
+
+export async function executeCloseConversation(args: z.infer<typeof closeConversationSchema>): Promise<ToolResponse> {
+  try {
+    const { sessionId, resolution } = args;
+    
+    await updateConversationStatus(sessionId, "closed");
+    
+    return {
+      success: true,
+      message: "La conversación ha sido cerrada exitosamente. ¡Gracias por contactarnos!",
+      data: { status: "closed", resolution },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error al cerrar la conversación: ${error instanceof Error ? error.message : "Error desconocido"}`,
+    };
+  }
+}
+
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
@@ -305,6 +389,39 @@ export const getLocalTools = (): Record<string, unknown> => {
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeCreateGlpiTicket(args as unknown as z.infer<typeof createGlpiTicketSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    escalate_to_specialist: {
+      name: "escalate_to_specialist",
+      description: "Escala la conversación a un especialista humano cuando el cliente lo solicita o el problema es complejo.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          sessionId: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["sessionId", "reason"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeEscalateToSpecialist(args as unknown as z.infer<typeof escalateToSpecialistSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    close_conversation: {
+      name: "close_conversation",
+      description: "Cierra la conversación cuando el usuario confirma que no necesita más ayuda.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          sessionId: { type: "string" },
+          resolution: { type: "string" },
+          closedBy: { type: "string" },
+        },
+        required: ["sessionId", "resolution"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeCloseConversation(args as unknown as z.infer<typeof closeConversationSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
