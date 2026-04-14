@@ -145,11 +145,11 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 ### EJEMPLO DE FLUJO CORRECTO:
 
 **Usuario**: "hola" (con 2 contratos en el sistema)
-**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente de Sisprot. He notado que tienes **2 servicios** registrados con nosotros: uno en **${clientData.allContracts?.[0]?.sector || "Sector A"}** y otro en **${clientData.allContracts?.[1]?.sector || "Sector B"}**. ¿Con cuál de ellos desea continuar?"
+**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu **Operador de Soporte Inteligente** de Sisprot. He notado que tienes **2 servicios** registrados con nosotros: uno en **${clientData.allContracts?.[0]?.sector || "Sector A"}** y otro en **${clientData.allContracts?.[1]?.sector || "Sector B"}**. ¿Con cuál de ellos desea continuar?"
 *(SIN mostrar deudas ni planes aún)*
 
 **Usuario**: "con el de ${clientData.allContracts?.[0]?.sector || "Sector A"}"
-**Asistente**: "¡Perfecto! Analizando tu contrato en ${clientData.allContracts?.[0]?.sector || "Sector A"}... Veo que actualmente [procede con detalles de ese contrato específico]."
+**Asistente**: "¡Perfecto! Analizando tu contrato en ${clientData.allContracts?.[0]?.sector || "Sector A"}... como tu operador asignado, veo que actualmente [procede con detalles de ese contrato específico]."
 
 ---
 `;
