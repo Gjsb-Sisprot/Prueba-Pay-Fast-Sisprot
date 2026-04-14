@@ -1,5 +1,5 @@
 
-import type { ClientContextData } from "./types";
+import type { ClientContextData } from "./types"
 import {
   SYSTEM_PROMPT_BASE,
   SUSPENDED_SERVICE_PROMPT,
