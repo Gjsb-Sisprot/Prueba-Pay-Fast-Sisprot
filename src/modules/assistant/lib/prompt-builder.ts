@@ -69,7 +69,7 @@ No hay cliente autenticado en el portal. Si necesitas datos del cliente, pídelo
   
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
   const multiContractInfo = hasMultipleContracts
-    ? `\n- **CONTRATOS**: ${clientData.totalContracts} total (${clientData.activeContracts} activo${clientData.activeContracts !== 1 ? 's' : ''}, ${clientData.suspendedContracts} suspendido${clientData.suspendedContracts !== 1 ? 's' : ''})`
+    ? `\n- **CONTRATOS**: ${clientData.totalContracts} total (${clientData.activeContracts} activo${clientData.activeContracts !== 1 ? 's' : ''}, ${clientData.suspendedContracts} suspendido${clientData.suspendedContracts !== 1 ? 's' : ''}${clientData.cancelledContracts ? `, ${clientData.cancelledContracts} cancelado${clientData.cancelledContracts !== 1 ? 's' : ''}` : ''})`
     : "";
   
   const serviceInstructions = buildServiceInstructions(clientData);
@@ -198,7 +198,7 @@ function buildContractDetailsBlock(allContracts?: ClientContextData["allContract
           ? "Pago en verificacion"
           : c.contractTag === "with_debt"
             ? "Suspendido por deuda"
-            : c.status || "Desconocido";
+            : c.statusName || c.status || "Desconocido";
     return `  - Contrato #${c.contractId} | ${c.sector} | ${c.planName || "Sin plan"} | ${tagText} | Deuda: $${c.debt.toFixed(2)}`;
   });
 
