@@ -154,8 +154,8 @@ export interface MediaLimits {
 export const DEFAULT_MEDIA_LIMITS: MediaLimits = {
   maxImages: 10,
   maxVideos: 5,
-  maxVideoDuration: 30,
-  maxFileSize: 5 * 1024 * 1024,
+  maxVideoDuration: 60,
+  maxFileSize: 10 * 1024 * 1024,
 };
 
 export interface MediaUsage {
