@@ -84,13 +84,15 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       last_name?: string;
       client_name?: string;
       client_identification: string;
-      status: string;
-      status_name: string;
-      status_code: string;
-      plan_name: string;
-      sector: string;
-      address: string;
-      onu_serial: string;
+      status: string | number;
+      status_name?: string;
+      status_code?: string;
+      plan_name?: string;
+      sector?: string;
+      sector_name?: string;
+      address?: string;
+      address_tax?: string;
+      onu_serial?: string;
       debt?: string | number;
       is_active?: boolean;
     }
@@ -102,17 +104,18 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       contractId: item.contract_id || item.id,
       clientName: item.client_name || [item.name, item.last_name].filter(Boolean).join(" "),
       clientIdentification: item.client_identification,
-      status: item.status,
-      statusName: item.status_name || item.status,
-      statusCode: item.status_code,
-      planName: item.plan_name,
-      sector: item.sector,
-      address: item.address,
-      onuSerial: item.onu_serial,
+      status: String(item.status),
+      statusName: item.status_name || String(item.status),
+      statusCode: item.status_code || "",
+      planName: item.plan_name || "",
+      sector: item.sector_name || item.sector || "Sector no especificado",
+      address: item.address || item.address_tax || "",
+      onuSerial: item.onu_serial || "",
       debt: item.debt?.toString() || "0",
       isActive: (item.status_name || "").toLowerCase().includes('activo') || 
                 (item.status_code || "").toLowerCase() === 'active' || 
-                (item.status || "").toString() === '16' || // Based on user JSON
+                item.status === 16 || 
+                item.status === '16' || 
                 !!item.is_active
     }));
 
