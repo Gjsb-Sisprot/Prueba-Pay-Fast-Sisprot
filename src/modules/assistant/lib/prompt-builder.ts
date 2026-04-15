@@ -124,12 +124,15 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 
 3. **MANEJO DE PROBLEMAS TÉCNICOS Y MULTICONTRATO**:
    ${hasMultipleContracts
-     ? "- CLIENTE MULTICONTRATO: Es OBLIGATORIO que el usuario seleccione un contrato antes de dar detalles de deuda o soporte técnico. Tu primera respuesta ante un mensaje vago o saludo debe ser listar los sectores de sus contratos y preguntar: '¿Con cuál de ellos desea continuar?'."
+     ? `
+- **POLÍTICA DE MULTI-CONTRATO (ESTRICTA)**: El cliente tiene ${clientData.totalContracts} servicios. NO asumas sobre cuál está hablando. Es OBLIGATORIO que el usuario especifique el sector.
+- **VALIDACIÓN DE SECTOR (OBLIGATORIA - SIN EXCEPCIÓN)**: Si el usuario menciona un sector que NO existe en sus registros (ej. "tengo falla en Valle Lindo" pero sus contratos son en "Valle Paraiso"), DEBES detenerte y decir: "No ubico un contrato en **[Sector que dijo]**. Actualmente tienes servicios en: **${clientData.allContracts?.map(c => c.sector).join(" y ")}**. ¿Con cuál de ellos necesitas ayuda?"`
      : ""}
    ${clientData.serviceStatus === "suspended" 
      ? `- ⚠️ SERVICIO SUSPENDIDO: No ofrezcas soporte técnico.
    - Responde directamente: el servicio está suspendido por una deuda de $${clientData.debtAmount?.toFixed(2) || "pendiente"}, debe pagar para reactivar.`
      : `- Si el usuario reporta problemas ("no tengo internet", "está lento", "se cae la conexión"):
+     * **REGLA DE ORO**: Antes de diagnosticar, asegúrate de que el sector mencionado coincida con los datos del cliente.
      * Revisa la sección [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS] al final del mensaje.
      * Si ves resultados del diagnóstico de la ONU, úsalos para explicar el problema.
      * Si NO hay resultados del diagnóstico, asume que no pudiste conectar con el equipo remotamente y ofrécele asistencia inicial (ej. pedirle que verifique las luces de la ONU o el cable de fibra física).`
@@ -193,21 +196,22 @@ function buildContractDetailsBlock(allContracts?: ClientContextData["allContract
   const contractLines = allContracts.map((c) => {
     const tagText =
       c.contractTag === "available"
-        ? "Al dia"
+        ? "✅ Al día"
         : c.contractTag === "verify"
-          ? "Pago en verificacion"
+          ? "⏳ Pago en verificación"
           : c.contractTag === "with_debt"
-            ? "Suspendido por deuda"
-            : c.statusName || c.status || "Desconocido";
-    return `  - Contrato #${c.contractId} | ${c.sector} | ${c.planName || "Sin plan"} | ${tagText} | Deuda: $${c.debt.toFixed(2)}`;
+            ? "🚫 Suspendido por deuda"
+            : `🔸 ${c.statusName || c.status || "Desconocido"}`;
+    
+    return `- **ID #${c.contractId}** | Sector: **${c.sector}** | Plan: *${c.planName || "N/A"}* | Estatus: ${tagText} | Deuda: **$${c.debt.toFixed(2)}**`;
   });
 
   const header = allContracts.length > 1
-    ? `\n### DETALLE POR CONTRATO (deudas INDEPENDIENTES):\n`
-    : `\n### DETALLE DEL CONTRATO:\n`;
+    ? `\n### 📋 SERVICIOS REGISTRADOS (${allContracts.length}):\n`
+    : `\n### 📋 DETALLE DEL SERVICIO:\n`;
 
   const footer = allContracts.length > 1
-    ? `\n**IMPORTANTE**: La deuda de cada contrato es INDEPENDIENTE. Cuando el cliente pregunte por su deuda, muestra la de CADA contrato por separado. No sumes a menos que pregunte el total.\n`
+    ? `\n> [!IMPORTANT]\n> El cliente debe especificar a cuál de estos **${allContracts.length} sectores** se refiere para recibir soporte especializado.\n`
     : "";
 
   return header + contractLines.join("\n") + footer;
