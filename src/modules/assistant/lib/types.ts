@@ -96,6 +96,7 @@ export interface ClientContextData {
   summary?: string;
   reason?: string;
   specialistName?: string;
+  visitDate?: string | Date;
 }
 
 
@@ -153,7 +154,7 @@ export interface MediaLimits {
 export const DEFAULT_MEDIA_LIMITS: MediaLimits = {
   maxImages: 10,
   maxVideos: 5,
-  maxVideoDuration: 3,
+  maxVideoDuration: 30,
   maxFileSize: 5 * 1024 * 1024,
 };
 
