@@ -100,6 +100,7 @@ export function ChatBubble() {
     backToChat,
     sessionId,
     isFetchingContext,
+    handleSelectDate,
   } = useAssistantChat({
     identification,
     clientName,
@@ -294,6 +295,7 @@ export function ChatBubble() {
                     onCloseConversation={message.closeOffer ? closeConversation : undefined}
                     onDismissCloseOffer={message.closeOffer ? () => dismissCloseOffer(message.id) : undefined}
                     onAcceptPaymentOffer={message.paymentOffer ? handleAcceptPaymentOffer : undefined}
+                    onSelectDate={handleSelectDate}
                     isStreaming={
                       isLoading &&
                       index === messages.length - 1 &&
