@@ -46,6 +46,7 @@ const SOLVER_PRO_MODEL = process.env.SOLVER_PRO_MODEL?.trim() || process.env.SOL
 export const maxDuration = 300;
 
 const PAYMENT_ACTION_TOKEN_REGEX = /(?:__PAYMENT_ACTION__|PAYMENT_ACTION)\s*:?/gi;
+const CALENDAR_ACTION_TOKEN_REGEX = /__CALENDAR_ACTION__/gi;
 const CLOSE_CHAT_TOKEN_REGEX = /__CLOSE_CHAT__/gi;
 const TECHNICAL_TOKEN_REGEX = /fcl_[a-z0-9_]+|fcall_[a-z0-9_]+|\[TOOL_CALL:[a-z0-9_]+\]/gi;
 
@@ -62,6 +63,7 @@ function stripUiControlTokens(content: string): string {
 
   return cleaned
     .replace(PAYMENT_ACTION_TOKEN_REGEX, "")
+    .replace(CALENDAR_ACTION_TOKEN_REGEX, "")
     .replace(CLOSE_CHAT_TOKEN_REGEX, "")
     .replace(TECHNICAL_TOKEN_REGEX, "")
     .trim();
