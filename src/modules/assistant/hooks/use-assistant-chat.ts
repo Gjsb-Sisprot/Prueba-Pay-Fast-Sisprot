@@ -28,6 +28,8 @@ import {
   normalizeSystemMessageContent,
   CLOSE_CHAT_MARKER,
 } from "./use-assistant-chat.utils";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface UseAssistantChatOptions {
   config?: Partial<typeof DEFAULT_ASSISTANT_CONFIG>;
@@ -406,6 +408,28 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       sendMessage(lastUserMessage.content);
     }
   }, [messages, sendMessage]);
+  
+  const handleSelectDate = useCallback(async (date: Date) => {
+    const formattedDate = format(date, "EEEE d 'de' MMMM", { locale: es });
+    const message = `Mi disponibilidad para la visita es el día ${formattedDate}`;
+    
+    // 1. Enviar mensaje al chat
+    await sendMessage(message);
+    
+    // 2. Sincronizar con Supabase de forma persistente
+    try {
+      await fetch(`/api/assistant/conversations/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_metadata",
+          metadata: { visitDate: date }
+        }),
+      });
+    } catch (err) {
+      console.error("[SYNC_VISIT_DATE_ERROR]", err);
+    }
+  }, [sessionId, sendMessage]);
 
 
   return {
@@ -450,5 +474,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
     mcpClientData,
     isFetchingContext,
+    handleSelectDate,
   };
 }
