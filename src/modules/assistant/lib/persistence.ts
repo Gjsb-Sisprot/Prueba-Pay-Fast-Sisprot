@@ -24,6 +24,7 @@ interface ConversationUpdate {
   specialist_name?: string;
   escalation_reason?: string;
   glpi_ticket_id?: number;
+  visit_date?: string | Date;
 }
 
 /**
@@ -288,6 +289,7 @@ export async function syncConversationMetadata(
     if (data.summary) updates.summary = data.summary;
     if (data.reason) updates.escalation_reason = data.reason;
     if (data.specialistName) updates.specialist_name = data.specialistName;
+    if (data.visitDate) updates.visit_date = data.visitDate;
 
     const { error } = await supabase
       .from("conversations")
