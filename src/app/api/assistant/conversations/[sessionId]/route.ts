@@ -114,6 +114,16 @@ export async function POST(
         break;
       }
 
+      case "update_metadata": {
+        const { metadata } = body;
+        if (!metadata) {
+          return NextResponse.json({ error: "Se requieren metadatos" }, { status: 400 });
+        }
+        await syncConversationMetadata(sessionId, metadata);
+        result = { success: true };
+        break;
+      }
+
       default:
         return NextResponse.json(
           { error: `Acción no soportada: ${action}` },
