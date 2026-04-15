@@ -18,7 +18,16 @@ import Image from "next/image";
 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
+import { Calendar } from "@/shared/components/ui/calendar";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/shared/components/ui/popover";
 import type { MediaAttachment } from "../lib/types";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -30,6 +39,7 @@ interface ChatMessageProps {
   onCloseConversation?: () => void;
   onDismissCloseOffer?: () => void;
   onAcceptPaymentOffer?: () => void;
+  onSelectDate?: (date: Date) => void;
   isStreaming?: boolean;
 }
 
@@ -43,6 +53,7 @@ function ChatMessageComponent({
   onCloseConversation,
   onDismissCloseOffer,
   onAcceptPaymentOffer,
+  onSelectDate,
   isStreaming,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
@@ -277,9 +288,39 @@ function ChatMessageComponent({
                 )}
               </div>
             ) : (
-              <div className="whitespace-pre-wrap break-words">{content}</div>
+              <div className="whitespace-pre-wrap break-words">{content.replace("__CALENDAR_ACTION__", "").trim()}</div>
             )}
           </div>
+
+          {isAssistant && content.includes("__CALENDAR_ACTION__") && !isLoading && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-gray-900">
+                <CalendarIcon className="w-4 h-4 text-primary" />
+                <span>Seleccionar fecha de visita</span>
+              </div>
+              <div className="flex justify-center bg-gray-50 rounded-lg p-2 border border-gray-100">
+                <Calendar
+                  mode="single"
+                  selected={undefined}
+                  onSelect={(date) => {
+                    if (date && onSelectDate) {
+                      onSelectDate(date);
+                    }
+                  }}
+                  disabled={(date) => {
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    return date < now || date.getDay() === 0; // No domingos
+                  }}
+                  initialFocus
+                  locale={es}
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2 text-center italic">
+                Solo disponible de Lunes a Sábado
+              </p>
+            </div>
+          )}
           
           {showCloseOffer && (
             <div className="flex gap-2 mt-2">
