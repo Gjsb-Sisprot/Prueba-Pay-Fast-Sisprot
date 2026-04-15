@@ -139,7 +139,7 @@ interface VideoFrameResult {
 }
 
 async function extractVideoFrames(file: File): Promise<VideoFrameResult> {
-  const TIMEOUT_MS = 8000;
+  const TIMEOUT_MS = 15000;
 
   return new Promise((resolve) => {
     let resolved = false;
