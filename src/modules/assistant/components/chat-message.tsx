@@ -63,6 +63,11 @@ function ChatMessageComponent({
   const [offerDismissed, setOfferDismissed] = useState(false);
   const [paymentOfferDismissed, setPaymentOfferDismissed] = useState(false);
 
+  // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
+  const segments = isAssistant 
+    ? content.split("\n\n").map(s => s.trim()).filter(s => s.length > 0)
+    : [content];
+
   const showCloseOffer = closeOffer && !offerDismissed && onCloseConversation;
   const showPaymentOffer = paymentOffer && !paymentOfferDismissed && onAcceptPaymentOffer;
 
@@ -154,22 +159,41 @@ function ChatMessageComponent({
             </div>
           )}
 
-          <div
-            className={cn(
-              "rounded-2xl px-3 py-2 text-sm overflow-hidden",
-              isAssistant
-                ? "bg-gray-100 text-gray-900 rounded-tl-sm"
-                : "bg-black text-white rounded-tr-sm"
-            )}
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+          <div className="flex flex-col gap-1.5">
+            {isLoading && segments.length === 0 ? (
+              <div
+                className={cn(
+                  "rounded-2xl px-3.5 py-2 text-sm bg-gray-100 text-gray-900 rounded-tl-sm w-fit"
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                </div>
               </div>
-            ) : isAssistant ? (
-              <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
+            ) : (
+              segments.map((segment, segmentIndex) => (
+                <div
+                  key={segmentIndex}
+                  className={cn(
+                    "rounded-2xl px-3.5 py-2 text-sm overflow-hidden transition-all duration-300",
+                    isAssistant
+                      ? "bg-gray-100 text-gray-900"
+                      : "bg-black text-white rounded-tr-sm",
+                    // Estilo de bordes para agrupar burbujas del asistente
+                    isAssistant && segments.length > 1 && (
+                      segmentIndex === 0 
+                        ? "rounded-tl-sm rounded-bl-md" 
+                        : segmentIndex === segments.length - 1 
+                          ? "rounded-tl-md rounded-bl-sm"
+                          : "rounded-l-md"
+                    ),
+                    isAssistant && segments.length === 1 && "rounded-tl-sm"
+                  )}
+                >
+                  {isAssistant ? (
+                    <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
                 <ReactMarkdown
                   components={{
                     img: ({ src, alt }) => {
@@ -280,16 +304,20 @@ function ChatMessageComponent({
                     },
                     p: ({ children }) => <p className="my-1">{children}</p>,
                   }}
-                >
-                  {content}
-                </ReactMarkdown>
-                {isStreaming && content && (
-                  <span className="inline-block w-1.5 h-4 bg-gray-400/70 rounded-[1px] animate-pulse align-text-bottom ml-0.5" />
+                    >
+                      {segment}
+                    </ReactMarkdown>
+                    {isStreaming && segmentIndex === segments.length - 1 && segment && (
+                      <span className="inline-block w-1.5 h-4 bg-gray-400/70 rounded-[1px] animate-pulse align-text-bottom ml-0.5" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap break-words">
+                    {segment.replace("__CALENDAR_ACTION__", "").trim()}
+                  </div>
                 )}
               </div>
-            ) : (
-              <div className="whitespace-pre-wrap break-words">{content.replace("__CALENDAR_ACTION__", "").trim()}</div>
-            )}
+            ))}
           </div>
 
           {isAssistant && content.includes("__CALENDAR_ACTION__") && !isLoading && (
