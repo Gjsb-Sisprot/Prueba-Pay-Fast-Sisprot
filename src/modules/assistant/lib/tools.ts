@@ -58,6 +58,10 @@ export const createGlpiTicketSchema = z.object({
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
 });
 
+export const auditServiceSchema = z.object({
+  contractId: z.string().describe("ID del contrato del cliente para realizar la auditoría interna"),
+});
+
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
@@ -118,6 +122,13 @@ export const toolDefinitions: ToolDefinition[] = [
       "Crea un ticket de soporte en GLPI para seguimiento técnico o administrativo. " +
       "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera atención humana.",
     schema: createGlpiTicketSchema,
+  },
+  {
+    name: "audit_service",
+    description:
+      "Ejecuta una auditoría interna del servicio de un cliente. " +
+      "Debe usarse ANTES de pedir videos de la ONU en casos de falla total o intermitencia.",
+    schema: auditServiceSchema,
   },
 ];
 
@@ -265,6 +276,34 @@ export async function executeCloseConversation(args: z.infer<typeof closeConvers
   }
 }
 
+export async function executeAuditService(args: z.infer<typeof auditServiceSchema>): Promise<ToolResponse> {
+  try {
+    const { contractId } = args;
+    const response = await fetch("https://n8n.sisprottaurus.com/webhook/bfd2bf8bd443", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: contractId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en el webhook de auditoría: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      message: "Auditoría interna ejecutada exitosamente.",
+      data: data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `No se pudo completar la auditoría interna: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+    };
+  }
+}
+
+
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
@@ -328,6 +367,21 @@ export const getLocalTools = (): Record<string, unknown> => {
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeCloseConversation(args as unknown as z.infer<typeof closeConversationSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    audit_service: {
+      name: "audit_service",
+      description: "Ejecuta una auditoría interna del servicio mediante el webhook de n8n.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string", description: "ID del contrato" },
+        },
+        required: ["contractId"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeAuditService(args as unknown as z.infer<typeof auditServiceSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
