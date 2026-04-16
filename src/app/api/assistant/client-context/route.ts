@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
     const clientData: ClientContextData = {
       identification: normalizedId,
       name: firstContract.clientName,
+      email: firstContract.email,
+      phone: firstContract.phone,
       contract: firstContract.contractId.toString(),
       sector: firstContract.sector,
       address: firstContract.address,
