@@ -216,7 +216,6 @@ export async function routeRequest(
     }
   }
 
-  const eagerDirectResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
   
   // GUARDIA AGRESIVO DE MULTICONTRATOS...
 
