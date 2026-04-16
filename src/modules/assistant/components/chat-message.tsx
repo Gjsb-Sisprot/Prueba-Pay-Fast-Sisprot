@@ -12,7 +12,9 @@ import {
   LogOut, 
   MessageSquarePlus, 
   CreditCard, 
-  X 
+  X,
+  Building2,
+  Clock 
 } from "lucide-react";
 import Image from "next/image";
 
@@ -37,9 +39,10 @@ interface ChatMessageProps {
   closeOffer?: boolean;
   paymentOffer?: boolean;
   onCloseConversation?: () => void;
-  onDismissCloseOffer?: () => void;
-  onAcceptPaymentOffer?: () => void;
   onSelectDate?: (date: Date) => void;
+  onSelectTime?: (time: string) => void;
+  onSelectContract?: (contractId: string, sector: string) => void;
+  mcpClientData?: any; 
   isStreaming?: boolean;
 }
 
@@ -54,6 +57,9 @@ function ChatMessageComponent({
   onDismissCloseOffer,
   onAcceptPaymentOffer,
   onSelectDate,
+  onSelectTime,
+  onSelectContract,
+  mcpClientData,
   isStreaming,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
@@ -65,8 +71,24 @@ function ChatMessageComponent({
 
   // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
   const segments = isAssistant 
-    ? content.split("\n\n").map(s => s.trim()).filter(s => s.length > 0)
+    ? content.split("\n\n")
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+        // Eliminar duplicados consecutivos de contenido idéntico
+        .filter((s, i, self) => i === 0 || s !== self[i - 1])
     : [content];
+
+  const cleanContent = (text: string) => {
+    return text
+      .replace(/__CALENDAR_ACTION__/gi, "")
+      .replace(/__PAYMENT_ACTION__/gi, "")
+      .replace(/__SELECT_CONTRACT__/gi, "")
+      .replace(/__SELECT_TIME__/gi, "")
+      .replace(/CALENDAR_ACTION/gi, "")
+      .replace(/PAYMENT_ACTION/gi, "")
+      .replace(/SELECT_CONTRACT/gi, "")
+      .trim();
+  };
 
   const showCloseOffer = closeOffer && !offerDismissed && onCloseConversation;
   const showPaymentOffer = paymentOffer && !paymentOfferDismissed && onAcceptPaymentOffer;
@@ -262,21 +284,93 @@ function ChatMessageComponent({
                           p: ({ children }) => <p className="my-1">{children}</p>,
                         }}
                       >
-                        {segment}
+                        {cleanContent(segment)}
                       </ReactMarkdown>
                       {isStreaming && segmentIndex === segments.length - 1 && segment && (
                         <span className="inline-block w-1.5 h-4 bg-gray-400/70 rounded-[1px] animate-pulse align-text-bottom ml-0.5" />
                       )}
                     </div>
                   ) : (
-                    <div className="whitespace-pre-wrap break-words">
-                      {segment.replace("__CALENDAR_ACTION__", "").trim()}
+                    <div className="whitespace-pre-wrap break-words text-sm">
+                      {cleanContent(segment)}
                     </div>
                   )}
                 </div>
               ))
             )}
           </div>
+          
+          {isAssistant && content.includes("__SELECT_CONTRACT__") && !isLoading && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Selecciona tu contrato</h4>
+                  <p className="text-[10px] text-gray-500">¿Sobre cuál servicio necesitas soporte?</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                {mcpClientData?.allContracts?.map((c: any) => (
+                  <Button
+                    key={c.contractId}
+                    variant="outline"
+                    size="sm"
+                    className="justify-start h-auto py-2.5 px-3 border-blue-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-left bg-blue-50/10"
+                    onClick={() => onSelectContract?.(String(c.contractId), c.sector)}
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[13px] font-medium text-blue-900 leading-tight">
+                        {c.sector}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {c.planName} • #{c.contractId}
+                      </span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isAssistant && content.includes("__SELECT_TIME__") && !isLoading && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Selecciona la hora</h4>
+                  <p className="text-[10px] text-gray-500">¿A qué hora puedes recibir al técnico?</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                {Array.from({ length: 25 }).map((_, i) => {
+                  const hour = 8 + Math.floor(i / 2);
+                  const minutes = i % 2 === 0 ? "00" : "30";
+                  const time = `${hour.toString().padStart(2, "0")}:${minutes}`;
+                  const ampm = hour >= 12 ? "PM" : "AM";
+                  const displayHour = hour > 12 ? hour - 12 : hour;
+                  const displayTime = `${displayHour}:${minutes} ${ampm}`;
+                  
+                  return (
+                    <Button
+                      key={time}
+                      variant="outline"
+                      size="sm"
+                      className="text-[11px] h-9 border-indigo-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all font-medium py-1 px-2"
+                      onClick={() => onSelectTime?.(displayTime)}
+                    >
+                      {displayTime}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {isAssistant && content.includes("__CALENDAR_ACTION__") && !isLoading && (
             <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
