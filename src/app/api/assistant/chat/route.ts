@@ -260,7 +260,9 @@ export async function POST(request: Request) {
               ? activeClientData.identification.trim().toUpperCase().slice(1) 
               : activeClientData.identification.trim().toUpperCase(),
             // AUTO-ENRIQUECIMIENTO DE NOMBRE: Si no tenemos nombre, usamos el de la API de Sisprot
-            name: activeClientData.name || sisprotClient.contracts[0]?.clientName || null
+            name: activeClientData.name || sisprotClient.contracts[0]?.clientName || null,
+            phone: activeClientData.phone || sisprotClient.contracts[0]?.phone || null,
+            email: activeClientData.email || sisprotClient.contracts[0]?.email || null
           } as ClientContextData;
         } else {
           console.log(`[SISPROT_ENRICH] No se obtuvieron resultados de la API.`);
@@ -409,10 +411,11 @@ export async function POST(request: Request) {
     const truncatedSolverHistory = conversationHistory.slice(-4);
     const solverHistory = buildSolverHistory(truncatedSolverHistory, messages);
 
-    const solverOptions = {
+    const solverOptions: SolverOptions = {
       config: assistantConfig,
       sessionId,
       conversationHistory: solverHistory,
+      attachments: lastMessage?.attachments || [],
     };
 
     const hasToolContext = toolResults.length > 0;
