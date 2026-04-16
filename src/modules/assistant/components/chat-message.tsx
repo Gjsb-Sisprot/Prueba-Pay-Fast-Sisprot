@@ -33,6 +33,8 @@ interface ChatMessageProps {
   closeOffer?: boolean;
   paymentOffer?: boolean;
   onCloseConversation?: () => void;
+  onDismissCloseOffer?: () => void;
+  onAcceptPaymentOffer?: () => void;
   onSelectDate?: (date: Date) => void;
   onSelectTime?: (time: string) => void;
   onSelectContract?: (contractId: string, sector: string) => void;
