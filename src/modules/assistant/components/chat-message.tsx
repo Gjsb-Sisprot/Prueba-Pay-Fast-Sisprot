@@ -21,14 +21,8 @@ import Image from "next/image";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/shared/components/ui/popover";
-import type { MediaAttachment } from "../lib/types";
+import type { MediaAttachment, ClientContextData } from "../lib/types";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface ChatMessageProps {
@@ -42,7 +36,7 @@ interface ChatMessageProps {
   onSelectDate?: (date: Date) => void;
   onSelectTime?: (time: string) => void;
   onSelectContract?: (contractId: string, sector: string) => void;
-  mcpClientData?: any; 
+  mcpClientData?: ClientContextData; 
   isStreaming?: boolean;
 }
 
@@ -313,7 +307,7 @@ function ChatMessageComponent({
               </div>
               
               <div className="grid grid-cols-1 gap-2">
-                {mcpClientData?.allContracts?.map((c: any) => (
+                {mcpClientData?.allContracts?.map((c) => (
                   <Button
                     key={c.contractId}
                     variant="outline"
