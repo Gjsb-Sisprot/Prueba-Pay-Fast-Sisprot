@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, streamText, type CoreMessage } from "ai";
+import { generateText, streamText } from "ai";
 import type { ClientContextData, AssistantConfig, MediaAttachment } from "./types";
 import { buildSystemPrompt } from "./prompt-builder";
 import type { ToolResult } from "./router-agent";
@@ -110,7 +110,8 @@ export function generateResponse(
     const result = streamText({
         model: google(assistantConfig.model),
         system: systemPrompt,
-        messages: messages as CoreMessage[],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: messages as any,
         temperature: assistantConfig.temperature,
         maxRetries: 0,
         maxOutputTokens: 8192,
@@ -153,7 +154,8 @@ export async function generateResponseBuffered(
             const result = await generateText({
                 model: google(modelName),
                 system: systemPrompt,
-                messages: messages as CoreMessage[],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                messages: messages as any,
                 temperature,
                 maxOutputTokens: 8192,
                 maxRetries: isLast ? 2 : 0,
