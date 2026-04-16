@@ -93,22 +93,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (response.success && response.data) {
           setMcpClientData(response.data);
           console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
-
-          // Saludo proactivo si es una conversación nueva y no hay mensajes aún
-          setMessages(prev => {
-            if (prev.length === 0 && !isHistoryLoaded) {
-              const fullName = response.data.name || options.clientName || "";
-              const firstName = fullName.trim().split(/\s+/)[0] || "";
-
-              return [{
-                id: "welcome",
-                role: "assistant",
-                content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
-                timestamp: new Date()
-              }];
-            }
-            return prev;
-          });
         }
       })
       .catch(() => {
@@ -120,7 +104,22 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       });
 
     return () => { cancelled = true; };
-  }, [identification, options.clientName, isHistoryLoaded]);
+  }, [identification, options.clientName]);
+
+  // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
+  useEffect(() => {
+    if (messages.length === 0 && !isFetchingContext && !isHistoryLoaded) {
+      const fullName = mcpClientData?.name || options.clientName || "";
+      const firstName = fullName.trim().split(/\s+/)[0] || "";
+      
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
+        timestamp: new Date()
+      }]);
+    }
+  }, [sessionId, mcpClientData?.name, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
 
 
   const handleInputChange = useCallback(
@@ -431,6 +430,48 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     }
   }, [sessionId, sendMessage]);
 
+  const handleSelectTime = useCallback(async (time: string) => {
+    const message = `Deseo agendar la visita para las ${time}`;
+    
+    // 1. Enviar mensaje al chat
+    await sendMessage(message);
+    
+    // 2. Sincronizar hora con Supabase
+    try {
+      await fetch(`/api/assistant/conversations/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_metadata",
+          metadata: { visitTime: time }
+        }),
+      });
+    } catch (err) {
+      console.error("[SYNC_VISIT_TIME_ERROR]", err);
+    }
+  }, [sessionId, sendMessage]);
+
+  const handleSelectContract = useCallback(async (contractId: string, sector: string) => {
+    const message = `Deseo soporte para mi contrato #${contractId} en el sector ${sector}`;
+    
+    // 1. Enviar mensaje al chat
+    await sendMessage(message);
+    
+    // 2. Sincronizar metadatos del contrato elegido
+    try {
+      await fetch(`/api/assistant/conversations/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_metadata",
+          metadata: { contract: contractId, sector: sector }
+        }),
+      });
+    } catch (err) {
+      console.error("[SYNC_CONTRACT_ERROR]", err);
+    }
+  }, [sessionId, sendMessage]);
+
 
   return {
     messages,
@@ -475,5 +516,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     mcpClientData,
     isFetchingContext,
     handleSelectDate,
+    handleSelectTime,
+    handleSelectContract,
   };
 }
