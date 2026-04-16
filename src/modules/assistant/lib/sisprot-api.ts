@@ -15,6 +15,8 @@ export interface SisprotContract {
   onuSerial: string;
   debt: string;
   isActive: boolean;
+  phone?: string;
+  email?: string;
 }
 
 /**
@@ -95,6 +97,8 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       onu_serial?: string;
       debt?: string | number;
       is_active?: boolean;
+      phone?: string;
+      email?: string;
     }
 
     const results = (Array.isArray(data) ? data : (data.results || [])) as RawSisprotContract[];
@@ -116,7 +120,9 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
                 (item.status_code || "").toLowerCase() === 'active' || 
                 item.status === 16 || 
                 item.status === '16' || 
-                !!item.is_active
+                !!item.is_active,
+      phone: item.phone,
+      email: item.email
     }));
 
     return { contracts, debugUrl: `${debugUrl} (${contracts.length} encontrados)` };
