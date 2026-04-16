@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, streamText } from "ai";
-import type { ClientContextData, AssistantConfig } from "./types";
+import { generateText, streamText, type CoreMessage } from "ai";
+import type { ClientContextData, AssistantConfig, MediaAttachment } from "./types";
 import { buildSystemPrompt } from "./prompt-builder";
 import type { ToolResult } from "./router-agent";
 
@@ -79,7 +79,7 @@ export interface SolverOptions {
     config?: Partial<AssistantConfig>;
     sessionId?: string;
     conversationHistory?: SolverMessage[];
-    attachments?: any[];
+    attachments?: MediaAttachment[];
 }
 
 interface SolverMessage {
@@ -110,7 +110,7 @@ export function generateResponse(
     const result = streamText({
         model: google(assistantConfig.model),
         system: systemPrompt,
-        messages: messages as any,
+        messages: messages as CoreMessage[],
         temperature: assistantConfig.temperature,
         maxRetries: 0,
         maxOutputTokens: 8192,
@@ -153,7 +153,7 @@ export async function generateResponseBuffered(
             const result = await generateText({
                 model: google(modelName),
                 system: systemPrompt,
-                messages: messages as any,
+                messages: messages as CoreMessage[],
                 temperature,
                 maxOutputTokens: 8192,
                 maxRetries: isLast ? 2 : 0,
@@ -195,7 +195,7 @@ function buildSolverMessages(
     userMessage: string,
     toolResults: ToolResult[],
     conversationHistory: SolverMessage[],
-    attachments?: any[]
+    attachments?: MediaAttachment[]
 ): SolverMessage[] {
     const messages: SolverMessage[] = [...conversationHistory];
     const hasCloseConversationResult = toolResults.some((tr) => tr.toolName === "close_conversation");
@@ -213,7 +213,7 @@ function buildSolverMessages(
 
     const toolContext = toolResults.length > 0 ? formatToolResults(toolResults, userMessage) : "";
 
-    const content: any[] = [];
+    const content: SolverMessage['content'] = [];
     
     // 1. Agregar texto principal
     let promptSuffix = "";
@@ -257,7 +257,7 @@ function buildSolverMessages(
 
     messages.push({
         role: "user",
-        content: content as any
+        content: content as SolverMessage['content']
     });
 
     return messages;
