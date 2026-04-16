@@ -97,6 +97,7 @@ export interface ClientContextData {
   reason?: string;
   specialistName?: string;
   visitDate?: string | Date;
+  visitTime?: string;
 }
 
 
