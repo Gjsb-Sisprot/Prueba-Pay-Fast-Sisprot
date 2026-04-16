@@ -103,6 +103,7 @@ export function ChatBubble() {
     handleSelectDate,
     handleSelectTime,
     handleSelectContract,
+    mcpClientData,
   } = useAssistantChat({
     identification,
     clientName,
