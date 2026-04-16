@@ -181,7 +181,6 @@ function ChatMessageComponent({
                     isAssistant
                       ? "bg-gray-100 text-gray-900"
                       : "bg-black text-white rounded-tr-sm",
-                    // Estilo de bordes para agrupar burbujas del asistente
                     isAssistant && segments.length > 1 && (
                       segmentIndex === 0 
                         ? "rounded-tl-sm rounded-bl-md" 
@@ -194,130 +193,89 @@ function ChatMessageComponent({
                 >
                   {isAssistant ? (
                     <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
-                <ReactMarkdown
-                  components={{
-                    img: ({ src, alt }) => {
-                      const githubUrl = typeof src === 'string' ? src : "";
-                      const isPlanResidencial = githubUrl.includes('/residenciales.png');
-                      const isPlanPyme = githubUrl.includes('/pymes.png');
-                      const isPlanImage = isPlanResidencial || isPlanPyme;
-                      
-                      if (isPlanImage) {
-                        // Convertir la URL de GitHub (blob) a Raw URL para que cargue la imagen real
-                        const rawSrc = githubUrl
-                          .replace('github.com', 'raw.githubusercontent.com')
-                          .replace('/blob/', '/');
-
-                        return (
-                          <span className="my-4 block w-full">
-                            <span className="flex flex-col gap-0 bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
-                              <span className="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <span className="bg-blue-100 p-2 rounded-lg flex items-center justify-center">
-                                  <CreditCard className="w-4 h-4 text-blue-600" />
-                                </span>
-                                <span className="flex-1">
-                                  <span className="text-sm font-bold text-gray-900 block leading-tight">
-                                    {isPlanResidencial ? "Plan Residencial" : "Plan PYME (Empresas)"}
+                      <ReactMarkdown
+                        components={{
+                          img: ({ src, alt }) => {
+                            const githubUrl = typeof src === 'string' ? src : "";
+                            const isPlanResidencial = githubUrl.includes('/residenciales.png');
+                            const isPlanPyme = githubUrl.includes('/pymes.png');
+                            const isPlanImage = isPlanResidencial || isPlanPyme;
+                            
+                            if (isPlanImage) {
+                              const rawSrc = githubUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+                              return (
+                                <span className="my-4 block w-full">
+                                  <span className="flex flex-col gap-0 bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
+                                    <span className="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
+                                      <span className="bg-blue-100 p-2 rounded-lg flex items-center justify-center">
+                                        <CreditCard className="w-4 h-4 text-blue-600" />
+                                      </span>
+                                      <span className="flex-1">
+                                        <span className="text-sm font-bold text-gray-900 block leading-tight">
+                                          {isPlanResidencial ? "Plan Residencial" : "Plan PYME (Empresas)"}
+                                        </span>
+                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Sisprot Global Fiber</span>
+                                      </span>
+                                    </span>
+                                    <span className="p-1 bg-white flex items-center justify-center">
+                                      <Image src={rawSrc} alt={alt || "Oferta de planes"} width={400} height={300} className="w-full h-auto object-cover rounded-xl" unoptimized />
+                                    </span>
+                                    <a href={githubUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full p-2.5 text-xs font-semibold text-blue-700 bg-blue-50/50 hover:bg-blue-100 transition-colors border-t border-gray-100 no-underline decoration-0">
+                                      <Maximize2 className="w-3 h-3" /> Ver en pantalla completa
+                                    </a>
                                   </span>
-                                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Sisprot Global Fiber</span>
                                 </span>
+                              );
+                            }
+                            return (
+                              <span className="block my-4 text-center">
+                                <Image src={githubUrl} alt={alt || "Imagen de Sisprot"} width={500} height={300} className="rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] max-w-full inline-block" unoptimized />
+                                {alt && <span className="text-[10px] text-gray-400 mt-2 block font-medium">{alt}</span>}
                               </span>
-                              <span className="p-1 bg-white flex items-center justify-center">
-                                <Image
-                                  src={rawSrc}
-                                  alt={alt || "Oferta de planes"}
-                                  width={400}
-                                  height={300}
-                                  className="w-full h-auto object-cover rounded-xl"
-                                  unoptimized
-                                />
-                              </span>
-                              <a 
-                                href={githubUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="flex items-center justify-center gap-2 w-full p-2.5 text-xs font-semibold text-blue-700 bg-blue-50/50 hover:bg-blue-100 transition-colors border-t border-gray-100 no-underline decoration-0"
-                              >
-                                <Maximize2 className="w-3 h-3" /> Ver en pantalla completa
-                              </a>
-                            </span>
-                          </span>
-                        );
-                      }
-
-                      return (
-                        <span className="block my-4 text-center">
-                          <Image
-                            src={githubUrl}
-                            alt={alt || "Imagen de Sisprot"}
-                            width={500}
-                            height={300}
-                            className="rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] max-w-full inline-block"
-                            unoptimized
-                          />
-                          {alt && <span className="text-[10px] text-gray-400 mt-2 block font-medium">{alt}</span>}
-                        </span>
-                      );
-                    },
-                    a: ({ href, children, ...rest }) => {
-
-                      const url = href || "";
-                      const isMapLink = url.includes('maps.app.goo.gl') || url.includes('google.com/maps') || url.includes('goo.gl/maps');
-                      
-                      if (isMapLink) {
-                        return (
-                          <span className="my-3 block w-full">
-                            <span className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
-                              <span className="flex-shrink-0 bg-red-50 p-2.5 rounded-full flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
-                                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                                  <circle cx="12" cy="10" r="3"/>
-                                </svg>
-                              </span>
-                              <span className="flex-1 min-w-0 flex flex-col justify-center">
-                                <span className="text-sm font-semibold text-gray-900 m-0 leading-tight block">Ubicación Sisprot</span>
-                                <span className="text-xs text-gray-500 leading-snug mt-0.5 mb-2 truncate block">Oficina Principal</span>
-                                <a 
-                                  href={url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="inline-flex items-center justify-center w-full px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm focus:outline-none no-underline transition-colors decoration-0"
-                                >
-                                  Guiarme con el mapa
-                                </a>
-                              </span>
-                            </span>
-                          </span>
-                        );
-                      }
-                      return (
-                        <a
-                          {...rest}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary underline hover:text-primary/80 break-all"
-                        >
-                          {children}
-                        </a>
-                      );
-                    },
-                    p: ({ children }) => <p className="my-1">{children}</p>,
-                  }}
-                    >
-                      {segment}
-                    </ReactMarkdown>
-                    {isStreaming && segmentIndex === segments.length - 1 && segment && (
-                      <span className="inline-block w-1.5 h-4 bg-gray-400/70 rounded-[1px] animate-pulse align-text-bottom ml-0.5" />
-                    )}
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-wrap break-words">
-                    {segment.replace("__CALENDAR_ACTION__", "").trim()}
-                  </div>
-                )}
-              </div>
-            ))}
+                            );
+                          },
+                          a: ({ href, children, ...rest }) => {
+                            const url = href || "";
+                            const isMapLink = url.includes('maps.app.goo.gl') || url.includes('google.com/maps') || url.includes('goo.gl/maps');
+                            if (isMapLink) {
+                              return (
+                                <span className="my-3 block w-full">
+                                  <span className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                    <span className="flex-shrink-0 bg-red-50 p-2.5 rounded-full flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                                      </svg>
+                                    </span>
+                                    <span className="flex-1 min-w-0 flex flex-col justify-center">
+                                      <span className="text-sm font-semibold text-gray-900 m-0 leading-tight block">Ubicación Sisprot</span>
+                                      <span className="text-xs text-gray-500 leading-snug mt-0.5 mb-2 truncate block">Oficina Principal</span>
+                                      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm focus:outline-none no-underline transition-colors decoration-0">Guiarme con el mapa</a>
+                                    </span>
+                                  </span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <a {...rest} href={url} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 break-all">{children}</a>
+                            );
+                          },
+                          p: ({ children }) => <p className="my-1">{children}</p>,
+                        }}
+                      >
+                        {segment}
+                      </ReactMarkdown>
+                      {isStreaming && segmentIndex === segments.length - 1 && segment && (
+                        <span className="inline-block w-1.5 h-4 bg-gray-400/70 rounded-[1px] animate-pulse align-text-bottom ml-0.5" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap break-words">
+                      {segment.replace("__CALENDAR_ACTION__", "").trim()}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
           {isAssistant && content.includes("__CALENDAR_ACTION__") && !isLoading && (
