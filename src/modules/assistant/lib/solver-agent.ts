@@ -79,11 +79,12 @@ export interface SolverOptions {
     config?: Partial<AssistantConfig>;
     sessionId?: string;
     conversationHistory?: SolverMessage[];
+    attachments?: any[];
 }
 
 interface SolverMessage {
     role: "user" | "assistant";
-    content: string;
+    content: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType?: string }>;
 }
 
 export function generateResponse(
@@ -92,7 +93,7 @@ export function generateResponse(
     toolResults: ToolResult[] = [],
     options: SolverOptions = {}
 ) {
-    const { config, conversationHistory = [] } = options;
+    const { config, conversationHistory = [], attachments = [] } = options;
 
     const assistantConfig = {
         model: MODEL_CHAIN[0],
@@ -104,12 +105,12 @@ export function generateResponse(
 
     // Truncamos historial de forma agresiva (últimos 3 mensajes previos)
     const truncatedHistory = conversationHistory.slice(-3);
-    const messages = buildSolverMessages(message, toolResults, truncatedHistory);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
 
     const result = streamText({
         model: google(assistantConfig.model),
         system: systemPrompt,
-        messages,
+        messages: messages as any,
         temperature: assistantConfig.temperature,
         maxRetries: 0,
         maxOutputTokens: 8192,
@@ -131,7 +132,7 @@ export async function generateResponseBuffered(
     toolResults: ToolResult[] = [],
     options: SolverOptions = {}
 ): Promise<BufferedResponse> {
-    const { config, conversationHistory = [] } = options;
+    const { config, conversationHistory = [], attachments = [] } = options;
 
     const primaryModel = config?.model || MODEL_CHAIN[0];
     const temperature = config?.temperature ?? 0.7;
@@ -142,7 +143,7 @@ export async function generateResponseBuffered(
 
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
     const truncatedHistory = conversationHistory.slice(-3);
-    const messages = buildSolverMessages(message, toolResults, truncatedHistory);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
 
     for (let i = 0; i < chain.length; i++) {
         const modelName = chain[i];
@@ -152,7 +153,7 @@ export async function generateResponseBuffered(
             const result = await generateText({
                 model: google(modelName),
                 system: systemPrompt,
-                messages,
+                messages: messages as any,
                 temperature,
                 maxOutputTokens: 8192,
                 maxRetries: isLast ? 2 : 0,
@@ -193,7 +194,8 @@ export async function generateResponseBuffered(
 function buildSolverMessages(
     userMessage: string,
     toolResults: ToolResult[],
-    conversationHistory: SolverMessage[]
+    conversationHistory: SolverMessage[],
+    attachments?: any[]
 ): SolverMessage[] {
     const messages: SolverMessage[] = [...conversationHistory];
     const hasCloseConversationResult = toolResults.some((tr) => tr.toolName === "close_conversation");
@@ -209,70 +211,54 @@ function buildSolverMessages(
     const followUpPatterns = /no respond|incompleto|falt[óa]|continúa|más información|explica mejor|no entendí/i;
     const isFollowUp = followUpPatterns.test(userMessage);
 
+    const toolContext = toolResults.length > 0 ? formatToolResults(toolResults, userMessage) : "";
+
+    const content: any[] = [];
+    
+    // 1. Agregar texto principal
+    let promptSuffix = "";
     if (toolResults.length > 0) {
-        const toolContext = formatToolResults(toolResults, userMessage);
-        messages.push({
-            role: "user",
-            content: `${userMessage}
-
----
-[INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS]
-${toolContext}
----
-
-INSTRUCCIONES CRÍTICAS PARA EL AGENTE:
-
-1. **PRIORIDAD AL RAG (Knowledge Base)**:
-   - Si los resultados incluyen información corporativa o planes desde el Knowledge Base, **USA TODA la información disponible**.
-   - Si devolvió un PROCEDIMIENTO técnico, **SIGUE SUS PASOS EXACTOS**.
-   - **NO omitas datos** - el usuario quiere información completa.
-
-2. **RESPUESTA COMPLETA**:
-   - Si la información viene del KB, incluye TODOS los puntos relevantes.
-   - Formatea con listas si hay múltiples elementos.
-   - Si hay dirección, teléfono, horarios, etc., inclúyelos.
-
-3. **MANEJO DE ERRORES DE HERRAMIENTAS**:
-   - Si una herramienta técnica falla (success: false, error 401/Not Found):
-     * NO inventes datos.
-     * Informa al usuario que no pudiste obtener la información.
-
-4. **REGLA DE ORO**:
-   - SIEMPRE genera una respuesta útil que responda la pregunta del usuario.
-    - NO cambies de tema ni diagnostiques cosas que el usuario no pidió.
-
-5. **ESCALAMIENTO VERIFICABLE**:
-    - Solo digas que "el caso fue escalado" si en los resultados aparece la herramienta "escalate_to_specialist".
-    - Si no aparece esa herramienta, pide confirmación antes de sugerir escalar.
-
-6. **REDES Y CANALES DIGITALES**:
-   - Si el usuario pregunta por Instagram, YouTube, Facebook, WhatsApp o redes de Sisprot:
-   - Usa preferentemente el bloque [ENLACES_Y_CANALES_DETECTADOS] del contexto de herramientas.
-    - Comparte enlaces/handles exactos, en líneas separadas, sin omitirlos ni resumirlos como texto genérico.
-
-7. **PORTAL AUTENTICADO Y PAGOS**:
-    - Si en el contexto aparece que el cliente ya esta autenticado en el portal, NO le indiques entrar al portal ni compartas la URL http://portal.sisprotgf.com.
-    - Para acciones de pago o reporte, guia al cliente dentro de la interfaz actual y usa __PAYMENT_ACTION__ cuando aplique.${closeConversationInstruction}`,
-        });
+        promptSuffix = `\n\n---\n[INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS]\n${toolContext}\n---\n\nINSTRUCCIONES CRÍTICAS PARA EL AGENTE:\n\n1. **PRIORIDAD AL RAG (Knowledge Base)**:\n   - Si los resultados incluyen información corporativa o planes desde el Knowledge Base, **USA TODA la información disponible**.\n   - Si devolvió un PROCEDIMIENTO técnico, **SIGUE SUS PASOS EXACTOS**.\n   - **NO omitas datos** - el usuario quiere información completa.\n\n2. **RESPUESTA COMPLETA**:\n   - Si la información viene del KB, incluye TODOS los puntos relevantes.\n   - Formatea con listas si hay múltiples elementos.\n   - Si hay dirección, teléfono, horarios, etc., inclúyelos.\n\n3. **MANEJO DE ERRORES DE HERRAMIENTAS**:\n   - Si una herramienta técnica falla (success: false, error 401/Not Found):\n     * NO inventes datos.\n     * Informa al usuario que no pudiste obtener la información.\n\n4. **REGLA DE ORO**:\n   - SIEMPRE genera una respuesta útil que responda la pregunta del usuario.\n    - NO cambies de tema ni diagnostiques cosas que el usuario no pidió.\n\n5. **ESCALAMIENTO VERIFICABLE**:\n     - Solo digas que "el caso fue escalado" si en los resultados aparece la herramienta "escalate_to_specialist".\n     - Si no aparece esa herramienta, pide confirmación antes de sugerir escalar.\n\n6. **REDES Y CANALES DIGITALES**:\n   - Si el usuario pregunta por Instagram, YouTube, Facebook, WhatsApp o redes de Sisprot:\n   - Usa preferentemente el bloque [ENLACES_Y_CANALES_DETECTADOS] del contexto de herramientas.\n    - Comparte enlaces/handles exactos, en líneas separadas, sin omitirlos ni resumirlos como texto genérico.\n\n7. **PORTAL AUTENTICADO Y PAGOS**:\n    - Si en el contexto aparece que el cliente ya esta autenticado en el portal, NO le indiques entrar al portal ni compartas la URL http://portal.sisprotgf.com.\n    - Para acciones de pago o reporte, guia al cliente dentro de la interfaz actual y usa __PAYMENT_ACTION__ cuando aplique.${closeConversationInstruction}`;
     } else if (isFollowUp && conversationHistory.length > 0) {
-        messages.push({
-            role: "user",
-            content: `${userMessage}
-
-INSTRUCCIÓN IMPORTANTE: El usuario indica que tu respuesta anterior fue incompleta o insuficiente.
-- NO cambies de tema
-- NO uses nuevas herramientas (no tienes nuevos datos)
-- COMPLETA la información que estabas dando antes
-- Si ya diste toda la información disponible, díselo amablemente`,
-        });
+        promptSuffix = `\n\nINSTRUCCIÓN IMPORTANTE: El usuario indica que tu respuesta anterior fue incompleta o insuficiente.\n- NO cambies de tema\n- NO uses nuevas herramientas (no tienes nuevos datos)\n- COMPLETA la información que estabas dando antes\n- Si ya diste toda la información disponible, díselo amablemente`;
     } else {
-        messages.push({
-            role: "user",
-            content: `${userMessage}
+        promptSuffix = `\n\nIMPORTANTE: SIEMPRE genera una respuesta. Si no tienes suficiente información, pide al usuario que describa mejor su situación o pregúntale en qué puedes ayudarle. NUNCA dejes la respuesta en blanco. Responde SOLO a lo que el usuario preguntó. Además, en este turno no tienes evidencia de herramientas terminales: NO afirmes que el caso ya fue escalado o cerrado.`;
+    }
 
-IMPORTANTE: SIEMPRE genera una respuesta. Si no tienes suficiente información, pide al usuario que describa mejor su situación o pregúntale en qué puedes ayudarle. NUNCA dejes la respuesta en blanco. Responde SOLO a lo que el usuario preguntó. Además, en este turno no tienes evidencia de herramientas terminales: NO afirmes que el caso ya fue escalado o cerrado.`,
+    content.push({ type: 'text', text: userMessage + promptSuffix });
+
+    // 2. Integrar imágenes si existen en este turno
+    if (attachments && attachments.length > 0) {
+        attachments.forEach(att => {
+            if (att.type === 'image' && att.url) {
+                // Extraer base64 si es data URL o usar URL si es pública
+                const base64Match = att.url.match(/^data:image\/\w+;base64,(.+)$/);
+                if (base64Match) {
+                    content.push({ 
+                        type: 'image', 
+                        image: base64Match[1],
+                        mimeType: att.mimeType || 'image/png'
+                    });
+                }
+            } else if (att.type === 'video' && att.frames && att.frames.length > 0) {
+                att.frames.forEach((frame: string) => {
+                    const b64 = frame.match(/^data:image\/\w+;base64,(.+)$/);
+                    if (b64) {
+                        content.push({ 
+                            type: 'image', 
+                            image: b64[1],
+                            mimeType: 'image/png'
+                        });
+                    }
+                });
+            }
         });
     }
+
+    messages.push({
+        role: "user",
+        content: content as any
+    });
 
     return messages;
 }
