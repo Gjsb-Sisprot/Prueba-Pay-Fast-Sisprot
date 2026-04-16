@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getConversationBySessionId, updateConversationStatus } from "./persistence";
+import { getConversationBySessionId, updateConversationStatus, syncConversationMetadata } from "./persistence";
 import { createTicket as createGlpiTicketInternal } from "./glpi";
 
 // --- GLPI INTEGRATION (Consolidated logic is now imported from glpi.ts) ---
@@ -166,6 +166,11 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     });
 
     if (result.success) {
+      // Sincronizar ID de ticket con Supabase de forma asíncrona
+      // Nota: executeCreateGlpiTicket no recibe sessionId directamente en los args estándar, 
+      // pero si está disponible en el contexto global o si lo añadimos al esquema.
+      // Por ahora, priorizamos executeEscalateToSpecialist que sí tiene sessionId.
+      
       return {
         success: true,
         message: `¡Listo! He creado el ticket de soporte en GLPI con el ID #${result.ticketId}. Un especialista revisará tu caso pronto.`,
@@ -193,13 +198,17 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const clientName = conversation?.contact_name || "Cliente Desconocido";
     const identification = conversation?.identification || "N/A";
     
-    // 2. Crear ticket en GLPI
+    // 2. Crear ticket en GLPI con fecha y hora si existen
+    const visitInfo = conversation?.visit_date 
+      ? `\nAGENDAMIENTO: Visita programada para el ${conversation.visit_date} a las ${conversation.visit_time || 'Hora por confirmar'}`
+      : "";
+
     const ticketResult = await createGlpiTicketInternal({
       name: `Escalamiento: ${reason.substring(0, 50)}...`,
       content: `
 ASUNTO: Escalamiento solicitado desde el Asistente AI.
 CLIENTE: ${clientName}
-ID/RIF: ${identification}
+ID/RIF: ${identification}${visitInfo}
 RAZÓN: ${reason}
 SESSION_ID: ${sessionId}
       `.trim(),
@@ -207,9 +216,12 @@ SESSION_ID: ${sessionId}
     });
 
     if (ticketResult.success) {
-      // 3. Cambiar estado en la base de datos
-      await updateConversationStatus(sessionId, "waiting_specialist").catch(err => {
-        console.error("[TOOLS_ERROR] Falló actualización de estado al escalar:", err);
+      // 3. Cambiar estado y guardar ticket ID en la base de datos
+      await Promise.all([
+        updateConversationStatus(sessionId, "waiting_specialist"),
+        syncConversationMetadata(sessionId, { glpiTicketId: ticketResult.ticketId })
+      ]).catch(err => {
+        console.error("[TOOLS_ERROR] Falló actualización de metadata al escalar:", err);
       });
 
       return {
