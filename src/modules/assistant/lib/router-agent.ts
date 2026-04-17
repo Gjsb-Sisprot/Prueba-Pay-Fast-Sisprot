@@ -719,7 +719,7 @@ async function callGeminiWithFallback(
         model: google(modelName),
         system: buildRouterPrompt(clientData, sessionId),
         prompt: promptWithHistory,
-        tools: routerTools,
+        tools: routerTools as any,
         stopWhen: stepCountIs(MAX_TOOL_STEPS),
         temperature: ROUTER_TEMPERATURE,
         maxOutputTokens: 1024,
