@@ -73,6 +73,10 @@ export const closeConversationSchema = z.object({
   closedBy: z.enum(["user", "assistant", "system"]).default("user"),
 });
 
+export const rebootOnuSchema = z.object({
+  serialNumber: z.string().describe("Serial de la ONU (ej: SMAGXXXXXXXX)"),
+});
+
 
 export interface ToolDefinition {
   name: string;
@@ -129,6 +133,21 @@ export const toolDefinitions: ToolDefinition[] = [
       "Ejecuta una auditoría interna del servicio de un cliente. " +
       "Debe usarse ANTES de pedir videos de la ONU en casos de falla total o intermitencia.",
     schema: auditServiceSchema,
+  },
+  {
+    name: "reboot_onu",
+    description: "Reinicia la ONU de forma remota para intentar solucionar problemas de conexión.",
+    schema: rebootOnuSchema,
+  },
+  {
+    name: "queryInvoices",
+    description: "Consulta las facturas de un contrato específico para verificar deudas o pagos.",
+    schema: queryInvoicesSchema,
+  },
+  {
+    name: "queryClient",
+    description: "Consulta información detallada del cliente por su identificación (Cedula/RIF).",
+    schema: queryClientSchema,
   },
 ];
 
@@ -304,10 +323,86 @@ export async function executeAuditService(args: z.infer<typeof auditServiceSchem
 }
 
 
+export async function executeQueryClient(args: z.infer<typeof queryClientSchema>): Promise<ToolResponse> {
+  try {
+    const { identification } = args;
+    const { contracts } = await fetchClientContracts(identification);
+    
+    if (contracts.length === 0) {
+      return { success: false, message: `No se encontraron contratos para la identificación: ${identification}` };
+    }
+
+    return {
+      success: true,
+      message: `He encontrado ${contracts.length} contrato(s) para el cliente ${contracts[0].clientName}.`,
+      data: { contracts }
+    };
+  } catch (error) {
+    return { success: false, message: `Error al consultar cliente: ${error instanceof Error ? error.message : "Error desconocido"}` };
+  }
+}
+
+export async function executeQueryInvoices(args: z.infer<typeof queryInvoicesSchema>): Promise<ToolResponse> {
+  try {
+    const { contractId } = args;
+    const result = await fetchClientInvoices(contractId);
+    
+    if (!result.success) throw new Error(result.message);
+
+    return {
+      success: true,
+      message: `Se han recuperado las facturas para el contrato #${contractId}.`,
+      data: { invoices: result.invoices }
+    };
+  } catch (error) {
+    return { success: false, message: `Error al consultar facturas: ${error instanceof Error ? error.message : "Error desconocido"}` };
+  }
+}
+
+export async function executeRebootOnu(args: z.infer<typeof rebootOnuSchema>): Promise<ToolResponse> {
+  try {
+    const { serialNumber } = args;
+    const result = await rebootOnu(serialNumber);
+    return {
+      success: result.success,
+      message: result.message
+    };
+  } catch (error) {
+    return { success: false, message: `Error al intentar reiniciar la ONU: ${error instanceof Error ? error.message : "Error desconocido"}` };
+  }
+}
+
+export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledgeSchema>): Promise<ToolResponse> {
+  try {
+    const { query } = args;
+    // Búsqueda vía webhook de n8n o similar
+    const response = await fetch("https://n8n.sisprottaurus.com/webhook/knowledge-base", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) throw new Error("Base de conocimientos no disponible.");
+    const data = await response.json();
+    
+    return {
+      success: true,
+      message: "Resultados encontrados en la base de conocimientos.",
+      data: { results: data.results || data }
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Por el momento no pude encontrar información específica sobre ese tema. ¿Puedo ayudarte con otra cosa?"
+    };
+  }
+}
+
+
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
-export const getLocalTools = (): Record<string, unknown> => {
+export const getLocalTools = (): Record<string, any> => {
   return {
     getCurrencyRate: {
       name: "getCurrencyRate",
@@ -333,13 +428,13 @@ export const getLocalTools = (): Record<string, unknown> => {
         required: ["name", "content"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeCreateGlpiTicket(args as unknown as z.infer<typeof createGlpiTicketSchema>);
+        const res = await executeCreateGlpiTicket(args as any);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
     escalate_to_specialist: {
       name: "escalate_to_specialist",
-      description: "Escala la conversación a un especialista humano cuando el cliente lo solicita o el problema es complejo.",
+      description: "Escala la conversación a un especialista humano.",
       inputSchema: {
         type: "object",
         properties: {
@@ -349,39 +444,98 @@ export const getLocalTools = (): Record<string, unknown> => {
         required: ["sessionId", "reason"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeEscalateToSpecialist(args as unknown as z.infer<typeof escalateToSpecialistSchema>);
+        const res = await executeEscalateToSpecialist(args as any);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
     close_conversation: {
       name: "close_conversation",
-      description: "Cierra la conversación cuando el usuario confirma que no necesita más ayuda.",
+      description: "Cierra la conversación.",
       inputSchema: {
         type: "object",
         properties: {
           sessionId: { type: "string" },
           resolution: { type: "string" },
-          closedBy: { type: "string" },
         },
         required: ["sessionId", "resolution"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeCloseConversation(args as unknown as z.infer<typeof closeConversationSchema>);
+        const res = await executeCloseConversation(args as any);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
     audit_service: {
       name: "audit_service",
-      description: "Ejecuta una auditoría interna del servicio mediante el webhook de n8n.",
+      description: "Ejecuta una auditoría interna del servicio.",
       inputSchema: {
         type: "object",
         properties: {
-          contractId: { type: "string", description: "ID del contrato" },
+          contractId: { type: "string" },
         },
         required: ["contractId"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeAuditService(args as unknown as z.infer<typeof auditServiceSchema>);
+        const res = await executeAuditService(args as any);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    reboot_onu: {
+      name: "reboot_onu",
+      description: "Reinicia la ONU remotamente.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          serialNumber: { type: "string" },
+        },
+        required: ["serialNumber"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeRebootOnu(args as any);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    queryClient: {
+      name: "queryClient",
+      description: "Consulta información del cliente por ID.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          identification: { type: "string" },
+        },
+        required: ["identification"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeQueryClient(args as any);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    queryInvoices: {
+      name: "queryInvoices",
+      description: "Consulta facturas de un contrato.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+        },
+        required: ["contractId"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeQueryInvoices(args as any);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    searchKnowledge: {
+      name: "searchKnowledge",
+      description: "Busca en la base de conocimientos.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+        },
+        required: ["query"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeSearchKnowledge(args as any);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
