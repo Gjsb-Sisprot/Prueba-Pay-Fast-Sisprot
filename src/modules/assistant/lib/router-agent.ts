@@ -698,7 +698,7 @@ export async function routeRequest(
 async function callGeminiWithFallback(
   message: string,
   clientData: ClientContextData | undefined,
-  routerTools: MCPToolSet,
+  routerTools: Record<string, any>,
   sessionId?: string,
   conversationHistory: RouterConversationMessage[] = []
 ): Promise<{ result: unknown; retriedModel?: string }> {
