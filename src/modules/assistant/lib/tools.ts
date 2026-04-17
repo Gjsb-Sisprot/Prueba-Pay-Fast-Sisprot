@@ -428,7 +428,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["name", "content"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeCreateGlpiTicket(args as any);
+        const res = await executeCreateGlpiTicket(args as z.infer<typeof createGlpiTicketSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -444,7 +444,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["sessionId", "reason"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeEscalateToSpecialist(args as any);
+        const res = await executeEscalateToSpecialist(args as z.infer<typeof escalateToSpecialistSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -460,7 +460,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["sessionId", "resolution"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeCloseConversation(args as any);
+        const res = await executeCloseConversation(args as z.infer<typeof closeConversationSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -475,7 +475,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["contractId"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeAuditService(args as any);
+        const res = await executeAuditService(args as z.infer<typeof auditServiceSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -490,7 +490,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["serialNumber"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeRebootOnu(args as any);
+        const res = await executeRebootOnu(args as z.infer<typeof rebootOnuSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -505,7 +505,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["identification"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeQueryClient(args as any);
+        const res = await executeQueryClient(args as z.infer<typeof queryClientSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -520,7 +520,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["contractId"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeQueryInvoices(args as any);
+        const res = await executeQueryInvoices(args as z.infer<typeof queryInvoicesSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
@@ -535,7 +535,7 @@ export const getLocalTools = (): Record<string, any> => {
         required: ["query"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeSearchKnowledge(args as any);
+        const res = await executeSearchKnowledge(args as z.infer<typeof searchKnowledgeSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
