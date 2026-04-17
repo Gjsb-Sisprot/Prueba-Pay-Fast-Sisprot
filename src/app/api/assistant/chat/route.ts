@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { after } from 'next/server';
 
-import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
+
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
 import {
   loadConversationHistory,
@@ -35,8 +35,6 @@ import {
 import { getLocalTools } from "@/modules/assistant/lib/tools";
 
 
-const MCP_SERVER_URL = (process.env.MCP_SERVER_URL || "https://mcp-humo-prueba-sisprot.vercel.app").replace(/\/+$/, "");
-const MCP_API_KEY = process.env.MCP_API_KEY || "";
 const TERMINAL_TOOLS = new Set(["escalate_to_specialist", "close_conversation"]);
 const TRUNCATION_THRESHOLD = 150;
 const EMPTY_RESPONSE_FALLBACK = "Disculpa, tuve un inconveniente procesando tu mensaje. ¿Podrías repetir tu pregunta?";
@@ -144,7 +142,6 @@ function persistToolResultsInBackground(
 
 
 export async function POST(request: Request) {
-  let mcpClient: MCPClient | null = null;
   let sessionId: string | undefined;
   let activeClientData: ClientContextData | undefined;
 
@@ -173,7 +170,6 @@ export async function POST(request: Request) {
     let summaryPromise: Promise<void> | null = null;
 
     try {
-
       conversationHistory = await loadConversationHistory(sessionId);
 
       if (loadHistoryOnly) {
@@ -184,37 +180,8 @@ export async function POST(request: Request) {
         });
       }
 
-      try {
-        mcpClient = await createMCPClient({
-          transport: {
-            type: "http",
-            url: `${MCP_SERVER_URL}/mcp`,
-            headers: {
-              ...(MCP_API_KEY ? { Authorization: `Bearer ${MCP_API_KEY}` } : {}),
-            },
-          },
-        });
-
-        // Timeout de 8 segundos para obtener las herramientas y no bloquear el request
-        const toolsPromise = mcpClient.tools();
-        const timeoutPromise = new Promise<LocalToolSet>((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout inicializando herramientas MCP")), 8000)
-        );
-        
-        tools = await Promise.race([toolsPromise, timeoutPromise]).catch(err => {
-          console.warn("[MCP_WARNING] Fallo al cargar herramientas:", err.message);
-          return {} as LocalToolSet;
-        });
-
-        // Combinar con herramientas locales (PRIORIDAD LOCAL)
-        const localTools = getLocalTools();
-        tools = { ...tools, ...(localTools as unknown as MCPToolSet) };
-
-      } catch (err) {
-        console.warn("[MCP_CRITICAL] No se pudo conectar con el servidor MCP:", err instanceof Error ? err.message : String(err));
-        // Si falla el MCP, al menos cargamos las herramientas locales
-        tools = getLocalTools() as unknown as LocalToolSet;
-      }
+      // Inicializar herramientas directamente desde local (Sin MCP)
+      tools = getLocalTools();
 
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
         const historyPromise = updateSummaryFromHistory(sessionId, conversationHistory, activeClientData).catch(() => {}) as Promise<void>;
@@ -222,8 +189,8 @@ export async function POST(request: Request) {
           ? Promise.all([summaryPromise, historyPromise]).then(() => { })
           : historyPromise;
       }
-    } catch {
-      // Ignoramos fallos del MCP para el flujo principal
+    } catch (err) {
+      console.error("[CHAT_INIT_ERROR] Error cargando historial o herramientas:", err);
     }
 
     // Enriquecimiento Fuera de bloque MCP: Vital para que funcione aunque el server MCP no esté disponible
@@ -356,7 +323,6 @@ export async function POST(request: Request) {
       }).catch((err) => console.error("[SUPABASE_DIRECT_SAVE_ERROR]", err));
 
       if (summaryPromise) await summaryPromise;
-      if (mcpClient) await mcpClient.close();
 
       return createTextStreamResponse(
         noToolResponse,
@@ -465,7 +431,6 @@ export async function POST(request: Request) {
         });
 
         if (summaryPromise) await summaryPromise;
-        if (mcpClient) await mcpClient.close();
       } catch (err) {
         console.error("[AFTER_REQUEST_PERSISTENCE_ERROR]", err);
       }
@@ -474,9 +439,7 @@ export async function POST(request: Request) {
     return response;
 
   } catch (error) {
-    if (mcpClient) {
-      await mcpClient.close();
-    }
+
 
     const errorMsg = error instanceof Error ? error.message : "Error desconocido";
     console.error(`[CHAT_CRITICAL_ERROR] Session: ${sessionId}`, {
