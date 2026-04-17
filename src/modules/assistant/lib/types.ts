@@ -127,7 +127,7 @@ export interface Conversation {
 }
 
 export function canSendMessages(status: ConversationStatus): boolean {
-  return status === "active";
+  return status === "active" || status === "waiting_specialist";
 }
 
 export function isConversationLive(status: ConversationStatus): boolean {
