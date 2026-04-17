@@ -302,6 +302,7 @@ export function ChatBubble() {
                     onSelectTime={handleSelectTime}
                     onSelectContract={handleSelectContract}
                     mcpClientData={mcpClientData}
+                    messages={messages}
                     isStreaming={
                       isLoading &&
                       index === messages.length - 1 &&
