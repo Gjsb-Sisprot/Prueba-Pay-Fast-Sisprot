@@ -299,7 +299,7 @@ export function ChatBubble() {
                     onSelectDate={handleSelectDate}
                     onSelectTime={handleSelectTime}
                     onSelectContract={handleSelectContract}
-                    mcpClientData={mcpClientData}
+                    clientData={clientData}
                     messages={messages}
                     isStreaming={
                       isLoading &&
