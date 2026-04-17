@@ -73,6 +73,7 @@ function appendSystemMessage(
   prefix: string
 ) {
   const normalized = normalizeSystemMessageContent(content);
+  if (!normalized) return;
 
   setMessages((prev) => [
     ...prev,
@@ -202,7 +203,12 @@ export function useConversationStatus({
             return;
           }
 
-          // Si es un rol desconocido que no es usuario ni asistente, lo tratamos como sistema
+          // Si es un rol técnico (tool), lo ignoramos
+          if (data.role === "tool") {
+            return;
+          }
+
+          // Si es un rol desconocido, lo tratamos como sistema
           appendSystemMessage(setMessages, data.content, "sse-unknown");
         } catch {
         }
