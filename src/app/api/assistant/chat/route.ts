@@ -22,7 +22,7 @@ import { generateResponse, generateResponseBuffered, type SolverOptions } from "
 import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
 import { type LocalToolSet } from "@/modules/assistant/lib/router-helpers";
-import type { ChatMessage as ConversationMessage } from "@/modules/assistant/lib/types";
+import type { ConversationMessage } from "@/modules/assistant/lib/types";
 
 import {
   errorResponse,
