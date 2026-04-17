@@ -282,7 +282,7 @@ export const ACTIVE_SERVICE_PROMPT = `
 ### ✅ SERVICIO ACTIVO SIN DEUDA
 El cliente está al día.
 **Saludo Oficial (OBLIGATORIO - NO CAMBIAR)**:
-"¡Genial! Actualmente no tienes deudas de pendientes. ✅ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
+"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
 
 **REGLAS**:
 - Proceder con soporte técnico o gestión solicitada normalmente.
