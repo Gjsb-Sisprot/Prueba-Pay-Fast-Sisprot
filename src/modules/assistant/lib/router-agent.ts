@@ -719,7 +719,7 @@ async function callGeminiWithFallback(
         model: google(modelName),
         system: buildRouterPrompt(clientData, sessionId),
         prompt: promptWithHistory,
-        tools: routerTools as any,
+        tools: routerTools as any, // eslint-disable-line @typescript-eslint/no-explicit-any
         stopWhen: stepCountIs(MAX_TOOL_STEPS),
         temperature: ROUTER_TEMPERATURE,
         maxOutputTokens: 1024,
