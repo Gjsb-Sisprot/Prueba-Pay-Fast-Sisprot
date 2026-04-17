@@ -55,7 +55,7 @@ function buildStatusSystemMessage(
     return `Conversación pausada${reason}. No puedes enviar mensajes hasta que sea retomada.${ticketInfo}`;
   }
   if (newStatus === "waiting_specialist") {
-    return "Tu caso ha sido escalado a un especialista. Espera por favor.";
+    return null;
   }
   if (newStatus === "handed_over") {
     const specialistName = extra?.specialistName?.trim();
