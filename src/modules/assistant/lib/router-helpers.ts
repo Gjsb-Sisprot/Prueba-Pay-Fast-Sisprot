@@ -1,5 +1,5 @@
 
-import type { MCPToolSet } from "./mcp-types";
+export type LocalToolSet = Record<string, any>;
 
 
 export interface ToolCall {
@@ -45,10 +45,10 @@ interface RouterToolFilterOptions {
   allowClose?: boolean;
 }
 
-export function filterToolsForRouter(tools: MCPToolSet, options: RouterToolFilterOptions = {}): MCPToolSet {
+export function filterToolsForRouter(tools: LocalToolSet, options: RouterToolFilterOptions = {}): LocalToolSet {
   const allowEscalation = options.allowEscalation ?? true;
   const allowClose = options.allowClose ?? true;
-  const filtered: MCPToolSet = {};
+  const filtered: LocalToolSet = {};
   for (const [name, tool] of Object.entries(tools)) {
     if (EXCLUDED_ROUTER_TOOLS.has(name)) continue;
     if (name === "escalate_to_specialist" && !allowEscalation) continue;
@@ -76,7 +76,7 @@ export const FAST_PATH_EXCLUDED_CATEGORIES = new Set([
 export async function executeForced(
   toolName: string,
   query: string,
-  tools: MCPToolSet
+  tools: LocalToolSet
 ): Promise<ToolResult | null> {
   const tool = tools[toolName];
   if (!tool) return null;
@@ -94,7 +94,7 @@ export async function executeForced(
 }
 
 export async function executeForcedEscalation(
-  tools: MCPToolSet,
+  tools: LocalToolSet,
   sessionId: string,
   reason: string
 ): Promise<ToolResult | null> {
@@ -115,7 +115,7 @@ export async function executeForcedEscalation(
 }
 
 export async function executeForcedClose(
-  tools: MCPToolSet,
+  tools: LocalToolSet,
   sessionId: string,
   resolution: string
 ): Promise<ToolResult | null> {
