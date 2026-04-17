@@ -103,8 +103,8 @@ export function generateResponse(
 
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
 
-    // Truncamos historial de forma agresiva (últimos 3 mensajes previos)
-    const truncatedHistory = conversationHistory.slice(-3);
+    // Truncamos historial de forma agresiva (últimos 8 mensajes previos)
+    const truncatedHistory = conversationHistory.slice(-8);
     const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
 
     const result = streamText({
@@ -143,7 +143,7 @@ export async function generateResponseBuffered(
         : [primaryModel, ...MODEL_CHAIN.filter(m => m !== primaryModel)];
 
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
-    const truncatedHistory = conversationHistory.slice(-3);
+    const truncatedHistory = conversationHistory.slice(-8);
     const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
 
     for (let i = 0; i < chain.length; i++) {
