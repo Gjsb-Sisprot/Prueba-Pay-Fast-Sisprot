@@ -21,7 +21,8 @@ import { routeRequest, type ToolResult } from "@/modules/assistant/lib/router-ag
 import { generateResponse, generateResponseBuffered, type SolverOptions } from "@/modules/assistant/lib/solver-agent";
 import { fetchClientContracts } from "@/modules/assistant/lib/sisprot-api";
 import type { ClientContextData } from "@/modules/assistant/lib/types";
-import type { ConversationMessage, MCPToolSet } from "@/modules/assistant/lib/mcp-types";
+import { type LocalToolSet } from "@/modules/assistant/lib/router-helpers";
+import type { ChatMessage as ConversationMessage } from "@/modules/assistant/lib/types";
 
 import {
   errorResponse,
@@ -79,7 +80,7 @@ function buildSolverHistory(
     return conversationHistory
       .filter(msg => msg.role !== "tool")
       .map(msg => ({
-        role: msg.role === "model" ? "assistant" as const : "user" as const,
+        role: (msg.role === "assistant" || (msg.role as string) === "model") ? "assistant" as const : "user" as const,
         content: msg.content,
       }));
   }
@@ -114,7 +115,7 @@ function buildRouterHistory(
 
   return conversationHistory
     .map(msg => ({
-      role: msg.role === "model" ? "assistant" as const : msg.role,
+      role: (msg.role === "assistant" || (msg.role as string) === "model") ? "assistant" as const : msg.role as "user",
       content: msg.content,
     }))
     .filter(msg => msg.content.trim().length > 0);
@@ -167,7 +168,7 @@ export async function POST(request: Request) {
     const lastMessage = getLastUserMessage(messages);
     const userMessageText = lastMessage ? extractTextContent(lastMessage) : "";
 
-    let tools: MCPToolSet = {};
+    let tools: LocalToolSet = {};
     let conversationHistory: ConversationMessage[] = [];
     let summaryPromise: Promise<void> | null = null;
 
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
         
         tools = await Promise.race([toolsPromise, timeoutPromise]).catch(err => {
           console.warn("[MCP_WARNING] Fallo al cargar herramientas:", err.message);
-          return {} as MCPToolSet;
+          return {} as LocalToolSet;
         });
 
         // Combinar con herramientas locales (PRIORIDAD LOCAL)
@@ -212,7 +213,7 @@ export async function POST(request: Request) {
       } catch (err) {
         console.warn("[MCP_CRITICAL] No se pudo conectar con el servidor MCP:", err instanceof Error ? err.message : String(err));
         // Si falla el MCP, al menos cargamos las herramientas locales
-        tools = getLocalTools() as unknown as MCPToolSet;
+        tools = getLocalTools() as unknown as LocalToolSet;
       }
 
       if (activeClientData && conversationHistory.length > 0 && conversationHistory.length % 5 === 0) {
