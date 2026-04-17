@@ -111,15 +111,22 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     if (messages.length === 0 && !isFetchingContext && !isHistoryLoaded) {
       const fullName = mcpClientData?.name || options.clientName || "";
       const firstName = fullName.trim().split(/\s+/)[0] || "";
+      const hasMultipleContracts = (mcpClientData?.totalContracts ?? 0) > 1;
+
+      let welcomeContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
+      
+      if (hasMultipleContracts) {
+        welcomeContent = `__SELECT_CONTRACT__ ¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. He notado que tienes varios servicios registrados. ¿Con cuál de ellos deseas continuar? 👇`;
+      }
       
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`,
+        content: welcomeContent,
         timestamp: new Date()
       }]);
     }
-  }, [sessionId, mcpClientData?.name, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
+  }, [sessionId, mcpClientData?.name, mcpClientData?.totalContracts, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
 
 
   const handleInputChange = useCallback(
