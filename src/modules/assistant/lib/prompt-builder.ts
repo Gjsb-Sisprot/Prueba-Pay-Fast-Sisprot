@@ -150,13 +150,13 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 
 **ESCENARIO 1: Solo saludo**
 - **Usuario**: "hola"
-- **Asistente**: "\`__SELECT_CONTRACT__\` ¡Hola! Soy Susana. Antes de continuar por favor selecciona uno de tus contratos 👇"
+- **Asistente**: __SELECT_CONTRACT__ ¡Hola! Soy Susana. Antes de continuar por favor selecciona uno de tus contratos 👇
 - **Usuario**: (clic en contrato #4929)
-- **Asistente**: "\`__SELECT_ISSUE_TYPE__\` ¡Perfecto! Para poder continuar ¿qué deseas realizar hoy para tu servicio? 👇"
+- **Asistente**: __SELECT_ISSUE_TYPE__ ¡Perfecto! Para poder continuar ¿qué deseas realizar hoy para tu servicio? 👇
 
 **ESCENARIO 2: Intención clara (Administrativa)**
 - **Usuario**: "quiero una devolución"
-- **Asistente**: "\`__SELECT_CONTRACT:ADMIN__\` ¡Hola! Entiendo que deseas gestionar una devolución. Antes de continuar por favor selecciona cuál de tus contratos es el afectado 👇"
+- **Asistente**: __SELECT_CONTRACT:ADMIN__ ¡Hola! Entiendo que deseas gestionar una devolución. Antes de continuar por favor selecciona cuál de tus contratos es el afectado 👇
 - **Usuario**: (clic en contrato #4929 -> el sistema envía mensaje oculto 'Quiero una gestión de administración')
 - **Asistente**: "Entendido. Para gestionar tu devolución administrativa..." (procede con el flujo sin pedir elegir gestión de nuevo).
 
