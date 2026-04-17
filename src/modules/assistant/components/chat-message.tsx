@@ -316,8 +316,8 @@ function ChatMessageComponent({
                   <Building2 className="w-4 h-4 text-blue-500" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Selecciona tu contrato</h4>
-                  <p className="text-[10px] text-gray-500">¿Sobre cuál servicio necesitas soporte?</p>
+                  <h4 className="text-sm font-semibold text-gray-900">¿Con qué contrato deseas continuar?</h4>
+                  <p className="text-[10px] text-gray-500">Selecciona el servicio para el cual necesitas ayuda</p>
                 </div>
               </div>
               
@@ -466,8 +466,8 @@ function ChatMessageComponent({
                   <InfoIcon className="w-4 h-4 text-blue-500" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">¿Cómo podemos ayudarte?</h4>
-                  <p className="text-[10px] text-gray-500">Selecciona el tipo de gestión que necesitas</p>
+                  <h4 className="text-sm font-semibold text-gray-900">¿Qué deseas realizar?</h4>
+                  <p className="text-[10px] text-gray-500">Selecciona el tipo de gestión para tu servicio</p>
                 </div>
               </div>
               
