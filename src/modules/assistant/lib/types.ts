@@ -166,7 +166,7 @@ export interface MediaUsage {
 
 
 export interface ConversationMessage {
-  role: "user" | "model" | "tool";
+  role: MessageRole | "model";
   content: string;
   timestamp: string;
   toolCallId?: string;
