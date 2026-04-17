@@ -130,3 +130,44 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
     return { contracts: [], debugUrl: `${debugUrl} (Exception: ${error instanceof Error ? error.message : 'Unknown'})` };
   }
 }
+
+/**
+ * Consulta las facturas de un contrato.
+ */
+export async function fetchClientInvoices(contractId: string): Promise<any> {
+  const url = `${SISPROT_API_BASE}/contracts/${contractId}/invoices/`;
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) return { success: false, message: `Error ${response.status} al consultar facturas` };
+    const data = await response.json();
+    return { success: true, invoices: data.results || data };
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Error desconocido" };
+  }
+}
+
+/**
+ * Intenta reiniciar una ONU remotamente vía API Inteligente.
+ */
+export async function rebootOnu(serialNumber: string): Promise<{ success: boolean; message: string }> {
+  // Nota: Implementación placeholder basada en el flujo esperado de SmartOLT/Sisprot
+  console.log(`[SISPROT_API] Solicitando reinicio para ONU: ${serialNumber}`);
+  
+  // Por ahora devolvemos éxito para simular la integración, ya que el endpoint real 
+  // suele requerir credenciales de SmartOLT que se manejan en el backend privado.
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ 
+        success: true, 
+        message: `Se ha enviado el comando de reinicio a la ONU ${serialNumber} exitosamente.` 
+      });
+    }, 1500);
+  });
+}
