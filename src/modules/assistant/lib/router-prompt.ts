@@ -41,9 +41,10 @@ Detectar la INTENCIÓN del mensaje del usuario y decidir SI necesita una herrami
 | Tutoriales, cómo usar el portal | "tutoriales youtube sisprot" |
 | Horarios, atención | "información corporativa Sisprot" |
 | Fallas técnicas, procedimientos | "procedimiento falla internet" |
-| Devoluciones, reembolsos, pago duplicado | "devoluciones reembolsos" |
+| Devoluciones, reembolsos, pago duplicado | "escalate_to_specialist" (requiere escalamiento administrativo) |
 | Mudanzas, cambio de titular | "mudanzas cambio titular" |
-| Requisitos de contratación, documentos | "requisitos contratación" |
+| Tasa del dólar, BCV, cuánto está el dólar | "getCurrencyRate" (consultar tasa oficial) |
+| Saldo a favor, excedente | "escalate_to_specialist" (requiere revisión administrativa) |
 | Pasarelas de pago, Zelle, Binance, PayPal | "pasarelas pago Zelle Binance PayPal" |
 | Prorrateo, ciclos de facturación, fecha de corte | "prorrateo ciclos facturación" |
 | Financiamiento de instalación, cuotas | "instalación costos promociones" |
@@ -85,7 +86,8 @@ Esta es tu herramienta principal cuando no puedes resolver el problema remotamen
 4. El problema persiste después de intentar un reinicio (reboot_onu) o si el diagnóstico indica falla física.
 5. Consideres que la solicitud requiere revisión técnica presencial o administrativa humana.
 6. **DETECCIÓN DE INTENCIONES IMPLÍCITAS**: Si el usuario expresa frustración recurrente ("sigue igual", "nada de lo que dices sirve", "llevo días así") o describe un escenario de falla física clara, interpreta que su intención es obtener soporte técnico oficial aunque no use palabras clave. Procede a escalar.
-7. **ESCALACIÓN DIRECTA**: No pidas confirmación adicional si la solicitud es clara. Procede a escalar de inmediato para crear el ticket en GLPI.
+7. **ADMINISTRACIÓN Y PAGOS**: El usuario menciona **"saldo a favor"**, **"excedente"**, **"devolución"**, **"reembolso"** o **"pago duplicado"**. Estos casos requieren atención humana inmediata.
+8. **ESCALACIÓN DIRECTA**: No pidas confirmación adicional si la solicitud es clara. Procede a escalar de inmediato para crear el ticket en GLPI.
 ${sessionId ? `Usa sessionId: "${sessionId}"` : ""}
 
 ## CUÁNDO USAR close_conversation
@@ -177,8 +179,14 @@ Usuario: "sí por favor apúrate" (seguimiento corto sin solicitud explícita de
 Usuario: "tienen cobertura en mi zona?"
 → search_knowledge_base({ query: "cobertura sectores servicio" })
 
-Usuario: "quiero una devolución"
-→ search_knowledge_base({ query: "devoluciones reembolsos" })
+Usuario: "a cuanto esta el dolar?" / "tasa bcv hoy"
+→ getCurrencyRate({})
+
+Usuario: "quiero una devolución" / "pague de mas y quiero mi dinero"
+→ escalate_to_specialist({ sessionId: "${sessionId || '...'}", reason: "Solicitud de devolución / reembolso de pago" })
+
+Usuario: "tengo saldo a favor?" / "me quedo un excedente del mes pasado"
+→ escalate_to_specialist({ sessionId: "${sessionId || '...'}", reason: "Consulta sobre saldo a favor o excedente en cuenta" })
 
 Usuario: "quiero mudarme"
 → search_knowledge_base({ query: "mudanzas cambio titular" })
