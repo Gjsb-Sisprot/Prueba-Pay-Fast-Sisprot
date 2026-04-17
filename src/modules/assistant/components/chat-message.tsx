@@ -67,26 +67,37 @@ function ChatMessageComponent({
   const [offerDismissed, setOfferDismissed] = useState(false);
   const [paymentOfferDismissed, setPaymentOfferDismissed] = useState(false);
 
-  // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
-  const segments = isAssistant 
-    ? content.split("\n\n")
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-        // Eliminar duplicados consecutivos de contenido idéntico
-        .filter((s, i, self) => i === 0 || s !== self[i - 1])
-    : [content];
-
   const cleanContent = (text: string) => {
     return text
       .replace(/__CALENDAR_ACTION__/gi, "")
       .replace(/__PAYMENT_ACTION__/gi, "")
       .replace(/__SELECT_CONTRACT__/gi, "")
       .replace(/__SELECT_TIME__/gi, "")
+      .replace(/__SELECT_ISSUE_TYPE__/gi, "")
       .replace(/CALENDAR_ACTION/gi, "")
       .replace(/PAYMENT_ACTION/gi, "")
       .replace(/SELECT_CONTRACT/gi, "")
+      // Eliminar marcadores técnicos internos
+      .replace(/\[TICKET_ID:[0-9]+\]/gi, "")
+      .replace(/__CLOSE_CHAT__/gi, "")
+      .replace(/CLO[A-Z_]+CHAT/gi, "") // Captura CLOASE_CHAT o similares
+      // Eliminar fugas de JSON crudo (detecta bloques que parecen JSON de content/text/success)
+      .replace(/\{"content":\[\{"type":"text","text":".*?\}\}\}/gs, "")
+      .replace(/\{"success":true,"message":".*?data":\{.*?\}\}/gs, "")
       .trim();
   };
+
+  // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
+  const segments = isAssistant 
+    ? content.split("\n\n")
+        .map(s => s.trim())
+        .map(s => ({ original: s, cleaned: cleanContent(s) }))
+        // Filtrar segmentos que queden vacíos después de la limpieza (burbujas blancas/fantasma)
+        .filter(seg => seg.cleaned.length > 0)
+        // Eliminar duplicados consecutivos de contenido idéntico
+        .filter((seg, i, self) => i === 0 || seg.cleaned !== self[i - 1].cleaned)
+        .map(seg => seg.original)
+    : [content];
 
   const showCloseOffer = closeOffer && !offerDismissed && onCloseConversation;
   const showPaymentOffer = paymentOffer && !paymentOfferDismissed && onAcceptPaymentOffer;
@@ -427,8 +438,16 @@ function ChatMessageComponent({
                   }}
                   disabled={(date) => {
                     const now = new Date();
-                    now.setHours(0, 0, 0, 0);
-                    return date < now || date.getDay() === 0; // No domingos
+                    const justDate = new Date();
+                    justDate.setHours(0, 0, 0, 0);
+                    
+                    // Bloquear días pasados
+                    if (date < justDate) return true;
+                    
+                    // Bloquear hoy si ya han pasado las 8:00 PM (20:00)
+                    if (date.getTime() === justDate.getTime() && now.getHours() >= 20) return true;
+                    
+                    return date.getDay() === 0; // No domingos
                   }}
                   initialFocus
                   locale={es}
@@ -437,6 +456,43 @@ function ChatMessageComponent({
               <p className="text-[10px] text-gray-500 mt-2 text-center italic">
                 Solo disponible de Lunes a Sábado
               </p>
+            </div>
+          )}
+
+          {isAssistant && content.includes("__SELECT_ISSUE_TYPE__") && !isLoading && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <InfoIcon className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">¿Cómo podemos ayudarte?</h4>
+                  <p className="text-[10px] text-gray-500">Selecciona el tipo de gestión que necesitas</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  variant="outline"
+                  className="justify-start h-auto py-3 px-3 border-blue-100 hover:bg-blue-50 hover:border-blue-300 transition-all text-left bg-blue-50/20"
+                  onClick={() => onSelectContract?.("N/A", "Soporte Técnico")}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-bold text-blue-900 leading-tight">Soporte Técnico 🔧</span>
+                    <span className="text-[10px] text-gray-500">Problemas de internet, TV o equipos</span>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start h-auto py-3 px-3 border-gray-100 hover:bg-gray-50 hover:border-gray-300 transition-all text-left bg-gray-50/20"
+                  onClick={() => onSelectContract?.("N/A", "Gestión Administrativa")}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-bold text-gray-900 leading-tight">Gestión Administrativa 💰</span>
+                    <span className="text-[10px] text-gray-500">Pagos, facturación, planes y deudas</span>
+                  </div>
+                </Button>
+              </div>
             </div>
           )}
           
