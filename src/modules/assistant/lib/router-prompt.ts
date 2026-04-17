@@ -87,7 +87,12 @@ Esta es tu herramienta principal cuando no puedes resolver el problema remotamen
 5. Consideres que la solicitud requiere revisión técnica presencial o administrativa humana.
 6. **DETECCIÓN DE INTENCIONES IMPLÍCITAS**: Si el usuario expresa frustración recurrente ("sigue igual", "nada de lo que dices sirve", "llevo días así") o describe un escenario de falla física clara, interpreta que su intención es obtener soporte técnico oficial aunque no use palabras clave. Procede a escalar.
 7. **ADMINISTRACIÓN Y PAGOS**: El usuario menciona **"saldo a favor"**, **"excedente"**, **"devolución"**, **"reembolso"** o **"pago duplicado"**. Estos casos requieren atención humana inmediata.
-8. **ESCALACIÓN DIRECTA**: No pidas confirmación adicional si la solicitud es clara. Procede a escalar de inmediato para crear el ticket en GLPI.
+8. **ESCALACIÓN DETALLADA (GLPI)**: Al usar `escalate_to_specialist`, DEBES completar los campos adicionales para mejorar la calidad del ticket:
+   - `subReason`: Clasificación corta (ej: "Intermitencia", "Lentitud", "Pérdida de Señal", "Facturación").
+   - `aiSummary`: Resumen de 1-2 líneas sobre lo conversado y el problema detectado.
+   - `originalComment`: El mensaje exacto o motivo inicial de la queja del cliente.
+   - `observation`: Detalles técnicos relevantes (ej: serial ONU, resultados de diagnósticos fallidos).
+   - `isSurvey`: Márcale como `true` UNICAMENTE si el usuario acaba de dar una calificación negativa (2: Inconforme).
 ${sessionId ? `Usa sessionId: "${sessionId}"` : ""}
 
 ## CUÁNDO USAR close_conversation
@@ -183,10 +188,22 @@ Usuario: "a cuanto esta el dolar?" / "tasa bcv hoy"
 → getCurrencyRate({})
 
 Usuario: "quiero una devolución" / "pague de mas y quiero mi dinero"
-→ escalate_to_specialist({ sessionId: "${sessionId || '...'}", reason: "Solicitud de devolución / reembolso de pago" })
+→ escalate_to_specialist({ 
+    sessionId: "${sessionId || '...'}", 
+    reason: "Solicitud de devolución / reembolso de pago",
+    subReason: "Devoluciones",
+    aiSummary: "El cliente solicita el reembolso de un pago duplicado o excedente.",
+    originalComment: "quiero una devolución"
+})
 
 Usuario: "tengo saldo a favor?" / "me quedo un excedente del mes pasado"
-→ escalate_to_specialist({ sessionId: "${sessionId || '...'}", reason: "Consulta sobre saldo a favor o excedente en cuenta" })
+→ escalate_to_specialist({ 
+    sessionId: "${sessionId || '...'}", 
+    reason: "Consulta sobre saldo a favor o excedente en cuenta",
+    subReason: "Saldo a Favor",
+    aiSummary: "El cliente consulta sobre un saldo excedente en su cuenta administrativa.",
+    originalComment: "tengo saldo a favor?"
+})
 
 Usuario: "quiero mudarme"
 → search_knowledge_base({ query: "mudanzas cambio titular" })
