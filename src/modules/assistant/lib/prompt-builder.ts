@@ -107,13 +107,14 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu ÚNICA respuesta válida debe empezar con __SELECT_CONTRACT__ (o sus variantes :ADMIN/:TECH).
 2. **PROHIBIDO SALUDAR**: No digas "Hola", no digas "Soy Susana", no digas nada de cortesía. El sistema ya lo hizo. Ve DIRECTO a pedir el contrato.
 3. **CASO 'HOLA'**: Si el usuario te dice "hola" o te saluda, IGNORA el saludo y lanza el token __SELECT_CONTRACT__ inmediatamente.
+  const multiContractText = hasMultipleContracts ? `### ALERTA MULTI-CONTRATO
+Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : "";
 
-${hasMultipleContracts ? `### ALERTA MULTI-CONTRATO
-Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : ""}
-
-${clientData.serviceStatus === "suspended" ? `⚠️ SERVICIO SUSPENDIDO: Indica deuda de $${clientData.debtAmount?.toFixed(2)}.` : ""}
+  const suspendedText = clientData.serviceStatus === "suspended" ? `⚠️ SERVICIO SUSPENDIDO: Indica deuda de $${clientData.debtAmount?.toFixed(2)}.` : "";
 
   return clientContext + FULL_SYSTEM_PROMPT + `
+${multiContractText}
+${suspendedText}
 
 ---
 ### 🚨 REGLA DE ORO FINAL (NIVEL EXTREMO):
