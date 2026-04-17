@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, stepCountIs } from "ai";
 import type { ClientContextData } from "./types";
-import type { MCPToolSet } from "./mcp-types";
+import { getLocalTools } from "./tools";
 import { classifyIntent } from "./intent-classifier";
 import { buildRouterPrompt } from "./router-prompt";
 import { buildNoToolDirectResponse, buildSupportContractDisambiguationMessage } from "./router-direct-responses";
@@ -183,7 +183,7 @@ function buildRoutePolicy(
 export async function routeRequest(
   message: string,
   clientData: ClientContextData | undefined,
-  tools: MCPToolSet,
+  tools: Record<string, any>,
   sessionId?: string,
   conversationLength?: number,
   conversationHistory: RouterConversationMessage[] = []
@@ -745,7 +745,7 @@ async function callGeminiWithFallback(
 async function buildErrorFallback(
   message: string,
   clientData: ClientContextData | undefined,
-  tools: MCPToolSet,
+  tools: Record<string, any>,
   intent: ReturnType<typeof classifyIntent>,
   elapsed: () => number,
   sessionId?: string,
