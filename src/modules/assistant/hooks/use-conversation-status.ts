@@ -169,14 +169,23 @@ export function useConversationStatus({
           }
 
           if (data.role === "model" || data.role === "assistant") {
-            // DEDUPLICACIÓN: Evitar agregar el mensaje si ya está en el estado local 
-            // (vía streaming o inserción manual previa al cerrar stream)
+            // DEDUPLICACIÓN ROBUSTA: Limpiamos tokens y comparamos sin espacios extra
+            const cleanIncoming = data.content.trim()
+              .replace(/__(?:PAYMENT|SELECT|CALENDAR|CLOSE)_[A-Z_]+__/g, "")
+              .replace(/\[TICKET_ID:[0-9]+\]/gi, "");
+
             setMessages((prev) => {
-              const isAlreadyPresent = prev.some(
-                (m) =>
-                  (m.role === "assistant" && m.content === data.content.trim()) ||
-                  (m.role === "assistant" && data.content.trim().startsWith(m.content) && m.content.length > 0)
-              );
+              const isAlreadyPresent = prev.some((m) => {
+                if (m.role !== "assistant" || !m.content) return false;
+                
+                const cleanExisting = m.content.trim()
+                  .replace(/__(?:PAYMENT|SELECT|CALENDAR|CLOSE)_[A-Z_]+__/g, "")
+                  .replace(/\[TICKET_ID:[0-9]+\]/gi, "");
+
+                // Si el mensaje entrante es idéntico o está contenido en el existente (streaming parcial)
+                return cleanIncoming === cleanExisting || 
+                       (cleanExisting.includes(cleanIncoming) && cleanIncoming.length > 10);
+              });
 
               if (isAlreadyPresent) return prev;
 
