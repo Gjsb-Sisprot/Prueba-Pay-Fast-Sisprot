@@ -82,8 +82,8 @@ function ChatMessageComponent({
       .replace(/__CLOSE_CHAT__/gi, "")
       .replace(/CLO[A-Z_]+CHAT/gi, "") // Captura CLOASE_CHAT o similares
       // Eliminar fugas de JSON crudo (detecta bloques que parecen JSON de content/text/success)
-      .replace(/\{"content":\[\{"type":"text","text":".*?\}\}\}/gs, "")
-      .replace(/\{"success":true,"message":".*?data":\{.*?\}\}/gs, "")
+      .replace(/\{"content":\[\{"type":"text","text":"[\s\S]*?\}\}\}/g, "")
+      .replace(/\{"success":true,"message":"[\s\S]*?data":\{[\s\S]*?\}\}/g, "")
       .trim();
   };
 
