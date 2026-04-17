@@ -131,10 +131,16 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
   }
 }
 
+export interface SisprotInvoiceResponse {
+  success: boolean;
+  message?: string;
+  invoices?: Record<string, unknown>[];
+}
+
 /**
  * Consulta las facturas de un contrato.
  */
-export async function fetchClientInvoices(contractId: string): Promise<any> {
+export async function fetchClientInvoices(contractId: string): Promise<SisprotInvoiceResponse> {
   const url = `${SISPROT_API_BASE}/contracts/${contractId}/invoices/`;
   try {
     const response = await fetch(url, {
