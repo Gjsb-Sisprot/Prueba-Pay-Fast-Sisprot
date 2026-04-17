@@ -38,7 +38,7 @@ interface ChatMessageProps {
   onSelectDate?: (date: Date) => void;
   onSelectTime?: (time: string) => void;
   onSelectContract?: (contractId: string, sector: string, intent?: "admin" | "tech") => void;
-  mcpClientData?: ClientContextData; 
+  clientData?: ClientContextData; 
   messages?: AssistantChatMessage[]; 
   isStreaming?: boolean;
 }
@@ -56,7 +56,7 @@ function ChatMessageComponent({
   onSelectDate,
   onSelectTime,
   onSelectContract,
-  mcpClientData,
+  clientData,
   messages = [],
   isStreaming,
 }: ChatMessageProps) {
@@ -324,7 +324,7 @@ function ChatMessageComponent({
               </div>
               
               <div className="grid grid-cols-1 gap-2">
-                {mcpClientData?.allContracts?.map((c) => (
+                {clientData?.allContracts?.map((c) => (
                   <Button
                     key={c.contractId}
                     variant="outline"
@@ -368,8 +368,8 @@ function ChatMessageComponent({
                       displayDay = dateStr.split(' ')[0] || "Seleccionado";
                       displayFullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
                     }
-                  } else if (mcpClientData?.visitDate) {
-                    const d = new Date(mcpClientData.visitDate);
+                  } else if (clientData?.visitDate) {
+                    const d = new Date(clientData.visitDate);
                     displayDay = format(d, 'eeee', { locale: es });
                     displayFullDate = format(d, "d 'de' MMMM, yyyy", { locale: es });
                   }
