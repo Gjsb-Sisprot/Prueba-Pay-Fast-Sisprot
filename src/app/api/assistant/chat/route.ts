@@ -65,6 +65,11 @@ function stripUiControlTokens(content: string): string {
     .replace(CALENDAR_ACTION_TOKEN_REGEX, "")
     .replace(CLOSE_CHAT_TOKEN_REGEX, "")
     .replace(TECHNICAL_TOKEN_REGEX, "")
+    // Eliminar fugas de JSON crudo antes de guardar persistentemente
+    .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "")
+    .replace(/\{\s*"content":\s*\[[\s\S]*?\}\s*\}/g, "")
+    .replace(/\{\s*"success":\s*true[\s\S]*?\}\}/g, "")
+    .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "")
     .trim();
 }
 
