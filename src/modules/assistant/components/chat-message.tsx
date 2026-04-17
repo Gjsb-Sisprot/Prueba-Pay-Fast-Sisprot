@@ -37,7 +37,7 @@ interface ChatMessageProps {
   onAcceptPaymentOffer?: () => void;
   onSelectDate?: (date: Date) => void;
   onSelectTime?: (time: string) => void;
-  onSelectContract?: (contractId: string, sector: string) => void;
+  onSelectContract?: (contractId: string, sector: string, intent?: "admin" | "tech") => void;
   mcpClientData?: ClientContextData; 
   messages?: AssistantChatMessage[]; 
   isStreaming?: boolean;
@@ -72,6 +72,8 @@ function ChatMessageComponent({
       .replace(/__CALENDAR_ACTION__/gi, "")
       .replace(/__PAYMENT_ACTION__/gi, "")
       .replace(/__SELECT_CONTRACT__/gi, "")
+      .replace(/__SELECT_CONTRACT:ADMIN__/gi, "")
+      .replace(/__SELECT_CONTRACT:TECH__/gi, "")
       .replace(/__SELECT_TIME__/gi, "")
       .replace(/__SELECT_ISSUE_TYPE__/gi, "")
       .replace(/CALENDAR_ACTION/gi, "")
@@ -328,7 +330,12 @@ function ChatMessageComponent({
                     variant="outline"
                     size="sm"
                     className="justify-start h-auto py-2.5 px-3 border-blue-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-left bg-blue-50/10"
-                    onClick={() => onSelectContract?.(String(c.contractId), c.sector)}
+                    onClick={() => {
+                      const intent = content.includes("__SELECT_CONTRACT:ADMIN__") ? "admin" 
+                        : content.includes("__SELECT_CONTRACT:TECH__") ? "tech" 
+                        : undefined;
+                      onSelectContract?.(String(c.contractId), c.sector, intent);
+                    }}
                   >
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[13px] font-medium text-blue-900 leading-tight">
