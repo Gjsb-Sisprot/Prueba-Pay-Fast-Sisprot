@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
-import type { ClientContextData } from "./types";
-import type { ConversationMessage } from "./mcp-types";
+import type { ClientContextData, ConversationMessage } from "./types";
 
 interface ChatLogResult {
   role: string;
