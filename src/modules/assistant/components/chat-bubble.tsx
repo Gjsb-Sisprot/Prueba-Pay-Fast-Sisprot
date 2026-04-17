@@ -19,7 +19,7 @@ import { ChatInput } from "@/modules/assistant/components/chat-input";
 import { ConversationsList } from "@/modules/assistant/components/conversations-list";
 import { useClientStore } from "@/shared/lib/store/client-store";
 import { canAccessAIAssistant } from "@/shared/lib/validation/ai-access-control";
-import { DEFAULT_MEDIA_LIMITS, getStatusLabel } from "@/modules/assistant/lib/types";
+import { DEFAULT_MEDIA_LIMITS } from "@/modules/assistant/lib/types";
 
 function ThinkingIndicator() {
   const [isVisible, setIsVisible] = useState(false);
