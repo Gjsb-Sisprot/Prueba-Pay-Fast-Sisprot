@@ -340,9 +340,6 @@ export async function POST(request: Request) {
 
     if (terminalResult) {
       if (terminalResult.toolName === "escalate_to_specialist") {
-        const ticketId = getTicketIdFromResult(terminalResult.result);
-        escalationMarker = ` __CLOSE_CHAT__${ticketId ? ` [TICKET_ID:${ticketId}]` : ""}`;
-        
         // Actualización de estado EXPLÍCITA y asíncrona
         updateConversationStatus(sessionId, "waiting_specialist").catch(() => {});
       }
