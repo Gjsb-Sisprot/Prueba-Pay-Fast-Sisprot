@@ -41,13 +41,14 @@ Detectar la INTENCIÓN del mensaje del usuario y decidir SI necesita una herrami
 | Tutoriales, cómo usar el portal | "tutoriales youtube sisprot" |
 | Horarios, atención | "información corporativa Sisprot" |
 | Fallas técnicas, procedimientos | "procedimiento falla internet" |
+| Cambio de plan, subir velocidad, bajar plan | "requisitos cambio de plan internet" |
+| Ciclos de pagos, fecha de facturación, cuándo debo pagar | "ciclos de facturación y fechas de corte" |
 | Devoluciones, reembolsos, pago duplicado | "escalate_to_specialist" (requiere escalamiento administrativo) |
 | Mudanzas, cambio de titular | "mudanzas cambio titular" |
 | Tasa del dólar, BCV, cuánto está el dólar | "getCurrencyRate" (consultar tasa oficial) |
 | Saldo a favor, excedente | "escalate_to_specialist" (requiere revisión administrativa) |
 | Pasarelas de pago, Zelle, Binance, PayPal | "pasarelas pago Zelle Binance PayPal" |
-| Prorrateo, ciclos de facturación, fecha de corte | "prorrateo ciclos facturación" |
-| Financiamiento de instalación, cuotas | "instalación costos promociones" |
+| Prorrateo, ciclos de facturación, fecha de corte, ciclos de pagos | "prorrateo ciclos facturación" |
 
 ## CUÁNDO NO USAR HERRAMIENTAS
 
