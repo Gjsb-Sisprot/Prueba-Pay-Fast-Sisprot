@@ -13,18 +13,17 @@ import {
   MessageSquarePlus, 
   CreditCard, 
   X,
-  Building2,
-  Clock 
+  Building2
 } from "lucide-react";
 import Image from "next/image";
 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
-import type { MediaAttachment, ClientContextData } from "../lib/types";
-import { Calendar as CalendarIcon, MapPin, Info as InfoIcon } from "lucide-react";
+import type { MediaAttachment, ClientContextData, ChatMessage as AssistantChatMessage } from "../lib/types";
+import { Calendar as CalendarIcon, MapPin } from "lucide-react";
 import { es } from "date-fns/locale";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -40,7 +39,7 @@ interface ChatMessageProps {
   onSelectTime?: (time: string) => void;
   onSelectContract?: (contractId: string, sector: string) => void;
   mcpClientData?: ClientContextData; 
-  messages?: ChatMessage[]; 
+  messages?: AssistantChatMessage[]; 
   isStreaming?: boolean;
 }
 
@@ -385,10 +384,6 @@ function ChatMessageComponent({
                 {/* Lista de Horas (Vertical) */}
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
                   {(() => {
-                    // Determinar si es fin de semana para filtrar slots
-                    const dateMsg = messages.findLast(m => m.role === 'user' && m.content.toLowerCase().includes('disponibilidad para la visita es el día'));
-                    const isWeekend = dateMsg?.content.toLowerCase().includes('sábado') || dateMsg?.content.toLowerCase().includes('domingo');
-                    
                     // Generar slots basados en las reglas de Susana
                     // Sáb/Dom: 8am-8pm | Lun/Vie: 8am-5pm y 5pm-8pm
                     const slots = [];
