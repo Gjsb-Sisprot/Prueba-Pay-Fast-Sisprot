@@ -104,7 +104,7 @@ export function generateResponse(
     const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
 
     // Truncamos historial de forma agresiva (últimos 8 mensajes previos)
-    const truncatedHistory = conversationHistory.slice(-8);
+    const truncatedHistory = conversationHistory.slice(-15);
     const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
 
     const result = streamText({
@@ -312,6 +312,9 @@ function cleanToolResult(toolName: string, result: unknown): string {
                 return cleanClientStatusResult(result);
             case "sisprot": // Si viene del módulo completo
                 return cleanClientStatusResult(result);
+            case "create_glpi_ticket":
+            case "escalate_to_specialist":
+                return cleanTicketResult(result);
             default:
                 // Para otras herramientas, devolvemos un JSON compacto si es objeto
                 return typeof result === "object" 
@@ -320,6 +323,21 @@ function cleanToolResult(toolName: string, result: unknown): string {
         }
     } catch {
         return typeof result === "object" ? JSON.stringify(result) : String(result);
+    }
+}
+
+function cleanTicketResult(result: unknown): string {
+    try {
+        const res = result as { message?: string; success?: boolean; data?: { ticketId?: number } };
+        if (res.message) return res.message;
+        const text = (result as { content?: Array<{ type: string; text: string }> })?.content?.[0]?.text;
+        if (text) {
+            const parsed = JSON.parse(text);
+            return parsed.message || JSON.stringify(parsed);
+        }
+        return JSON.stringify(result);
+    } catch {
+        return String(result);
     }
 }
 
