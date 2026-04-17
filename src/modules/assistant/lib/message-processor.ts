@@ -1,7 +1,5 @@
-
 import type { ModelMessage, TextPart, ImagePart } from "ai";
-import type { MediaAttachment, ClientContextData } from "./types";
-import type { ConversationMessage } from "./mcp-types";
+import type { MediaAttachment, ClientContextData, ConversationMessage } from "./types";
 
 
 export interface ClientMessage {
