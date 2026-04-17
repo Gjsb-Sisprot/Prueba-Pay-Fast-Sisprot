@@ -77,6 +77,12 @@ No hay cliente autenticado en el portal. Si necesitas datos del cliente, pídelo
 
 ---
 
+  const isContractSelected = !!clientData.contract;
+
+  const clientContext = `
+
+---
+
 ## INSTRUCCION PRIORITARIA - LEE ESTO PRIMERO
 
 **EL CLIENTE YA ESTÁ AUTENTICADO EN EL PORTAL.**
@@ -102,12 +108,13 @@ ${buildPaymentVerificationStatus(clientData.allContracts)}
 ${serviceInstructions}
 ${buildClientTypePlanInstruction(clientData.clientType)}
 
-### 🚨 REGLAS DE ORO (ESTRICTO - NIÑO DE 8 AÑOS):
-1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu respuesta DEBE empezar con el token __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).
-2. **SALUDOS OFICIALES**: Si el cliente tiene deuda o está al día, DEBES usar exclusivamente los saludos oficiales definidos en SUSPENDED_SERVICE_PROMPT o ACTIVE_SERVICE_PROMPT. No agregues cortesía adicional fuera de lo estipulado.
+### 🚨 REGLAS DE COMPORTAMIENTO:
+${!isContractSelected ? `1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu respuesta DEBE empezar con el token __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).` : `1. **CONTRATO SELECCIONADO**: El cliente YA seleccionó el contrato #${clientData.contract}. NO vuelvas a pedirlo ni uses tokens de selección. Procede directo a la solución.`}
+2. **SALUDOS OFICIALES**: Si el cliente tiene deuda o está al día, usa los saludos oficiales definidos en SUSPENDED_SERVICE_PROMPT o ACTIVE_SERVICE_PROMPT.
+3. **BYPASS POR FRUSTRACIÓN**: Si el usuario usa lenguaje fuerte ("coño", "nojoda", "ladilla", "no sirve") o se muestra muy molesto, IGNORA los saludos oficiales y la petición de contrato. **PROSEGUIR INMEDIATAMENTE AL ESCALAMIENTO O SOLUCIÓN TÉCNICA**. La prioridad es calmar al cliente con resolutividad.
 `;
 
-  const multiContractText = hasMultipleContracts ? `### ALERTA MULTI-CONTRATO
+  const multiContractText = (hasMultipleContracts && !isContractSelected) ? `### ALERTA MULTI-CONTRATO
 Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : "";
 
   const suspendedText = clientData.serviceStatus === "suspended" ? `⚠️ SERVICIO SUSPENDIDO: Indica deuda de $${clientData.debtAmount?.toFixed(2)}.` : "";
@@ -117,12 +124,8 @@ ${multiContractText}
 ${suspendedText}
 
 ---
-### 🚨 REGLA DE ORO FINAL (NIVEL EXTREMO):
-- SI EL USUARIO SALUDA O INICIA CONVERSACIÓN: 
-  - **RESPUESTA OBLIGATORIA**: Usa el Saludo Oficial correspondiente (con deuda o sin deuda) y pide contrato con __SELECT_CONTRACT__.
-  - **PROHIBIDO**: Reformular los saludos oficiales o agregar líneas adicionales.
-- SI EL CONTRATO NO ESTÁ SELECCIONADO: 
-  - Todo mensaje DEBE empezar con __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).
+### 🚨 REGLA DE ORO FINAL:
+${!isContractSelected ? `- SI EL USUARIO SALUDA O INICIA CONVERSACIÓN: Usa el Saludo Oficial y pide contrato con __SELECT_CONTRACT__.` : `- CONTRATO YA SELECCIONADO: Prohibido pedir contrato o usar tokens de selección. Resuelve la intención directamente.`}
 - **SEGUIMIENTO**: Recuerda siempre terminar con "¿Hay algo más en lo que pueda ayudarte?" (excepto en el cierre).
 `;
 }
@@ -130,27 +133,53 @@ ${suspendedText}
 
 function buildServiceInstructions(clientData: ClientContextData): string {
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
-  const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
-  
   const multiContractWarning = hasMultipleContracts 
-    ? `\n**ATENCION - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Algunos pueden estar activos y otros suspendidos. Consulta la tabla de contratos para dar informacion precisa por contrato y NO generalices un estado de suspension si hay contratos activos.\n`
+    ? `\n**ATENCION - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Consulta la tabla de contratos para dar información precisa por contrato y NO generalices un estado si hay contratos con estados distintos.\n`
     : "";
 
-  // Si tiene al menos uno activo, tratamos el servicio como ACTIVO para permitir soporte
-  if (hasAtLeastOneActive) {
-    if (clientData.hasDebt) {
-      return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
+  // 1. PRIORIDAD ABSOLUTA: Estado del contrato seleccionado por el usuario
+  if (clientData.contract && clientData.allContracts) {
+    const selectedContract = clientData.allContracts.find(c => c.contractId.toString() === clientData.contract?.toString());
+    
+    if (selectedContract) {
+      const status = (selectedContract.statusName || selectedContract.status || "").toLowerCase();
+      
+      // CASO CANCELADO: Prioridad técnica máxima
+      if (status.includes('cancel')) {
+        return `### ⚠️ CONTRATO CANCELADO (Sujeto a Reactivación)
+El contrato #${selectedContract.contractId} en el sector **${selectedContract.sector}** se encuentra actualmente **CANCELADO**.
+**ACCIÓN OBLIGATORIA**: Informa al cliente que para recuperar la navegación es necesario procesar una **Reactivación**. **CREA EL TICKET EN GLPI** inmediatamente con el motivo "Reactivación de Servicio" y entrega el número de ticket.` + multiContractWarning;
+      }
+
+      // CASO SUSPENDIDO POR DEUDA
+      if (selectedContract.contractTag === "with_debt" || status.includes('suspend') || selectedContract.debt > 0) {
+        return `### 🚫 CONTRATO SUSPENDIDO POR DEUDA (CONTRATO #${selectedContract.contractId})
+El servicio en el sector **${selectedContract.sector}** está suspendido.
+**ACCIÓN OBLIGATORIA**: Indica que el monto pendiente para este contrato es de **$${selectedContract.debt.toFixed(2)}**. Envía el token **__PAYMENT_ACTION__** y guía al portal de pagos.` + multiContractWarning;
+      }
+
+      // CASO EN VERIFICACIÓN
+      if (selectedContract.contractTag === "verify") {
+        return VERIFY_PENDING_PROMPT + ` (Contrato #${selectedContract.contractId})` + multiContractWarning;
+      }
     }
-    return ACTIVE_SERVICE_PROMPT + multiContractWarning;
   }
 
-  // Solo si TODOS están suspendidos o no hay activos
-  if (clientData.contractTag === "with_debt" || clientData.serviceStatus === "suspended") {
+  // 2. FALLBACK: Si no hay contrato seleccionado o no se encontró el específico, usar lógica general
+  if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
     return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
   }
 
   if (clientData.contractTag === "verify") {
     return VERIFY_PENDING_PROMPT + multiContractWarning;
+  }
+
+  const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
+  if (hasAtLeastOneActive) {
+    if (clientData.hasDebt) {
+      return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
+    }
+    return ACTIVE_SERVICE_PROMPT + multiContractWarning;
   }
 
   return ACTIVE_SERVICE_PROMPT;
