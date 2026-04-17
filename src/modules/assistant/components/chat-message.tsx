@@ -21,7 +21,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
 import type { MediaAttachment, ClientContextData, ChatMessage as AssistantChatMessage } from "../lib/types";
-import { Calendar as CalendarIcon, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin, Info as InfoIcon } from "lucide-react";
 import { es } from "date-fns/locale";
 import { format } from "date-fns";
 
