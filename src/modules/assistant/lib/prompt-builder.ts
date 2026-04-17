@@ -103,26 +103,26 @@ ${buildPaymentVerificationStatus(clientData.allContracts)}
 ${serviceInstructions}
 ${buildClientTypePlanInstruction(clientData.clientType)}
 
-### REGLAS DE ORO (ESTRICTO):
-1. **CONTRATO OBLIGATORIO**: Si el usuario no ha especificado el sector/contrato, DEBES usar __SELECT_CONTRACT__ (o sus variantes :ADMIN/:TECH) antes de cualquier otra cosa.
-2. **CERO SALUDOS**: NO saludes si el sistema ya lo hizo. Responde directamente.
-3. **UNA COSA A LA VEZ**: Primero el contrato, luego la gestión.
+### 🚨 REGLAS DE ORO (ESTRICTO - NIÑO DE 8 AÑOS):
+1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu ÚNICA respuesta válida debe empezar con __SELECT_CONTRACT__ (o sus variantes :ADMIN/:TECH).
+2. **PROHIBIDO SALUDAR**: No digas "Hola", no digas "Soy Susana", no digas nada de cortesía. El sistema ya lo hizo. Ve DIRECTO a pedir el contrato.
+3. **CASO 'HOLA'**: Si el usuario te dice "hola" o te saluda, IGNORA el saludo y lanza el token __SELECT_CONTRACT__ inmediatamente.
 
-${hasMultipleContracts ? `### POLÍTICA MULTI-CONTRATO
-El cliente tiene ${clientData.totalContracts} servicios. SIEMPRE usa __SELECT_CONTRACT__ en el primer mensaje.` : ""}
+${hasMultipleContracts ? `### ALERTA MULTI-CONTRATO
+Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : ""}
 
 ${clientData.serviceStatus === "suspended" ? `⚠️ SERVICIO SUSPENDIDO: Indica deuda de $${clientData.debtAmount?.toFixed(2)}.` : ""}
 
----
-
-### EJEMPLO DE FLUJO OBLIGATORIO:
-- **Usuario**: "hola"
-- **Asistente**: __SELECT_CONTRACT__ ¡Hola! Antes de continuar selecciona tu contrato 👇
+  return clientContext + FULL_SYSTEM_PROMPT + `
 
 ---
+### 🚨 REGLA DE ORO FINAL (NIVEL EXTREMO):
+- SI EL USUARIO SALUDA ("hola", "buenos días", etc.): 
+  - **RESPUESTA OBLIGATORIA**: __SELECT_CONTRACT__ ¡Hola! Antes de continuar por favor selecciona uno de tus contratos 👇
+  - **PROHIBIDO**: Saludar de forma larga o ignorar la tarjeta.
+- SI EL CONTRATO NO ESTÁ SELECCIONADO: 
+  - Todo mensaje DEBE empezar con __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).
 `;
-
-  return clientContext + FULL_SYSTEM_PROMPT;
 }
 
 
