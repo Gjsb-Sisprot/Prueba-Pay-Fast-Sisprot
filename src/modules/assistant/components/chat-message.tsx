@@ -496,7 +496,7 @@ function ChatMessageComponent({
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[13px] font-bold text-gray-900 leading-tight">Gestión Administrativa 💰</span>
-                    <span className="text-[10px] text-gray-500">Pagos, facturación, planes y deudas</span>
+                    <span className="text-[10px] text-gray-500">Pagos, facturación, planes, deudas, devoluciones, cambios de planes y cambios de ciclos</span>
                   </div>
                 </Button>
               </div>
