@@ -107,18 +107,27 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   }, [identification, options.clientName]);
 
   // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
+  // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
   useEffect(() => {
-    if (messages.length === 0 && !isFetchingContext && !isHistoryLoaded) {
-      const fullName = mcpClientData?.name || options.clientName || "";
-      const firstName = fullName.trim().split(/\s+/)[0] || "";
-      const hasMultipleContracts = (mcpClientData?.totalContracts ?? 0) > 1;
+    const fullName = mcpClientData?.name || options.clientName || "";
+    const firstName = fullName.trim().split(/\s+/)[0] || "";
+    const hasMultipleContracts = (mcpClientData?.totalContracts ?? 0) > 1;
 
-      let welcomeContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
-      
-      if (hasMultipleContracts) {
-        welcomeContent = `__SELECT_CONTRACT__ ¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. He notado que tienes varios servicios registrados. ¿Con cuál de ellos deseas continuar? 👇`;
-      }
-      
+    let welcomeContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
+    if (hasMultipleContracts) {
+      welcomeContent = `__SELECT_CONTRACT__ ¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. He notado que tienes varios servicios registrados. ¿Con cuál de ellos deseas continuar? 👇`;
+    }
+
+    // Si no hay mensajes, o si el único mensaje es el de bienvenida por defecto y tenemos nueva data
+    if (messages.length === 0 && !isFetchingContext && !isHistoryLoaded) {
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        content: welcomeContent,
+        timestamp: new Date()
+      }]);
+    } else if (messages.length === 1 && messages[0].id === "welcome" && messages[0].content !== welcomeContent && !isFetchingContext) {
+      // Actualizar el saludo si la data llegó después
       setMessages([{
         id: "welcome",
         role: "assistant",
