@@ -85,7 +85,10 @@ function ChatMessageComponent({
       .replace(/\{\s*"content":\s*\[[\s\S]*?\}\s*\}/g, "") // Objetivos de contenido
       .replace(/\{\s*"success":\s*true[\s\S]*?\}\}/g, "") // Bloques success JSON
       .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "") // Bloques GLPI JSON
-      .replace(/\{"content":\[\{"type":"text","text":"[\s\S]*?\}\}\}/g, "") // Echo de Gemini del input
+      .replace(/\{?"content":\s*\[\s*\{"type":"text","text":"[\s\S]*?\}\s*\]\s*\}?/g, "") // Echo de Gemini del input (más flexible)
+      .replace(/"?success"?:?\s*true,\s*"message":[\s\S]*?}/g, "") // Fragmentos de éxito sueltos
+      .replace(/"?glpiTicketId"?:?\s*\d+,[\s\S]*?}/g, "") // Fragmentos de ticket sueltos
+      .replace(/"?status"?:\s*"waiting_specialist"[\s\S]*?}/g, "") // Fragmentos de status sueltos
       .trim();
   };
 
