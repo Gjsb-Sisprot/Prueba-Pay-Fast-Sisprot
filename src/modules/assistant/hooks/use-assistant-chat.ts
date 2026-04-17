@@ -451,8 +451,11 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     }
   }, [sessionId, sendMessage]);
 
-  const handleSelectContract = useCallback(async (contractId: string, sector: string) => {
-    const message = `Deseo soporte para mi contrato #${contractId} en el sector ${sector}`;
+  const handleSelectContract = useCallback(async (contractId: string, sector: string, intent?: "admin" | "tech") => {
+    let message = `Deseo soporte para mi contrato #${contractId} en el sector ${sector}`;
+    
+    if (intent === "admin") message = "Quiero una gestión de administración";
+    if (intent === "tech") message = "Quiero un soporte técnico";
     
     // 1. Enviar mensaje al chat
     await sendMessage(message);
