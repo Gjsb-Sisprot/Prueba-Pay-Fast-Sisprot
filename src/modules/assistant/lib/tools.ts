@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getConversationBySessionId, updateConversationStatus, syncConversationMetadata } from "./persistence";
 import { createTicket as createGlpiTicketInternal } from "./glpi";
+import { type LocalToolSet } from "./router-helpers";
 
 // --- GLPI INTEGRATION (Consolidated logic is now imported from glpi.ts) ---
 // --------------------------------------------------------------------------
@@ -402,7 +403,7 @@ export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledg
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
  */
-export const getLocalTools = (): Record<string, any> => {
+export const getLocalTools = (): LocalToolSet => {
   return {
     getCurrencyRate: {
       name: "getCurrencyRate",
