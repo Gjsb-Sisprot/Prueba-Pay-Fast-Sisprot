@@ -18,7 +18,7 @@ import {
   type ConversationStatus,
   canSendMessages,
 } from "../lib/types";
-import { toolDefinitions } from "./tools";
+
 import { useConversationStatus } from "./use-conversation-status";
 import { useMediaAttachments } from "./use-media-attachments";
 import {
