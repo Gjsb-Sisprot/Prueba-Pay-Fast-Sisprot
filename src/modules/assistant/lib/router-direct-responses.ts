@@ -118,11 +118,13 @@ export function buildNoToolDirectResponse(
 
   // 4. REDES SOCIALES
   if (/(?:redes|instagram|sociales|youtube|contacto|whatsapp|facebook)/i.test(normalized)) {
-    return "\u00a1S\u00edguenos y mantente al d\u00eda con Sisprot! \ud83d\udcf1\n\n" +
-           "\ud83d\udcf8 **Instagram**: @sisprotgf\n" +
-           "\ud83d\udcfa **YouTube**: [Sisprot Online](https://www.youtube.com/@sisprotgf)\n" +
-           "\ud83d\udcac **WhatsApp**: [0412-0261134](https://wa.me/584120261134)\n" +
-           "\ud83c\udf10 **Web**: [www.sisprotgf.com](https://www.sisprotgf.com)";
+    return "¡Síguenos y mantente al día con Sisprot! 📱\n\n" +
+           "📲 **[WhatsApp (Canal)](https://whatsapp.com/channel/0029Vab9DIpEFeXk23mELA2g)**\n" +
+           "📷 **[Instagram](https://www.instagram.com/sisprotgf)**\n" +
+           "🎵 **[TikTok](https://www.tiktok.com/@sisprotgf)**\n" +
+           "📘 **[Facebook](https://www.facebook.com/sisprotgf)**\n" +
+           "▶️ **[YouTube](https://youtube.com/@sisprotglobalfiber)**\n" +
+           "🌐 **[Web](https://www.sisprotgf.com)**";
   }
 
   // 5. COBERTURA
