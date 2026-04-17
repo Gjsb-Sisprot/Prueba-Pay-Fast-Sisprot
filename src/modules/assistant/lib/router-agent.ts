@@ -132,7 +132,7 @@ function buildRouterInputWithHistory(
 ): string {
   const recentTurns = conversationHistory
     .filter((entry) => entry.role !== "tool" && entry.content?.trim())
-    .slice(-6)
+    .slice(-15)
     .map((entry) => `${entry.role === "model" || entry.role === "assistant" ? "asistente" : "usuario"}: ${entry.content.trim()}`);
 
   if (recentTurns.length === 0) {
