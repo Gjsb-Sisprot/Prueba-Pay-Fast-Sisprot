@@ -545,7 +545,7 @@ export const getLocalTools = (): Record<string, any> => {
 export function getPlaceholderResponse(toolName: string): ToolResponse {
   return {
     success: false,
-    message: `La herramienta "${toolName}" estará disponible próximamente cuando se conecte el servidor MCP.`,
+    message: `La herramienta "${toolName}" estará disponible próximamente cuando se complete la integración con los servidores internos.`,
   };
 }
 
