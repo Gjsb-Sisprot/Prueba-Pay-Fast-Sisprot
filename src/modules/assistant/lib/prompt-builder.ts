@@ -97,9 +97,9 @@ ${clientData.planName ? `- Plan: ${clientData.planName}` : ""}${multiContractInf
 - **DEUDA TOTAL**: ${clientData.hasDebt ? `$${clientData.debtAmount?.toFixed(2) || "N/A"}` : "$0.00"}
 ${onuSerial ? `- Serial ONU: ${onuSerial}` : "- Serial ONU: No disponible"}
 
-${hasHistory ? `
+${hasHistory && !hasMultipleContracts ? `
 > [!NOTE]
-> Como hay historial de conversación, NO repitas el detalle completo de contratos ni la deuda a menos que el usuario lo pregunte de nuevo. La información ya fue presentada al inicio.
+> Como hay historial de conversación, NO repitas el detalle completo del servicio a menos que sea necesario.
 ` : `
 ${buildContractDetailsBlock(clientData.allContracts)}
 ${buildPaymentVerificationStatus(clientData.allContracts)}
@@ -126,8 +126,8 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 3. **MANEJO DE PROBLEMAS TÉCNICOS Y MULTICONTRATO**:
    ${hasMultipleContracts
      ? `
-- **POLÍTICA DE MULTI-CONTRATO (ESTRICTA)**: El cliente tiene ${clientData.totalContracts} servicios. NO asumas sobre cuál está hablando. Es OBLIGATORIO que el usuario especifique el sector.
-- **VALIDACIÓN DE SECTOR (OBLIGATORIA - SIN EXCEPCIÓN)**: Si el usuario menciona un sector que NO existe en sus registros (ej. "tengo falla en Valle Lindo" pero sus contratos son en "Valle Paraiso"), DEBES detenerte y decir: "No ubico un contrato en **[Sector que dijo]**. Actualmente tienes servicios en: **${clientData.allContracts?.map(c => c.sector).join(" y ")}**. ¿Con cuál de ellos necesitas ayuda?"`
+- **POLÍTICA DE MULTI-CONTRATO (OBLIGATORIA)**: El cliente tiene ${clientData.totalContracts} servicios. SIEMPRE debes iniciar el primer mensaje con el token \`__SELECT_CONTRACT__\` para que el usuario elija su contrato. Es PROHIBIDO asumir un sector.
+- **VALIDACIÓN DE SECTOR (ESTRICTA)**: Si el usuario menciona un sector que NO existe en sus registros, DEBES detenerte y usar \`__SELECT_CONTRACT__\`. Actualmente tiene servicios en: **${clientData.allContracts?.map(c => c.sector).join(" y ")}**.`
      : ""}
    ${clientData.serviceStatus === "suspended" 
      ? `- ⚠️ SERVICIO SUSPENDIDO: No ofrezcas soporte técnico.
