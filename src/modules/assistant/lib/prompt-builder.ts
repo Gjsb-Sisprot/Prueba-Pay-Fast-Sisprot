@@ -149,16 +149,24 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 ### EJEMPLO DE FLUJO CORRECTO:
 
 **Usuario**: "hola" (con 2 contratos en el sistema)
-**Asistente**: "¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu **Operador de Soporte Inteligente** de Sisprot. He notado que tienes **2 servicios** registrados con nosotros: uno en **${clientData.allContracts?.[0]?.sector || "Sector A"}** y otro en **${clientData.allContracts?.[1]?.sector || "Sector B"}**. ¿Con cuál de ellos desea continuar?"
-*(SIN mostrar deudas ni planes aún)*
+**Asistente**: "\`__SELECT_CONTRACT__\` ¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu **Operador de Soporte Inteligente** de Sisprot. He notado que tienes **2 servicios** registrados. ¿Con cuál de ellos desea continuar?"
 
-**Usuario**: "con el de ${clientData.allContracts?.[0]?.sector || "Sector A"}"
-**Asistente**: "¡Perfecto! Analizando tu contrato en ${clientData.allContracts?.[0]?.sector || "Sector A"}... como tu operador asignado, veo que actualmente [procede con detalles de ese contrato específico]."
+**Usuario**: (selecciona un contrato)
+**Asistente**: "\`__SELECT_ISSUE_TYPE__\` ¡Perfecto! He seleccionado tu contrato. ¿Qué deseas realizar hoy para este servicio?"
 
 ---
 `;
 
-  return clientContext + FULL_SYSTEM_PROMPT;
+  const finalReminder = `
+---
+### 🚨 RECORDATORIO FINAL DE FLUJO (CRÍTICO)
+1. Si el cliente tiene > 1 contrato y no ha elegido: Usa \`__SELECT_CONTRACT__\` inmediatamente.
+2. Si el cliente ya eligió contrato (o solo tiene uno) y no ha elegido gestión: Usa \`__SELECT_ISSUE_TYPE__\` inmediatamente.
+3. NUNCA repitas saludos.
+4. NUNCA menciones JSON ni IDs internos.
+`;
+
+  return clientContext + FULL_SYSTEM_PROMPT + finalReminder;
 }
 
 
