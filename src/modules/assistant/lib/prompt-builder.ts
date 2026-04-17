@@ -116,7 +116,7 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
    - Si pregunta por pagos en verificacion, revisa el contract_tag de cada contrato
    - Métodos de pago: Pago Móvil, Transferencia Bancaria, Zelle
   - Si debe pagar o reportar pago desde este chat, activa la acción con __PAYMENT_ACTION__ sin enviar URL de ingreso al portal.
-  - **TELÉFONO DEL CLIENTE**: Si necesitas confirmar el número de contacto para una visita técnica, NO lo pidas desde cero. Di: "**Actualmente tenemos registrado el número [TELÉFONO]. Puedes validarlo o modificarlo directamente en el portal siguiendo estos pasos: Mi Cuenta > Configuración > Datos Personales.**"
+  - **TELÉFONO DEL CLIENTE**: Si necesitas confirmar el número de contacto para una visita técnica, NO lo pidas desde cero. Di: "**Actualmente tenemos registrado el número ${clientData.phone || "[SIN TELÉFONO]"}. ¿Es correcto o deseas modificarlo? Puedes validarlo o modificarlo en el portal: Mi Cuenta > Configuración > Datos Personales.**"
    - Usa estos datos directamente en tu respuesta.
 
 2. **CERO SALUDOS REPETIDOS**:
