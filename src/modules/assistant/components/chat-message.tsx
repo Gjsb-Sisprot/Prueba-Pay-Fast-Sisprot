@@ -22,8 +22,9 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
 import type { MediaAttachment, ClientContextData } from "../lib/types";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin, Info as InfoIcon } from "lucide-react";
 import { es } from "date-fns/locale";
+import { format, parse } from "date-fns";
 
 interface ChatMessageProps {
   role: "user" | "assistant" | "system" | "tool";
@@ -39,6 +40,7 @@ interface ChatMessageProps {
   onSelectTime?: (time: string) => void;
   onSelectContract?: (contractId: string, sector: string) => void;
   mcpClientData?: ClientContextData; 
+  messages?: ChatMessage[]; 
   isStreaming?: boolean;
 }
 
@@ -56,6 +58,7 @@ function ChatMessageComponent({
   onSelectTime,
   onSelectContract,
   mcpClientData,
+  messages = [],
   isStreaming,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
@@ -332,38 +335,82 @@ function ChatMessageComponent({
           )}
 
           {isAssistant && content.includes("__SELECT_TIME__") && !isLoading && (
-            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-indigo-500" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Selecciona la hora</h4>
-                  <p className="text-[10px] text-gray-500">¿A qué hora puedes recibir al técnico?</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-                {Array.from({ length: 25 }).map((_, i) => {
-                  const hour = 8 + Math.floor(i / 2);
-                  const minutes = i % 2 === 0 ? "00" : "30";
-                  const time = `${hour.toString().padStart(2, "0")}:${minutes}`;
-                  const ampm = hour >= 12 ? "PM" : "AM";
-                  const displayHour = hour > 12 ? hour - 12 : hour;
-                  const displayTime = `${displayHour}:${minutes} ${ampm}`;
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Header con Fecha (Extraída del historial) */}
+              <div className="bg-gray-50 border-b border-gray-100 p-4">
+                {(() => {
+                  // Intentar encontrar el mensaje donde el usuario confirmó la fecha
+                  const dateMsg = messages.findLast(m => m.role === 'user' && m.content.toLowerCase().includes('disponibilidad para la visita es el día'));
+                  let displayDay = "Día seleccionado";
+                  let displayFullDate = "Cargando fecha...";
                   
+                  if (dateMsg) {
+                    const match = dateMsg.content.match(/día\s+(.+)$/i);
+                    if (match && match[1]) {
+                      const dateStr = match[1].trim(); // ej: "jueves 16 de abril"
+                      displayDay = dateStr.split(' ')[0] || "Seleccionado";
+                      displayFullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+                    }
+                  } else if (mcpClientData?.visitDate) {
+                    const d = new Date(mcpClientData.visitDate);
+                    displayDay = format(d, 'eeee', { locale: es });
+                    displayFullDate = format(d, "d 'de' MMMM, yyyy", { locale: es });
+                  }
+
                   return (
-                    <Button
-                      key={time}
-                      variant="outline"
-                      size="sm"
-                      className="text-[11px] h-9 border-indigo-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all font-medium py-1 px-2"
-                      onClick={() => onSelectTime?.(displayTime)}
-                    >
-                      {displayTime}
-                    </Button>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{displayDay}</p>
+                      <h4 className="text-sm font-bold text-gray-900">{displayFullDate}</h4>
+                    </div>
                   );
-                })}
+                })()}
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* Zona Horaria */}
+                <div className="flex items-center gap-2 text-gray-500">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-medium leading-tight">Zona horaria</span>
+                    <span className="text-[11px] text-gray-400">GMT-04:00 America/Caracas (GMT-4)</span>
+                  </div>
+                </div>
+
+                {/* Título de selección */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Seleccionar Ventana de tiempo</h3>
+                  <p className="text-[10px] text-gray-500">Duración estimada: 60 minutos</p>
+                </div>
+
+                {/* Lista de Horas (Vertical) */}
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  {(() => {
+                    // Determinar si es fin de semana para filtrar slots
+                    const dateMsg = messages.findLast(m => m.role === 'user' && m.content.toLowerCase().includes('disponibilidad para la visita es el día'));
+                    const isWeekend = dateMsg?.content.toLowerCase().includes('sábado') || dateMsg?.content.toLowerCase().includes('domingo');
+                    
+                    // Generar slots basados en las reglas de Susana
+                    // Sáb/Dom: 8am-8pm | Lun/Vie: 8am-5pm y 5pm-8pm
+                    const slots = [];
+                    for (let h = 8; h < 20; h++) {
+                      const ampm = h >= 12 ? "PM" : "AM";
+                      const displayHour = h > 12 ? h - 12 : h;
+                      const timeStr = `${displayHour.toString().padStart(2, '0')}:00 ${ampm}`;
+                      slots.push(timeStr);
+                    }
+
+                    return slots.map((time) => (
+                      <Button
+                        key={time}
+                        variant="outline"
+                        className="w-full justify-center h-12 text-sm font-bold border-gray-200 hover:border-gray-900 hover:bg-gray-50 transition-all rounded-lg"
+                        onClick={() => onSelectTime?.(time)}
+                      >
+                        {time}
+                      </Button>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
           )}
