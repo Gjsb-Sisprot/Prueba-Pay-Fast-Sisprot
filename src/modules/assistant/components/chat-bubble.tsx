@@ -274,13 +274,11 @@ export function ChatBubble() {
           ) : (
             <>
               { }
-              {!canSendMessage && (
+              {!canSendMessage && conversationStatus === "closed" && (
                 <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-yellow-600" />
                   <span className="text-xs text-yellow-700">
-                    Esta conversación está{" "}
-                    {getStatusLabel(conversationStatus).toLowerCase()}.
-                    {conversationStatus === "closed" && " Solo lectura."}
+                    Esta conversación está cerrada. Solo lectura.
                   </span>
                 </div>
               )}
