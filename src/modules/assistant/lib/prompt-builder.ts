@@ -71,22 +71,16 @@ No hay cliente autenticado en el portal. Si necesitas datos del cliente, pídelo
     ? `\n- **CONTRATOS**: ${clientData.totalContracts} total (${clientData.activeContracts} activo${clientData.activeContracts !== 1 ? 's' : ''}, ${clientData.suspendedContracts} suspendido${clientData.suspendedContracts !== 1 ? 's' : ''}${clientData.cancelledContracts ? `, ${clientData.cancelledContracts} cancelado${clientData.cancelledContracts !== 1 ? 's' : ''}` : ''})`
     : "";
   
+  const isContractSelected = !!clientData.contract;
   const serviceInstructions = buildServiceInstructions(clientData);
 
   const clientContext = `
-
----
-
-  const isContractSelected = !!clientData.contract;
-
-  const clientContext = `
-
 ---
 
 ## INSTRUCCION PRIORITARIA - LEE ESTO PRIMERO
 
 **EL CLIENTE YA ESTÁ AUTENTICADO EN EL PORTAL.**
-**NO le indiques "ingresa al portal" ni repitas http:
+**NO le indiques "ingresa al portal" ni repitas enlaces HTTP.**
 
 ### DATOS DEL CLIENTE (NO LOS PIDAS):
 - Cédula/RIF: ${clientData.identification}
