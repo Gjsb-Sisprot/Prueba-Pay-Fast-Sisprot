@@ -152,25 +152,27 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         return;
       }
 
-      if ((!content.trim() && media.attachments.length === 0) && !isLoading) {
+      if ((!content.trim() && media.pendingAttachments.length === 0) && !isLoading) {
         if (messages.length > 0) return;
       }
 
       if (isLoading) return;
+
+      const attachmentsToSubmit = media.consumeAttachments();
 
       const userMessage: ChatMessage = {
         id: generateMessageId(),
         role: "user",
         content: content.trim(),
         timestamp: new Date(),
-        attachments: media.attachments.length > 0 ? [...media.attachments] : undefined,
+        attachments: attachmentsToSubmit.length > 0 ? attachmentsToSubmit : undefined,
       };
 
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setIsLoading(true);
       setError(undefined);
-      media.clear();
+      // media.consumeAttachments() ya limpia los pendientes
 
       abortControllerRef.current = new AbortController();
 
