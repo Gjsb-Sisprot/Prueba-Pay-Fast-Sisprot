@@ -208,6 +208,9 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     } else {
       throw new Error(result.error || result.message);
     }
+  } catch (error) {
+    return {
+      success: false,
       message: `Tuve un problema al intentar crear el ticket en GLPI: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
