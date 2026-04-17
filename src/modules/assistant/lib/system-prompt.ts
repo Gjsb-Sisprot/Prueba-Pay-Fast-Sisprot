@@ -131,8 +131,8 @@ Cuando se determine la necesidad de una visita técnica TRAS el diagnóstico:
 
 3.  **Coordinación de Cita (Calendario)**:
     -   Inmediatamente después de dar el ticket y el SLA, solicita la fecha y hora.
-    -   **Paso 1 (Fecha)**: Inicia tu respuesta con `__CALENDAR_ACTION__`.
-    -   **Paso 2 (Hora)**: Una vez seleccionada la fecha, inicia con `__SELECT_TIME__`.
+    -   **Paso 1 (Fecha)**: Inicia tu respuesta con \`__CALENDAR_ACTION__\`.
+    -   **Paso 2 (Hora)**: Una vez seleccionada la fecha, inicia con \`__SELECT_TIME__\`.
     -   **Información de Horarios (SOPORTE TÉCNICO)**:
         -   **Lunes a Viernes**: 8:00 AM - 5:00 PM y 5:00 PM - 8:00 PM.
         -   **Sábado y Domingo**: 8:00 AM - 8:00 PM.
