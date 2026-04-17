@@ -69,23 +69,23 @@ function ChatMessageComponent({
 
   const cleanContent = (text: string) => {
     return text
+      // Eliminar tokens de UI y marcadores técnicos
       .replace(/__CALENDAR_ACTION__/gi, "")
       .replace(/__PAYMENT_ACTION__/gi, "")
-      .replace(/__SELECT_CONTRACT__/gi, "")
-      .replace(/__SELECT_CONTRACT:ADMIN__/gi, "")
-      .replace(/__SELECT_CONTRACT:TECH__/gi, "")
+      .replace(/__SELECT_CONTRACT(?:_ADMIN|_TECH)?__/gi, "")
       .replace(/__SELECT_TIME__/gi, "")
       .replace(/__SELECT_ISSUE_TYPE__/gi, "")
-      .replace(/CALENDAR_ACTION/gi, "")
-      .replace(/PAYMENT_ACTION/gi, "")
-      .replace(/SELECT_CONTRACT/gi, "")
-      // Eliminar marcadores técnicos internos
       .replace(/\[TICKET_ID:[0-9]+\]/gi, "")
       .replace(/__CLOSE_CHAT__/gi, "")
-      .replace(/CLO[A-Z_]+CHAT/gi, "") // Captura CLOASE_CHAT o similares
-      // Eliminar fugas de JSON crudo (detecta bloques que parecen JSON de content/text/success)
-      .replace(/\{"content":\[\{"type":"text","text":"[\s\S]*?\}\}\}/g, "")
-      .replace(/\{"success":true,"message":"[\s\S]*?data":\{[\s\S]*?\}\}/g, "")
+      .replace(/CLOSE_OFFER/gi, "")
+      .replace(/CLOSE_CHAT/gi, "")
+      .replace(/CLO[A-Z_]+CHAT/gi, "")
+      // Eliminar fugas de JSON crudo - MUY AGRESIVO
+      .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "") // Bloques content: []
+      .replace(/\{\s*"content":\s*\[[\s\S]*?\}\s*\}/g, "") // Objetivos de contenido
+      .replace(/\{\s*"success":\s*true[\s\S]*?\}\}/g, "") // Bloques success JSON
+      .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "") // Bloques GLPI JSON
+      .replace(/\{"content":\[\{"type":"text","text":"[\s\S]*?\}\}\}/g, "") // Echo de Gemini del input
       .trim();
   };
 
@@ -95,12 +95,19 @@ function ChatMessageComponent({
         const rawSegments = content.split("\n\n")
           .map(s => s.trim())
           .map(s => ({ original: s, cleaned: cleanContent(s) }))
-          .filter(seg => seg.cleaned.length > 2); // Evitar burbujas vacías o casi vacías
+          .filter(seg => seg.cleaned.length > 5); // Evitar burbujas vacías o irrelevantes
 
-        const seenTyped = new Set<string>();
+        const seenNorm = new Set<string>();
         return rawSegments.filter(seg => {
-          if (seenTyped.has(seg.cleaned)) return false;
-          seenTyped.add(seg.cleaned);
+          // Normalización extrema para comparación: sin puntuación, sin espacios extra
+          const norm = seg.cleaned.toLowerCase()
+            .replace(/[.,!?;:]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+          
+          if (norm.length < 5) return true; // Si es muy corto (ej: "Ok"), dejarlo pasar
+          if (seenNorm.has(norm)) return false;
+          seenNorm.add(norm);
           return true;
         }).map(seg => seg.original);
       })()
