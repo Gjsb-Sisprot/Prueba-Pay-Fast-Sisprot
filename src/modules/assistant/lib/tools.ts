@@ -68,6 +68,11 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
+  subReason: z.string().optional().describe("Clasificación corta del problema (ej. Intermitencia)"),
+  aiSummary: z.string().optional().describe("Resumen ejecutivo de la conversación realizado por la IA"),
+  originalComment: z.string().optional().describe("El primer comentario o mensaje de queja del cliente"),
+  observation: z.string().optional().describe("Observaciones o detalles técnicos adicionales"),
+  isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
 });
 
 export const closeConversationSchema = z.object({
@@ -203,9 +208,6 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     } else {
       throw new Error(result.error || result.message);
     }
-  } catch (error) {
-    return {
-      success: false,
       message: `Tuve un problema al intentar crear el ticket en GLPI: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
@@ -214,29 +216,41 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
 export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, reason } = args;
+    const { sessionId, reason, subReason, aiSummary, originalComment, observation, isSurvey } = args;
     
     // 1. Obtener contexto del cliente desde la DB
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     
     const clientName = conversation?.contact_name || "Cliente Desconocido";
     const identification = conversation?.identification || "N/A";
+    const contractId = conversation?.contract || "N/A";
+    const sector = conversation?.sector || "No especificado";
+    const phone = conversation?.contact_phone || "No disponible";
     
-    // 2. Crear ticket en GLPI con fecha y hora si existen
-    const visitInfo = conversation?.visit_date 
-      ? `\nAGENDAMIENTO: Visita programada para el ${conversation.visit_date} a las ${conversation.visit_time || 'Hora por confirmar'}`
-      : "";
+    const displaySubReason = subReason || "Escalamiento General";
+    const prefix = isSurvey ? "[Encuesta] " : "";
+
+    // 2. Crear ticket en GLPI con el nuevo formato estructurado
+    const ticketName = `${prefix}${displaySubReason} - Contrato ${contractId} - ${clientName}`;
+    
+    const ticketContent = `
+Resumen IA: ${aiSummary || 'El cliente requiere atención especializada.'}
+Submotivo: ${displaySubReason}
+Comentario Original del Cliente: ${originalComment || reason}
+Observación: ${observation || 'Sin observaciones adicionales.'}
+Sector: ${sector}
+Cliente: ${clientName}
+N° de contrato: ${contractId}
+Teléfono: ${phone}
+---
+ID Sesión: ${sessionId}
+Identificación: ${identification}
+`.trim();
 
     const ticketResult = await createGlpiTicketInternal({
-      name: `Escalamiento: ${reason.substring(0, 50)}...`,
-      content: `
-ASUNTO: Escalamiento solicitado desde el Asistente AI.
-CLIENTE: ${clientName}
-ID/RIF: ${identification}${visitInfo}
-RAZÓN: ${reason}
-SESSION_ID: ${sessionId}
-      `.trim(),
-      urgency: 5, // Alta urgencia para escalamientos
+      name: ticketName,
+      content: ticketContent,
+      urgency: 5,
     });
 
     if (ticketResult.success) {
@@ -434,6 +448,11 @@ export const getLocalTools = (): LocalToolSet => {
         properties: {
           sessionId: { type: "string" },
           reason: { type: "string" },
+          subReason: { type: "string" },
+          aiSummary: { type: "string" },
+          originalComment: { type: "string" },
+          observation: { type: "string" },
+          isSurvey: { type: "boolean" },
         },
         required: ["sessionId", "reason"],
       },
