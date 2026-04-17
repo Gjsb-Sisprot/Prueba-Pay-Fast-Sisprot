@@ -44,7 +44,7 @@ export function getBaseSystemPrompt(): string {
 }
 
 
-export function buildSystemPrompt(clientData?: ClientContextData, hasHistory: boolean = false): string {
+export function buildSystemPrompt(clientData?: ClientContextData): string {
   if (!clientData || !clientData.identification) {
     return FULL_SYSTEM_PROMPT + `
 
@@ -64,7 +64,6 @@ No hay cliente autenticado en el portal. Si necesitas datos del cliente, pídelo
     : clientData.contractTag === "with_debt" ? "Suspendido por deuda"
     : statusText;
 
-  const firstName = clientData.name?.split(" ")[0] || "";
   const onuSerial = clientData.onuSerial || "";
   
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
