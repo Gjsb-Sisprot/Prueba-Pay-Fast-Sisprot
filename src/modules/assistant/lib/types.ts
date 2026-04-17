@@ -164,4 +164,14 @@ export interface MediaUsage {
   videosUsed: number;
 }
 
+
+export interface ConversationMessage {
+  role: "user" | "model" | "tool";
+  content: string;
+  timestamp: string;
+  toolCallId?: string;
+  toolName?: string;
+  attachments?: MediaAttachment[];
+}
+
 export { DEFAULT_ASSISTANT_CONFIG, type AssistantConfig } from "./assistant-config";
