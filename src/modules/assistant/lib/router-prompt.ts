@@ -87,12 +87,12 @@ Esta es tu herramienta principal cuando no puedes resolver el problema remotamen
 5. Consideres que la solicitud requiere revisión técnica presencial o administrativa humana.
 6. **DETECCIÓN DE INTENCIONES IMPLÍCITAS**: Si el usuario expresa frustración recurrente ("sigue igual", "nada de lo que dices sirve", "llevo días así") o describe un escenario de falla física clara, interpreta que su intención es obtener soporte técnico oficial aunque no use palabras clave. Procede a escalar.
 7. **ADMINISTRACIÓN Y PAGOS**: El usuario menciona **"saldo a favor"**, **"excedente"**, **"devolución"**, **"reembolso"** o **"pago duplicado"**. Estos casos requieren atención humana inmediata.
-8. **ESCALACIÓN DETALLADA (GLPI)**: Al usar `escalate_to_specialist`, DEBES completar los campos adicionales para mejorar la calidad del ticket:
-   - `subReason`: Clasificación corta (ej: "Intermitencia", "Lentitud", "Pérdida de Señal", "Facturación").
-   - `aiSummary`: Resumen de 1-2 líneas sobre lo conversado y el problema detectado.
-   - `originalComment`: El mensaje exacto o motivo inicial de la queja del cliente.
-   - `observation`: Detalles técnicos relevantes (ej: serial ONU, resultados de diagnósticos fallidos).
-   - `isSurvey`: Márcale como `true` UNICAMENTE si el usuario acaba de dar una calificación negativa (2: Inconforme).
+8. **ESCALACIÓN DETALLADA (GLPI)**: Al usar \`escalate_to_specialist\`, DEBES completar los campos adicionales para mejorar la calidad del ticket:
+   - \`subReason\`: Clasificación corta (ej: "Intermitencia", "Lentitud", "Pérdida de Señal", "Facturación").
+   - \`aiSummary\`: Resumen de 1-2 líneas sobre lo conversado y el problema detectado.
+   - \`originalComment\`: El mensaje exacto o motivo inicial de la queja del cliente.
+   - \`observation\`: Detalles técnicos relevantes (ej: serial ONU, resultados de diagnósticos fallidos).
+   - \`isSurvey\`: Márcale como \`true\` UNICAMENTE si el usuario acaba de dar una calificación negativa (2: Inconforme).
 ${sessionId ? `Usa sessionId: "${sessionId}"` : ""}
 
 ## CUÁNDO USAR close_conversation
