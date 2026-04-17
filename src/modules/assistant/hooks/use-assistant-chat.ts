@@ -18,6 +18,7 @@ import {
   type ConversationStatus,
   canSendMessages,
 } from "../lib/types";
+import { toolDefinitions } from "./tools";
 import { useConversationStatus } from "./use-conversation-status";
 import { useMediaAttachments } from "./use-media-attachments";
 import {
@@ -92,7 +93,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (cancelled) return;
         if (response.success && response.data) {
           setClientData(response.data);
-          console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
         }
       })
       .catch(() => {
@@ -106,8 +106,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     return () => { cancelled = true; };
   }, [identification, options.clientName]);
 
-  // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
-  // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
   useEffect(() => {
     const fullName = clientData?.name || options.clientName || "";
     const firstName = fullName.trim().split(/\s+/)[0] || "";
@@ -118,7 +116,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       welcomeContent = `__SELECT_CONTRACT__ ¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. He notado que tienes varios servicios registrados. ¿Con cuál de ellos deseas continuar? 👇`;
     }
 
-    // Si no hay mensajes, o si el único mensaje es el de bienvenida por defecto y tenemos nueva data
     if (messages.length === 0 && !isFetchingContext && !isHistoryLoaded) {
       setMessages([{
         id: "welcome",
@@ -127,7 +124,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         timestamp: new Date()
       }]);
     } else if (messages.length === 1 && messages[0].id === "welcome" && messages[0].content !== welcomeContent && !isFetchingContext) {
-      // Actualizar el saludo si la data llegó después
       setMessages([{
         id: "welcome",
         role: "assistant",
@@ -135,7 +131,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         timestamp: new Date()
       }]);
     }
-  }, [sessionId, clientData?.name, clientData?.totalContracts, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
+  }, [sessionId, clientData?.name, clientData?.totalContracts, options.clientName, isFetchingContext, isHistoryLoaded, messages]);
 
 
   const handleInputChange = useCallback(
@@ -145,17 +141,18 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     []
   );
 
+  const closeChat = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
   const sendMessage = useCallback(
     async (content: string) => {
-      // Si estamos cargando el contexto inicial (solo al principio), esperamos.
       if (isFetchingContext && messages.length === 0) {
-        // Reintentamos en 500ms hasta que esté listo.
         setTimeout(() => sendMessage(content), 500);
         return;
       }
 
       if ((!content.trim() && media.attachments.length === 0) && !isLoading) {
-        // Permitir mensajes vacíos solo para inicialización automática
         if (messages.length > 0) return;
       }
 
@@ -187,6 +184,8 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           sessionId,
           clientData: clientData || (identification ? { identification } : undefined),
           config: { ...DEFAULT_ASSISTANT_CONFIG, ...config },
+          tools: toolDefinitions,
+          systemPrompt: buildSolverSystemPrompt(clientData, messages.length > 0)
         };
 
         const response = await fetch("/api/assistant/chat", {
@@ -198,19 +197,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const wasRetried = response.headers.get("X-Retried") === "true";
-        if (wasRetried) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: generateMessageId(),
-              role: "system",
-              content: "El modelo principal experimenta alto tráfico. Se usó un modelo alternativo.",
-              timestamp: new Date(),
-            },
-          ]);
         }
 
         const assistantMessageId = generateMessageId();
@@ -523,6 +509,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     sessionId,
 
     sendMessage,
+    handleSendMessage,
     clearMessages,
     reload,
     stop,
