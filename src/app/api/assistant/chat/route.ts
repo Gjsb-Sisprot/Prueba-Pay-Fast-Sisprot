@@ -197,7 +197,7 @@ export async function POST(request: Request) {
 
         // Timeout de 8 segundos para obtener las herramientas y no bloquear el request
         const toolsPromise = mcpClient.tools();
-        const timeoutPromise = new Promise<MCPToolSet>((_, reject) => 
+        const timeoutPromise = new Promise<LocalToolSet>((_, reject) => 
           setTimeout(() => reject(new Error("Timeout inicializando herramientas MCP")), 8000)
         );
         
