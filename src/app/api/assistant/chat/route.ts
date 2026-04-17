@@ -266,25 +266,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Helper para extraer Ticket ID (mantenemos lógica consistente con el endpoint de cierre)
-    const getTicketIdFromResult = (raw: unknown): number | null => {
-      try {
-        const tr = raw as { content?: Array<{ type: string; text?: string }> };
-        const text = tr?.content?.find((c) => c.type === "text")?.text;
-        if (!text) return null;
-        const parsed = JSON.parse(text) as { 
-          glpiTicketId?: number; 
-          glpi_ticket_id?: number; 
-          ticket?: { ticketId: number };
-          message?: string;
-        };
-        const id = parsed.glpiTicketId ?? parsed.glpi_ticket_id ?? parsed.ticket?.ticketId;
-        if (id) return Number(id);
-        const m = String(parsed.message || "").match(/#(\d+)/);
-        return m ? Number(m[1]) : null;
-      } catch { return null; }
-    };
-
 
     // Truncamos historial para el Router (máximo 12 mensajes previos)
     const truncatedRouterHistory = conversationHistory.slice(-12);
@@ -336,7 +317,7 @@ export async function POST(request: Request) {
     }
 
     const terminalResult = toolResults.find(tr => TERMINAL_TOOLS.has(tr.toolName));
-    let escalationMarker = "";
+    const escalationMarker = "";
 
     if (terminalResult) {
       if (terminalResult.toolName === "escalate_to_specialist") {
