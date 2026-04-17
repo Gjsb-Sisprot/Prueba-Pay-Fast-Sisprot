@@ -47,7 +47,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
   const [sessionId, setSessionId] = useState(() => generateSessionId());
 
-  const [mcpClientData, setMcpClientData] = useState<ClientContextData | undefined>(undefined);
+  const [clientData, setClientData] = useState<ClientContextData | undefined>(undefined);
   const [isFetchingContext, setIsFetchingContext] = useState(false);
 
   const [conversationStatus, setConversationStatus] = useState<ConversationStatus>("active");
@@ -79,7 +79,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
   useEffect(() => {
     if (!identification) {
-      setMcpClientData(undefined);
+      setClientData(undefined);
       return;
     }
 
@@ -91,7 +91,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
       .then((response) => {
         if (cancelled) return;
         if (response.success && response.data) {
-          setMcpClientData(response.data);
+          setClientData(response.data);
           console.log("[ASSISTANT_DEBUG] Client Data loaded:", { name: response.data.name, contracts: response.data.totalContracts });
         }
       })
@@ -109,9 +109,9 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
   // Efecto separado para el saludo inicial para asegurar que ocurra en reset de conversa
   useEffect(() => {
-    const fullName = mcpClientData?.name || options.clientName || "";
+    const fullName = clientData?.name || options.clientName || "";
     const firstName = fullName.trim().split(/\s+/)[0] || "";
-    const hasMultipleContracts = (mcpClientData?.totalContracts ?? 0) > 1;
+    const hasMultipleContracts = (clientData?.totalContracts ?? 0) > 1;
 
     let welcomeContent = `¡Hola${firstName ? ` ${firstName}` : ""}! Soy Susana, tu asistente virtual de Sisprot. ¿En qué puedo ayudarte hoy? 🚀`;
     if (hasMultipleContracts) {
@@ -135,7 +135,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         timestamp: new Date()
       }]);
     }
-  }, [sessionId, mcpClientData?.name, mcpClientData?.totalContracts, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
+  }, [sessionId, clientData?.name, clientData?.totalContracts, options.clientName, isFetchingContext, isHistoryLoaded, messages.length]);
 
 
   const handleInputChange = useCallback(
@@ -145,11 +145,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     []
   );
 
-  const toggleChat = useCallback(() => setIsOpen((prev) => !prev), []);
-  const openChat = useCallback(() => setIsOpen(true), []);
-  const closeChat = useCallback(() => setIsOpen(false), []);
-
-  const sendMessage = useCallback(
     async (content: string) => {
       // Si estamos cargando el contexto inicial (solo al principio), esperamos.
       if (isFetchingContext && messages.length === 0) {
