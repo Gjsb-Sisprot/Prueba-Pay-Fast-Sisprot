@@ -184,8 +184,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           sessionId,
           clientData: clientData || (identification ? { identification } : undefined),
           config: { ...DEFAULT_ASSISTANT_CONFIG, ...config },
-          tools: toolDefinitions,
-          systemPrompt: buildSolverSystemPrompt(clientData, messages.length > 0)
         };
 
         const response = await fetch("/api/assistant/chat", {
@@ -294,10 +292,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     setError(undefined);
     media.resetMediaUsage();
   }, [media]);
-
-  const closeChat = useCallback(() => {
-    setIsOpen(false);
-  }, []);
 
   const openChat = useCallback(() => {
     setIsOpen(true);
