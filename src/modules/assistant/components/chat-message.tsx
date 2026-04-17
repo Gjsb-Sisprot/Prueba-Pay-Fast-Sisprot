@@ -466,14 +466,14 @@ function ChatMessageComponent({
                     // Bloquear hoy si ya han pasado las 8:00 PM (20:00)
                     if (date.getTime() === justDate.getTime() && now.getHours() >= 20) return true;
                     
-                    return date.getDay() === 0; // No domingos
+                    return false; // Disponible de Lunes a Domingo
                   }}
                   initialFocus
                   locale={es}
                 />
               </div>
               <p className="text-[10px] text-gray-500 mt-2 text-center italic">
-                Solo disponible de Lunes a Sábado
+                Disponible de Lunes a Domingo
               </p>
             </div>
           )}
