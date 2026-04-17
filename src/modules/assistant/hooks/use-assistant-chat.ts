@@ -145,6 +145,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     []
   );
 
+  const sendMessage = useCallback(
     async (content: string) => {
       // Si estamos cargando el contexto inicial (solo al principio), esperamos.
       if (isFetchingContext && messages.length === 0) {
@@ -153,27 +154,26 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         return;
       }
 
-      if ((!content.trim() && media.pendingAttachments.length === 0) && !isLoading) {
+      if ((!content.trim() && media.attachments.length === 0) && !isLoading) {
         // Permitir mensajes vacíos solo para inicialización automática
         if (messages.length > 0) return;
       }
 
       if (isLoading) return;
 
-      const attachments = media.consumeAttachments();
-
       const userMessage: ChatMessage = {
         id: generateMessageId(),
         role: "user",
         content: content.trim(),
         timestamp: new Date(),
-        attachments: attachments.length > 0 ? attachments : undefined,
+        attachments: media.attachments.length > 0 ? [...media.attachments] : undefined,
       };
 
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setIsLoading(true);
       setError(undefined);
+      media.clear();
 
       abortControllerRef.current = new AbortController();
 
@@ -276,7 +276,16 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
-    [messages, config, onError, isLoading, sessionId, clientData, media, identification, isFetchingContext]
+    [messages, config, onError, isLoading, sessionId, clientData, media, identification, isFetchingContext, closeChat]
+  );
+
+  const handleSendMessage = useCallback(
+    async (e?: FormEvent, overrideInput?: string) => {
+      if (e) e.preventDefault();
+      const messageText = overrideInput || input;
+      sendMessage(messageText);
+    },
+    [input, sendMessage]
   );
 
   const handleSubmit = useCallback(
