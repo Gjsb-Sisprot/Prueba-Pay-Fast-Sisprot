@@ -43,7 +43,7 @@ Como la conversación ya está en curso (ya hay historial), TU RESPUESTA DEBE IR
 NO DIGAS "Hola", NO DIGAS "Soy Susana", NO des los buenos días/tardes.
 IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD DEL USUARIO.` : "";
 
-    return buildSystemPrompt(clientData, hasHistory) + portalChannelRule + noGreetingRule + `
+    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + `
     
 ### REGLA SUPREMA DE SEGURIDAD:
 BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
