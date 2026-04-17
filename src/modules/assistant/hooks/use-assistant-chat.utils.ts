@@ -149,6 +149,13 @@ export function mapHistoryToMessages(history: Array<{ role: string; content: str
 export function normalizeSystemMessageContent(content: string): string {
   const raw = content.trim();
 
+  // SI ES JSON TÉCNICO, LO IGNORAMOS
+  // Este es el filtro de seguridad final para evitar fugas de payloads de herramientas
+  if ((raw.startsWith('{') || raw.startsWith('[')) && 
+      (raw.includes('"success":') || raw.includes('"content":') || raw.includes('"glpiTicketId":') || raw.includes('"status":'))) {
+    return "";
+  }
+
   const ticketMatch = raw.match(/ticket\s*#\s*(\d+)/i);
   if (ticketMatch?.[1]) {
     return `Tu número de ticket es: #${ticketMatch[1]}`;
