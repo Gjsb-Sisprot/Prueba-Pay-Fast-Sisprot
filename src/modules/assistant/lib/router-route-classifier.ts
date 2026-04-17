@@ -67,7 +67,7 @@ function buildClassifierPrompt(input: ClassifyRouteInput): string {
     "Solo decides la ruta. No redactes respuesta para el usuario.",
     "",
     "Rutas validas:",
-    "- tool_call: hace falta usar herramientas MCP antes de responder.",
+    "- tool_call: hace falta usar herramientas internas antes de responder.",
     "- solver_flash: no hace falta tool y el solver rapido es suficiente.",
     "- solver_pro: no hace falta tool, pero la respuesta requiere razonamiento o sintesis mas profunda.",
     "",
