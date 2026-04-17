@@ -91,14 +91,19 @@ function ChatMessageComponent({
 
   // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
   const segments = isAssistant 
-    ? content.split("\n\n")
-        .map(s => s.trim())
-        .map(s => ({ original: s, cleaned: cleanContent(s) }))
-        // Filtrar segmentos que queden vacíos después de la limpieza (burbujas blancas/fantasma)
-        .filter(seg => seg.cleaned.length > 0)
-        // Eliminar duplicados consecutivos de contenido idéntico
-        .filter((seg, i, self) => i === 0 || seg.cleaned !== self[i - 1].cleaned)
-        .map(seg => seg.original)
+    ? (() => {
+        const rawSegments = content.split("\n\n")
+          .map(s => s.trim())
+          .map(s => ({ original: s, cleaned: cleanContent(s) }))
+          .filter(seg => seg.cleaned.length > 2); // Evitar burbujas vacías o casi vacías
+
+        const seenTyped = new Set<string>();
+        return rawSegments.filter(seg => {
+          if (seenTyped.has(seg.cleaned)) return false;
+          seenTyped.add(seg.cleaned);
+          return true;
+        }).map(seg => seg.original);
+      })()
     : [content];
 
   const showCloseOffer = closeOffer && !offerDismissed && onCloseConversation;
