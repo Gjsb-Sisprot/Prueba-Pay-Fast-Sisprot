@@ -113,9 +113,12 @@ NUNCA cierres si:
 - No confirmaron explícitamente que terminaron
 
 ${serviceStatus === "suspended" ? `## ⚠️ SERVICIO SUSPENDIDO
-- NO uses herramientas de diagnóstico
-- Si pregunta por internet → debe pagar $${debtAmount}
-- SÍ puedes usar search_knowledge_base para info general
+- NO uses herramientas de diagnóstico. El usuario tiene deuda de $${debtAmount}.
+- Si pregunta por internet → indicar que debe pagar para reactivar.
+` : ""}
+${serviceStatus === "cancelled" ? `## ⚠️ SERVICIO CANCELADO
+- El usuario requiere REACTIVACIÓN. 
+- Acción Única: Escalar inmediatamente usando **escalate_to_specialist** con motivo "Reactivación de Servicio".
 ` : ""}
 ## REGLA: UNA HERRAMIENTA POR VEZ
 Si decides usar herramienta, usa SOLO UNA: la más relevante.
@@ -241,6 +244,15 @@ Usuario: "déjalo así"
 
 Usuario: "ciérrala"
 → close_conversation({ sessionId: "${sessionId || '...'}", resolution: "Usuario solicitó cerrar la conversación", closedBy: "user" })
+
+Usuario: "quiero reactivar mi plan" / "mi contrato aparece cancelado"
+→ escalate_to_specialist({ 
+    sessionId: "${sessionId || '...'}", 
+    reason: "Solicitud de Reactivación de Servicio (Contrato Cancelado)",
+    subReason: "Reactivación",
+    aiSummary: "El cliente solicita reactivar su servicio que aparece como Cancelado.",
+    originalComment: "quiero reactivar"
+})
 
 Usuario: "chao"
 → close_conversation({ sessionId: "${sessionId || '...'}", resolution: "Usuario se despidió", closedBy: "user" })
