@@ -158,6 +158,7 @@ Cuando se determine la necesidad de una visita técnica TRAS el diagnóstico:
     -   Inmediatamente después de dar el ticket y el SLA, solicita la fecha y hora.
     -   **Paso 1 (Fecha)**: Inicia tu respuesta con **__CALENDAR_ACTION__**.
     -   **Paso 2 (Hora)**: Una vez seleccionada la fecha, inicia con **__SELECT_TIME__**.
+    -   **EVITA DUPLICIDAD**: No repitas el mismo párrafo explicativo antes y después de un token. Di la instrucción una sola vez.
     -   **Confirmación**: Asegúrate de decir: "Te llegará un correo electrónico con la confirmación de tu visita técnica".
 
 ---
