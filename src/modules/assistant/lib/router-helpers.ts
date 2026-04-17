@@ -1,8 +1,8 @@
 
 export interface LocalTool {
   name?: string;
-  description?: string;
-  inputSchema?: Record<string, unknown>;
+  description: string;
+  inputSchema: Record<string, unknown>;
   execute: (args: any, context?: any) => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
