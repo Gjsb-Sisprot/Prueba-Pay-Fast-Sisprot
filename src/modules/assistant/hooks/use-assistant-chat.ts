@@ -185,7 +185,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
             attachments: m.attachments,
           })),
           sessionId,
-          clientData: mcpClientData || (identification ? { identification } : undefined),
+          clientData: clientData || (identification ? { identification } : undefined),
           config: { ...DEFAULT_ASSISTANT_CONFIG, ...config },
         };
 
@@ -230,7 +230,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
 
             assistantContent += decoder.decode(value, { stream: true });
             const patch = buildAssistantStreamPatch(assistantContent, {
-              isPortalAuthenticated: Boolean(mcpClientData?.identification || identification),
+              isPortalAuthenticated: Boolean(clientData?.identification || identification),
             });
             setMessages((prev) =>
               prev.map((m) =>
@@ -276,7 +276,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
-    [messages, config, onError, isLoading, sessionId, mcpClientData, media, identification, closeChat, isFetchingContext]
+    [messages, config, onError, isLoading, sessionId, clientData, media, identification, isFetchingContext]
   );
 
   const handleSubmit = useCallback(
@@ -299,6 +299,18 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     setError(undefined);
     media.resetMediaUsage();
   }, [media]);
+
+  const closeChat = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  const openChat = useCallback(() => {
+    setIsOpen(true);
+  }, []);
+
+  const toggleChat = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
 
   const closeConversation = useCallback(async () => {
     if (!sessionId) return;
@@ -375,7 +387,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         body: JSON.stringify({
           messages: [],
           sessionId: conversation.sessionId,
-          clientData: mcpClientData,
+          clientData: clientData,
           loadHistoryOnly: true,
         }),
       });
@@ -392,7 +404,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [mcpClientData]);
+  }, [clientData]);
 
   const startNewConversation = useCallback(() => {
     setSessionId(generateSessionId());
@@ -531,7 +543,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     backToChat,
     isHistoryLoaded,
 
-    mcpClientData,
+    clientData,
     isFetchingContext,
     handleSelectDate,
     handleSelectTime,
