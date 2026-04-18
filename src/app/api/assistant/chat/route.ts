@@ -170,6 +170,20 @@ export async function POST(request: Request) {
     const lastMessage = getLastUserMessage(messages);
     const userMessageText = lastMessage ? extractTextContent(lastMessage) : "";
 
+    // 🔍 DETECCIÓN PROACTIVA DE CONTRATO (BACKEND OVERRIDE)
+    // Si el usuario menciona un # de contrato que existe en su lista, forzamos ese contexto.
+    if (userMessageText && activeClientData?.allContracts) {
+      const contractMatch = userMessageText.match(/#\s*(\d{3,})/i) || userMessageText.match(/contrato\s*#?\s*(\d{3,})/i);
+      if (contractMatch) {
+        const foundContractId = contractMatch[1];
+        const exists = activeClientData.allContracts.find(c => c.contractId.toString() === foundContractId);
+        if (exists) {
+            console.log(`[BACKEND_OVERRIDE] Detectado contrato ${foundContractId} en mensaje. Actualizando contexto.`);
+            activeClientData = { ...activeClientData, contract: foundContractId };
+        }
+      }
+    }
+
     let tools: LocalToolSet = {};
     let conversationHistory: ConversationMessage[] = [];
     let summaryPromise: Promise<void> | null = null;
