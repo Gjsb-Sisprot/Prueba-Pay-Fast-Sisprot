@@ -102,9 +102,11 @@ Responde SOLO a lo que el usuario preguntó.
    - NO pidas calendario ni bloquees al usuario con agendamientos.
 
 3. **VERIFICACIÓN FINAL**:
-   - Solo afirma "ya registré tu ticket/reporte" si ves el resultado exitoso en el contexto técnico.
-   - Si el ticket es técnico exitoso, recuerda incluir la frase de SLA (24 horas).
-   - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".`;
+    - Solo afirma "ya registré tu ticket/reporte" si ves el resultado exitoso en el contexto técnico.
+    - **PROHIBICIÓN ESTRICTA**: NO digas "un momento mientras genero tu ticket", "estoy procesando", "dame un segundo para crear el reporte" ni frases similares que sugieran una espera. 
+    - **RESPUESTA DETERMINISTA**: Si ves un \`glpiTicketId\` o un ID en los resultados de la herramienta, entrégalo de inmediato. Si no lo ves, no inventes que lo estás creando.
+    - Si el ticket es técnico exitoso, recuerda incluir la frase de SLA (24 horas).
+    - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".`;
 }
 
 export interface SolverOptions {
