@@ -42,13 +42,14 @@ export async function GET(request: NextRequest) {
 
     // Lógica de estado global más inteligente: 
     // Si hay estados mixtos, el serviceStatus global no debe ser "cancelled" por defecto si hay activos.
-    let globalServiceStatus: "active" | "suspended" | "cancelled" | "mixed" = "active";
+    let globalServiceStatus: "active" | "suspended" | "cancelled" = "active";
     
     if (activeCount === 0) {
       if (cancelledCount > 0) globalServiceStatus = "cancelled";
       else if (suspendedCount > 0) globalServiceStatus = "suspended";
-    } else if (cancelledCount > 0 || suspendedCount > 0) {
-      globalServiceStatus = "mixed";
+    } else {
+      // Si hay al menos uno activo, marcamos como active para evitar bloqueos globales prematuros
+      globalServiceStatus = "active";
     }
 
     const clientData: ClientContextData = {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
       sector: firstContract.sector,
       address: firstContract.address,
       planName: firstContract.planName,
-      serviceStatus: globalServiceStatus as any,
+      serviceStatus: globalServiceStatus,
       hasDebt: totalDebt > 0,
       debtAmount: totalDebt,
       onuSerial: firstContract.onuSerial,
