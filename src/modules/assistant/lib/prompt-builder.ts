@@ -139,11 +139,12 @@ function buildServiceInstructions(clientData: ClientContextData): string {
     if (selectedContract) {
       const status = (selectedContract.statusName || selectedContract.status || "").toLowerCase();
       
-      // CASO CANCELADO: Prioridad técnica máxima
+      // CASO CANCELADO: Prioridad técnica máxima (Bloqueante)
       if (status.includes('cancel')) {
-        return `### ⚠️ CONTRATO CANCELADO (Sujeto a Reactivación)
-El contrato #${selectedContract.contractId} en el sector **${selectedContract.sector}** se encuentra actualmente **CANCELADO**.
-**ACCIÓN OBLIGATORIA**: Informa al cliente que para recuperar la navegación es necesario procesar una **Reactivación**. **CREA EL TICKET EN GLPI** inmediatamente y entrega el número de ticket. **ESTÁ PROHIBIDO realizar diagnósticos, pedir WiFiman o videos de la ONU.**` + multiContractWarning;
+        return `### 🚨 BLOQUEO POR CONTRATO CANCELADO
+El contrato #${selectedContract.contractId} está **CANCELADO**.
+**INSTRUCCIÓN OBLIGATORIA**: Informa al cliente que debe solicitar una **Reactivación**.
+**PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos. Procede directo a generar el ticket de reactivación.` + multiContractWarning;
       }
 
       // CASO SUSPENDIDO POR DEUDA
@@ -161,9 +162,9 @@ El servicio en el sector **${selectedContract.sector}** está suspendido.
   }
 
   // 2. FALLBACK: Si no hay contrato seleccionado o no se encontró el específico, usar lógica general
-  if (clientData.serviceStatus === "cancelled") {
-      return `### ⚠️ CONTRATO CANCELADO
-Tu servicio se encuentra actualmente **CANCELADO**. Es necesario procesar una **Reactivación** para recuperar la navegación. **CREA EL TICKET EN GLPI** de inmediato.` + multiContractWarning;
+  if (clientData.serviceStatus === "cancelled" || (clientData.cancelledContracts ?? 0) > 0) {
+      return `### ⚠️ AVISO DE CONTRATO CANCELADO
+Se detectó al menos un contrato **CANCELADO**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
   }
 
   if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
