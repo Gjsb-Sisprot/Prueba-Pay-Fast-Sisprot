@@ -57,6 +57,7 @@ No hay cliente autenticado en el portal. Si necesitas datos del cliente, pídelo
 
   const statusText = clientData.serviceStatus === "active" ? "Activo" 
     : clientData.serviceStatus === "suspended" ? "Suspendido"
+    : clientData.serviceStatus === "cancelled" ? "Cancelado"
     : clientData.serviceStatus || "Desconocido";
 
   const contractTagText = clientData.contractTag === "available" ? "Al dia"
@@ -142,7 +143,7 @@ function buildServiceInstructions(clientData: ClientContextData): string {
       if (status.includes('cancel')) {
         return `### ⚠️ CONTRATO CANCELADO (Sujeto a Reactivación)
 El contrato #${selectedContract.contractId} en el sector **${selectedContract.sector}** se encuentra actualmente **CANCELADO**.
-**ACCIÓN OBLIGATORIA**: Informa al cliente que para recuperar la navegación es necesario procesar una **Reactivación**. **CREA EL TICKET EN GLPI** inmediatamente con el motivo "Reactivación de Servicio" y entrega el número de ticket.` + multiContractWarning;
+**ACCIÓN OBLIGATORIA**: Informa al cliente que para recuperar la navegación es necesario procesar una **Reactivación**. **CREA EL TICKET EN GLPI** inmediatamente y entrega el número de ticket. **ESTÁ PROHIBIDO realizar diagnósticos, pedir WiFiman o videos de la ONU.**` + multiContractWarning;
       }
 
       // CASO SUSPENDIDO POR DEUDA
@@ -160,6 +161,11 @@ El servicio en el sector **${selectedContract.sector}** está suspendido.
   }
 
   // 2. FALLBACK: Si no hay contrato seleccionado o no se encontró el específico, usar lógica general
+  if (clientData.serviceStatus === "cancelled") {
+      return `### ⚠️ CONTRATO CANCELADO
+Tu servicio se encuentra actualmente **CANCELADO**. Es necesario procesar una **Reactivación** para recuperar la navegación. **CREA EL TICKET EN GLPI** de inmediato.` + multiContractWarning;
+  }
+
   if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
     return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
   }
