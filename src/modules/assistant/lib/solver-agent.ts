@@ -51,7 +51,13 @@ SE HA DETECTADO QUE EL CONTRATO ESTÁ CANCELADO.
 - **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y que has generado un ticket administrativo.
 - **ESTRICTO**: Ignora cualquier protocolo técnico de asistencia que leas en el resto del prompt.` : "";
 
-    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + statusInterceptor + `
+    const uiTokenEnforcement = `
+### 🚨 REGLA DE CUMPLIMIENTO TÉCNICO (UI TOKENS):
+- Si el prompt incluye tokens como __SELECT_ISSUE_TYPE__, __PAYMENT_ACTION__, __CALENDAR_ACTION__ o __SELECT_CONTRACT__, DEBES USARLOS EXACTAMENTE.
+- **PROHIBICIÓN**: No parafrasees las opciones descritas por los tokens. El token ES el comando que genera los botones. Si escribes el texto por tu cuenta, el sistema fallará.
+- REVISA tu salida: Si debías saludar a un cliente activo, asegúrate de haber incluido __SELECT_ISSUE_TYPE__.`;
+
+    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + statusInterceptor + uiTokenEnforcement + `
     
 ### REGLA SUPREMA DE SEGURIDAD:
 BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
