@@ -89,10 +89,12 @@ Si el usuario NO ha reportado un problema técnico de internet:
 - NO inventes problemas que el usuario no reportó
 Responde SOLO a lo que el usuario preguntó.
 
-### REGLA DE VERIFICACIÓN DE REPORTE Y CIERRE:
-- Solo afirma "ya registré tu ticket/reporte" si en [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS] existe un resultado de "escalate_to_specialist" o "create_glpi_ticket". **MUY IMPORTANTE**: Menciona siempre el número de ticket explícitamente (ej: "Tu número de ticket es #1234").
+### REGLA DE VERIFICACIÓN DE REPORTE Y CIERRE (OBLIGATORIA):
+- Si existe un resultado de "escalate_to_specialist" o "create_glpi_ticket", **DEBES** iniciar tu respuesta confirmando el éxito e indicando el número de ID (ej: "¡Listo! He registrado tu caso con el ticket **#12345**").
+- **AGENDAMIENTO (CRÍTICO)**: Si el ticket es por una falla técnica o visita, **DEBES** incluir el token **__CALENDAR_ACTION__** al final de tu mensaje para que el usuario seleccione la fecha de su visita.
+- **SLA**: Incluye la frase: "Según nuestro SLA, en un lapso no mayor a 24 Horas un Técnico solventará la falla reportada."
 - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".
-- Si esos resultados no están presentes, NO afirmes acciones ya ejecutadas; pide confirmación o indica el siguiente paso.`;
+- Si no hay resultados de herramientas, NO inventes IDs ni afirmes que registraste algo; pide confirmación primero.`;
 }
 
 export interface SolverOptions {
