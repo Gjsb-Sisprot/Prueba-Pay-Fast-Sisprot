@@ -82,7 +82,7 @@ export const FAST_PATH_EXCLUDED_CATEGORIES = new Set([
 
 export async function executeForced(
   toolName: string,
-  query: string,
+  args: string | Record<string, unknown>,
   tools: LocalToolSet
 ): Promise<ToolResult | null> {
   const tool = tools[toolName];
@@ -91,7 +91,7 @@ export async function executeForced(
   try {
     const toolCallId = `forced-${Date.now()}`;
     const result = await tool.execute(
-      { query },
+      typeof args === "string" ? { query: args } : args,
       { messages: [], toolCallId }
     );
     return { toolName, toolCallId, result };
