@@ -224,12 +224,11 @@ export async function POST(request: Request) {
             contractId: c.contractId,
             status: c.status,
             statusName: c.statusName,
-            contractTag: c.contractTag || (parseFloat(c.debt) > 0 ? "with_debt" : "active"),
+            contractTag: parseFloat(c.debt) > 0 ? "with_debt" : "active",
             hasDebt: parseFloat(c.debt) > 0,
             debt: parseFloat(c.debt),
             sector: c.sector,
             planName: c.planName,
-            parish: c.parish,
             onuSerial: c.onuSerial,
             isActive: c.isActive
           }));
