@@ -40,6 +40,10 @@ export async function GET(request: NextRequest) {
     const suspendedCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("suspendido")).length;
     const cancelledCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("cancelado")).length;
 
+    const serviceStatus = (firstContract.statusName || "").toLowerCase().includes("cancel") 
+      ? "cancelled" 
+      : (firstContract.isActive ? "active" : "suspended");
+
     const clientData: ClientContextData = {
       identification: normalizedId,
       name: firstContract.clientName,
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
       sector: firstContract.sector,
       address: firstContract.address,
       planName: firstContract.planName,
-      serviceStatus: firstContract.isActive ? "active" : "suspended",
+      serviceStatus: serviceStatus,
       hasDebt: totalDebt > 0,
       debtAmount: totalDebt,
       onuSerial: firstContract.onuSerial,
