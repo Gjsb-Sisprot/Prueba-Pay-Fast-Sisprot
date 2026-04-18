@@ -98,6 +98,10 @@ export interface ClientContextData {
   specialistName?: string;
   visitDate?: string | Date;
   visitTime?: string;
+  ipActual?: string;
+  vlanActual?: string;
+  gponSerial?: string;
+  locationDetails?: string;
 }
 
 
@@ -139,8 +143,8 @@ export function getStatusLabel(status: ConversationStatus): string {
     active: "Activa",
     paused: "Pausada",
     closed: "Cerrada",
-    handed_over: "Con especialista",
-    waiting_specialist: "En espera",
+    handed_over: "En Atención Técnica",
+    waiting_specialist: "Ticket Generado",
   };
   return labels[status] || status;
 }
