@@ -180,7 +180,7 @@ Tu cuenta principal se encuentra **CANCELADA**. Es necesario procesar una **Reac
 
   const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
   
-  // Si hay un contrato seleccionado, NO usamos la lógica global de "Al día" si el seleccionado no lo está.
+  const isContractSelected = !!clientData.contract;
   if (isContractSelected) {
     const selectedContract = clientData.allContracts?.find(c => c.contractId.toString() === clientData.contract?.toString());
     const isSelectedActive = selectedContract?.isActive || (selectedContract?.statusName?.toLowerCase().includes('activ') || selectedContract?.status?.toLowerCase().includes('activ'));
