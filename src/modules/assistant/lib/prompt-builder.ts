@@ -159,7 +159,8 @@ El servicio está suspendido por falta de pago.
 
   // 4. CASO ACTIVO Y AL DÍA
   if (status === "active") {
-    if ((clientData.debtAmount || 0) === 0) {
+    const hasDebt = (clientData.debtAmount || 0) > 0;
+    if (!hasDebt) {
       return ACTIVE_SERVICE_PROMPT + multiContractWarning;
     } else {
       return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
