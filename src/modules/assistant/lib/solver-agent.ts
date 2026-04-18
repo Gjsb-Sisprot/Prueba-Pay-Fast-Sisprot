@@ -43,12 +43,18 @@ Como la conversación ya está en curso (ya hay historial), TU RESPUESTA DEBE IR
 NO DIGAS "Hola", NO DIGAS "Soy Susana", NO des los buenos días/tardes.
 IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD DEL USUARIO.` : "";
 
-    const statusInterceptor = (clientData?.serviceStatus === "cancelled" || (clientData?.cancelledContracts ?? 0) > 0)
+    // Buscamos si el contrato SELECCIONADO específicamente es el cancelado
+    const selectedContractData = clientData?.allContracts?.find(c => c.contractId.toString() === clientData?.contract?.toString());
+    const isSelectedCancelled = selectedContractData?.statusName?.toLowerCase().includes("cancel") || 
+                               selectedContractData?.status?.toString().toLowerCase().includes("cancel");
+
+    const statusInterceptor = isSelectedCancelled
         ? `
-### 🚨 INTERCEPTOR DE SEGURIDAD (CONTRATO CANCELADO):
-SE HA DETECTADO QUE EL CONTRATO ESTÁ CANCELADO.
+### 🚨 INTERCEPTOR DE SEGURIDAD (CONTRATO SELECCIONADO CANCELADO):
+EL CONTRATO #${clientData?.contract} ESTÁ CANCELADO.
 - **PROHIBICIÓN REAL**: No diagnostiques, no uses herramientas de SmartOLT, no pidas fotos ni videos.
-- **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y que has generado un ticket administrativo.
+- **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y pregunta si desea que generes el ticket administrativo de reactivación.
+- **ACCIÓN TIPO COMANDO**: Si el usuario acepta, DEBES LLAMAR a la herramienta 'create_glpi_ticket' de inmediato.
 - **ESTRICTO**: Ignora cualquier protocolo técnico de asistencia que leas en el resto del prompt.` : "";
 
     const uiTokenEnforcement = `
