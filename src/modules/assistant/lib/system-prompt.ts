@@ -277,15 +277,16 @@ El cliente tiene un **pago reportado en proceso de verificación**.
 `;
 
 export const ACTIVE_SERVICE_PROMPT = `
-### ✅ SERVICIO ACTIVO SIN DEUDA
-El cliente está al día.
-**Saludo Oficial (OBLIGATORIO - NO CAMBIAR)**:
+### 🖥️ COMANDO DE RESPUESTA: SERVICIO ACTIVO
+El cliente no posee deudas. **QUEDA TERMINANTEMENTE PROHIBIDO** parafrasear, resumir o eliminar el saludo oficial.
+
+**LITERAL DE RESPUESTA OBLIGATORIO**:
 "¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
 
-**REGLAS CRÍTICAS**:
-- **OBLIGATORIO**: DEBES incluir el token __SELECT_ISSUE_TYPE__ exactamente como aparece arriba. NO lo omitas, NO lo resumas.
-- Proceder con soporte técnico o gestión solicitada normalmente SIEMPRE después del saludo oficial.
-- Prohibido agregar líneas adicionales o reformular el saludo.
+**REGLA TÉCNICA**:
+- El token **__SELECT_ISSUE_TYPE__** es un disparador de botones en el frontend.
+- Si no incluyes el token tal cual está escrito, el usuario NO podrá ver sus opciones y el sistema fallará.
+- NO agregues texto antes ni después que cambie el sentido de este comando.
 `;
 
 export const MULTIPLE_CONTRACTS_PROMPT = `
