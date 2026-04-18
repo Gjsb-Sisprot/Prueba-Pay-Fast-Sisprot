@@ -196,20 +196,30 @@ export async function routeRequest(
   
   // PRIORIDAD MÁXIMA: Si estamos confirmando un detalle para escalamiento, FORZAR LA HERRAMIENTA AHORA.
   if (contextualEscalation.shouldEnableEscalation && sessionId) {
-    const intent = classifyIntent(message); // Necesario para el razonamiento
+    const intent = classifyIntent(message);
     const routerTools = filterToolsForRouter(tools, { allowEscalation: true, allowClose: true });
-    const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-    const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
     
-    if (forcedEscalation) {
-      console.log(`[ROUTER_DECISION] ESCALAMIENTO FORZADO POR CONTEXTO: ${escalationReason}`);
+    // Si la razón indica una reactivación (cancelado), usamos create_glpi_ticket directamente
+    // Si es técnico, usamos el escalamiento estándar que rellena más campos.
+    const isAdministrative = contextualEscalation.reason?.toLowerCase().includes("reactivaci") || 
+                           clientData?.serviceStatus === "cancelled";
+                           
+    const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
+    
+    console.log(`[ROUTER_DECISION] EJECUCIÓN FORZADA CONTEXTUAL: ${escalationReason}`);
+    
+    const forcedResult = isAdministrative
+      ? await executeForced("create_glpi_ticket", { name: "Reactivación de Servicio", content: escalationReason }, routerTools)
+      : await executeForcedEscalation(routerTools, sessionId, escalationReason);
+    
+    if (forcedResult) {
       return {
         noToolNeeded: false,
-        toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
-        toolResults: [forcedEscalation],
+        toolCalls: [{ toolName: forcedResult.toolName, args: isAdministrative ? { name: "Reactivación", content: escalationReason } : { sessionId, reason: escalationReason } }],
+        toolResults: [forcedResult],
         routePolicy: buildRoutePolicy("tool_call", "deterministic", {
           solverModel: "pro",
-          reason: "Forzado por confirmación contextual (Finalización de flujo)",
+          reason: `Forzado por señal contextual: ${contextualEscalation.source}`,
         }),
         durationMs: elapsed(),
         intentClassification: intent,
