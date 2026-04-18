@@ -131,57 +131,38 @@ ${!isContractSelected ? `- SI EL USUARIO SALUDA O INICIA CONVERSACIÓN: Usa el S
 function buildServiceInstructions(clientData: ClientContextData): string {
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
   const multiContractWarning = hasMultipleContracts 
-    ? `\n**ATENCIÓN - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Consulta la tabla de contratos para dar información precisa por contrato y NO generalices un estado si hay contratos con estados distintos.\n`
+    ? `\n**ATENCIÓN - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} servicios. Has seleccionado el contrato #${clientData.contract || "N/A"}.\n`
     : "";
 
-  const isContractSelected = !!clientData.contract;
+  const status = clientData.serviceStatus;
 
-  // 1. PRIORIDAD ABSOLUTA: Si hay un contrato seleccionado, usamos exclusivamente su estado
-  if (isContractSelected && clientData.allContracts) {
-    const selectedContract = clientData.allContracts.find(c => c.contractId.toString() === clientData.contract?.toString());
-    
-    if (selectedContract) {
-      const status = (selectedContract.statusName || selectedContract.status || "").toLowerCase();
-      const isCancelled = status.includes('cancel');
-      const isSuspended = selectedContract.contractTag === "with_debt" || status.includes('suspend') || selectedContract.debt > 0;
-      const isVerify = selectedContract.contractTag === "verify";
-
-      if (isCancelled) {
-        return `### 🚨 REGLA SUPREMA: CONTRATO BLOQUEADO (CANCELADO)
-El contrato #${selectedContract.contractId} está **CANCELADO**.
-**MENSAJE OBLIGATORIO AL CLIENTE**: "Tu servicio para el contrato #${selectedContract.contractId} se encuentra actualmente **Cancelado**. Debes pagar tus facturas pendientes para poder procesar una **Reactivación** y recuperar la navegación."
+  // 1. CASO CANCELADO
+  if (status === "cancelled") {
+    return `### 🚨 REGLA SUPREMA: CONTRATO BLOQUEADO (CANCELADO)
+El contrato #${clientData.contract || ""} está **CANCELADO**.
+**MENSAJE OBLIGATORIO AL CLIENTE**: "Tu servicio para el contrato #${clientData.contract || ""} se encuentra actualmente **Cancelado**. Debes pagar tus facturas pendientes para poder procesar una **Reactivación** y recuperar la navegación."
 **PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos ni fotos. PROHIBIDO dar el saludo "Genial! No tienes deudas".
 **ACCIÓN ADMINISTRATIVA**: Genera el ticket de reactivación de inmediato.` + multiContractWarning;
-      }
-
-      if (isSuspended) {
-        return `### 🚫 CONTRATO SUSPENDIDO POR DEUDA (CONTRATO #${selectedContract.contractId})
-El servicio en el sector **${selectedContract.sector}** está suspendido por falta de pago.
-**ACCIÓN OBLIGATORIA**: Indica que el monto pendiente para este contrato es de **$${selectedContract.debt.toFixed(2)}**. Envía el token **__PAYMENT_ACTION__** y guía al portal de pagos.` + multiContractWarning;
-      }
-
-      if (isVerify) {
-        return VERIFY_PENDING_PROMPT + ` (Contrato #${selectedContract.contractId})` + multiContractWarning;
-      }
-
-      // Si está activo (no es ninguno de los anteriores)
-      if (selectedContract.debt === 0) {
-          return ACTIVE_SERVICE_PROMPT + multiContractWarning;
-      }
-    }
   }
 
-  // 2. FALLBACK: Si NO hay contrato seleccionado, usamos lógica por defecto
-  if (!isContractSelected) {
-    if (clientData.serviceStatus === "cancelled") {
-        return `### ⚠️ AVISO DE SERVICO CANCELADO
-Tu cuenta se encuentra actualmente **CANCELADA**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
-    }
-    if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
-      return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
-    }
-    if (clientData.activeContracts && clientData.activeContracts > 0) {
+  // 2. CASO SUSPENDIDO POR DEUDA
+  if (status === "suspended") {
+    return `### 🚫 CONTRATO SUSPENDIDO POR DEUDA
+El servicio está suspendido por falta de pago.
+**ACCIÓN OBLIGATORIA**: Indica que el monto pendiente es de **$${(clientData.debtAmount || 0).toFixed(2)}**. Envía el token **__PAYMENT_ACTION__** y guía al portal de pagos.` + multiContractWarning;
+  }
+
+  // 3. CASO EN VERIFICACIÓN
+  if (clientData.contractTag === "verify") {
+    return VERIFY_PENDING_PROMPT + multiContractWarning;
+  }
+
+  // 4. CASO ACTIVO Y AL DÍA
+  if (status === "active") {
+    if ((clientData.debtAmount || 0) === 0) {
       return ACTIVE_SERVICE_PROMPT + multiContractWarning;
+    } else {
+      return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
     }
   }
 
