@@ -282,8 +282,9 @@ El cliente está al día.
 **Saludo Oficial (OBLIGATORIO - NO CAMBIAR)**:
 "¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
 
-**REGLAS**:
-- Proceder con soporte técnico o gestión solicitada normalmente.
+**REGLAS CRÍTICAS**:
+- **OBLIGATORIO**: DEBES incluir el token __SELECT_ISSUE_TYPE__ exactamente como aparece arriba. NO lo omitas, NO lo resumas.
+- Proceder con soporte técnico o gestión solicitada normalmente SIEMPRE después del saludo oficial.
 - Prohibido agregar líneas adicionales o reformular el saludo.
 `;
 
