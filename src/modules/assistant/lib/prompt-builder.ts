@@ -167,6 +167,11 @@ El servicio está suspendido por falta de pago.
     }
   }
 
+  // 5. FALLBACK: Si no hay un estado claro pero hay deuda
+  if (clientData.serviceStatus === "suspended" || (clientData.debtAmount || 0) > 0) {
+    return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
+  }
+
   return "";
 }
 
