@@ -52,10 +52,10 @@ IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD 
         ? `
 ### 🚨 INTERCEPTOR DE SEGURIDAD (CONTRATO SELECCIONADO CANCELADO):
 EL CONTRATO #${clientData?.contract} ESTÁ CANCELADO.
-- **PROHIBICIÓN REAL**: No diagnostiques, no uses herramientas de SmartOLT, no pidas fotos ni videos.
-- **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y pregunta si desea que generes el ticket administrativo de reactivación.
-- **ACCIÓN TIPO COMANDO**: Si el usuario acepta, DEBES LLAMAR a la herramienta 'create_glpi_ticket' de inmediato.
-- **ESTRICTO**: Ignora cualquier protocolo técnico de asistencia que leas en el resto del prompt.` : "";
+- **PROHIBICIÓN TOTAL**: NO uses el saludo "¡Genial! Actualmente no tienes deudas...". NO uses el token __SELECT_ISSUE_TYPE__.
+- **INSTRUCCIÓN**: Informa directamente: "Tu servicio para el contrato #${clientData?.contract} se encuentra actualmente **Cancelado**. Debes pagar tus facturas pendientes para procesar una **Reactivación** y recuperar la navegación."
+- **PRÓXIMO PASO**: Pregunta si desea que generes el reporte de reactivación.
+- **ESTRICTO**: Ignora cualquier protocolo técnico o saludo de cliente activo que veas en el resto del prompt.` : "";
 
     const uiTokenEnforcement = `
 ### 🚨 REGLA DE CUMPLIMIENTO TÉCNICO (UI TOKENS):
@@ -89,12 +89,22 @@ Si el usuario NO ha reportado un problema técnico de internet:
 - NO inventes problemas que el usuario no reportó
 Responde SOLO a lo que el usuario preguntó.
 
-### REGLA DE VERIFICACIÓN DE REPORTE Y CIERRE (OBLIGATORIA):
-- Si existe un resultado de "escalate_to_specialist" o "create_glpi_ticket", **DEBES** iniciar tu respuesta confirmando el éxito e indicando el número de ID (ej: "¡Listo! He registrado tu caso con el ticket **#12345**").
-- **AGENDAMIENTO (CRÍTICO)**: Si el ticket es por una falla técnica o visita, **DEBES** incluir el token **__CALENDAR_ACTION__** al final de tu mensaje para que el usuario seleccione la fecha de su visita.
-- **SLA**: Incluye la frase: "Según nuestro SLA, en un lapso no mayor a 24 Horas un Técnico solventará la falla reportada."
-- Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".
-- Si no hay resultados de herramientas, NO inventes IDs ni afirmes que registraste algo; pide confirmación primero.`;
+### REGLA DE COORDINACIÓN — VISITA Y TICKET (CRÍTICO):
+
+1. **FLUJO TÉCNICO (Requiere Visita)**:
+   - Si detectas una falla que requiere visita (luz roja, falla persistente), **PRIMERO** debes mostrar el calendario iniciando tu respuesta con **__CALENDAR_ACTION__**.
+   - **PROHIBICIÓN**: NO afirmes haber registrado un ticket ni des un número ID hasta que el usuario haya seleccionado su cita.
+   - Solo cuando el resultado de la herramienta \`escalate_to_specialist\` esté presente en [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS], entrega el ID del ticket **#12345** y confirma la cita.
+
+2. **FLUJO ADMINISTRATIVO / CANCELADOS (Sin Visita)**:
+   - Si el contrato está **CANCELADO** o es un reclamo administrativo, la prioridad es la inmediatez.
+   - **DEBES** entregar el número de ticket **#ID** en tu primera respuesta de confirmación si la herramienta ya fue ejecutada.
+   - NO pidas calendario ni bloquees al usuario con agendamientos.
+
+3. **VERIFICACIÓN FINAL**:
+   - Solo afirma "ya registré tu ticket/reporte" si ves el resultado exitoso en el contexto técnico.
+   - Si el ticket es técnico exitoso, recuerda incluir la frase de SLA (24 horas).
+   - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".`;
 }
 
 export interface SolverOptions {
