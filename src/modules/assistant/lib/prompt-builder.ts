@@ -165,9 +165,9 @@ El servicio en el sector **${selectedContract.sector}** está suspendido.
   }
 
   // 2. FALLBACK: Si no hay contrato seleccionado o no se encontró el específico, usar lógica general
-  if (clientData.serviceStatus === "cancelled" || (clientData.cancelledContracts ?? 0) > 0) {
-      return `### ⚠️ AVISO DE CONTRATO CANCELADO
-Se detectó al menos un contrato **CANCELADO**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
+  if (clientData.serviceStatus === "cancelled") {
+      return `### ⚠️ AVISO DE SERVICIO CANCELADO
+Tu cuenta principal se encuentra **CANCELADA**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
   }
 
   if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
