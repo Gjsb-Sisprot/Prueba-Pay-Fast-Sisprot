@@ -199,23 +199,24 @@ export async function routeRequest(
     const intent = classifyIntent(message);
     const routerTools = filterToolsForRouter(tools, { allowEscalation: true, allowClose: true });
     
-    // Si la razón indica una reactivación (cancelado), usamos create_glpi_ticket directamente
-    // Si es técnico, usamos el escalamiento estándar que rellena más campos.
-    const isAdministrative = contextualEscalation.reason?.toLowerCase().includes("reactivaci") || 
-                           clientData?.serviceStatus === "cancelled";
-                           
+    // Si la razón indica una gestión administrativa (sin visita técnica), usamos create_glpi_ticket
+    const isAdministrative = 
+       contextualEscalation.reason?.toLowerCase().match(/reactivaci|reembolso|devoluci|reclamo|facturaci|pago|cobro|titular|mudanza|cambio\s+de\s+plan/) || 
+       intent.category === "INFO_ADMINISTRATIVO" ||
+       clientData?.serviceStatus === "cancelled";
+                            
     const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
     
-    console.log(`[ROUTER_DECISION] EJECUCIÓN FORZADA CONTEXTUAL: ${escalationReason}`);
+    console.log(`[ROUTER_DECISION] EJECUCIÓN FORZADA CONTEXTUAL (${isAdministrative ? 'ADMIN' : 'TECH'}): ${escalationReason}`);
     
     const forcedResult = isAdministrative
-      ? await executeForced("create_glpi_ticket", { name: "Reactivación de Servicio", content: escalationReason }, routerTools)
+      ? await executeForced("create_glpi_ticket", { name: "Gestion Administrativa/Ventas", content: escalationReason }, routerTools)
       : await executeForcedEscalation(routerTools, sessionId, escalationReason);
     
     if (forcedResult) {
       return {
         noToolNeeded: false,
-        toolCalls: [{ toolName: forcedResult.toolName, args: isAdministrative ? { name: "Reactivación", content: escalationReason } : { sessionId, reason: escalationReason } }],
+        toolCalls: [{ toolName: forcedResult.toolName, args: isAdministrative ? { name: "Gestión Administrativa", content: escalationReason } : { sessionId, reason: escalationReason } }],
         toolResults: [forcedResult],
         routePolicy: buildRoutePolicy("tool_call", "deterministic", {
           solverModel: "pro",
