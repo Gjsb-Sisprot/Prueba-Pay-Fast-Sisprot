@@ -223,10 +223,13 @@ export async function POST(request: Request) {
           const allContracts = sisprotClient.contracts.map(c => ({
             contractId: c.contractId,
             status: c.status,
+            statusName: c.statusName,
+            contractTag: c.contractTag || (parseFloat(c.debt) > 0 ? "with_debt" : "active"),
             hasDebt: parseFloat(c.debt) > 0,
             debt: parseFloat(c.debt),
             sector: c.sector,
             planName: c.planName,
+            parish: c.parish,
             onuSerial: c.onuSerial,
             isActive: c.isActive
           }));
@@ -260,24 +263,20 @@ export async function POST(request: Request) {
             if (selected) {
               console.log(`[CONTEXT_ISOLATION] Forzando contexto raíz para contrato #${currentContractId} (${selected.statusName || selected.status})`);
               
-              const statusName = (selected.statusName || selected.status || "").toLowerCase();
+              const statusName = (selected.statusName || "").toLowerCase();
               let serviceStatus: ClientContextData["serviceStatus"] = "active";
               
               if (statusName.includes("cancel")) serviceStatus = "cancelled";
-              else if (statusName.includes("suspend") || selected.contractTag === "with_debt") serviceStatus = "suspended";
-              else if (statusName.includes("paus")) serviceStatus = "paused";
-              else if (statusName.includes("pendien")) serviceStatus = "pending";
+              else if (statusName.includes("suspend") || (selected.hasDebt && selected.debt > 0)) serviceStatus = "suspended";
 
               activeClientData = {
                 ...activeClientData,
                 serviceStatus,
                 planName: selected.planName || activeClientData.planName,
                 sector: selected.sector || activeClientData.sector,
-                parish: selected.parish || activeClientData.parish,
                 hasDebt: selected.hasDebt,
                 debtAmount: selected.debt,
                 onuSerial: selected.onuSerial || activeClientData.onuSerial,
-                contractTag: selected.contractTag,
               };
             }
           }
