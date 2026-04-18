@@ -183,7 +183,10 @@ Se detectó al menos un contrato **CANCELADO**. Es necesario procesar una **Reac
     if (clientData.hasDebt) {
       return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
     }
-    return ACTIVE_SERVICE_PROMPT + multiContractWarning;
+    return `### [PREFIJO DE RESPUESTA OBLIGATORIO]
+Debes usar el literal de ACTIVE_SERVICE_PROMPT para iniciar tu mensaje:
+"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
+` + multiContractWarning;
   }
 
   return ACTIVE_SERVICE_PROMPT;
