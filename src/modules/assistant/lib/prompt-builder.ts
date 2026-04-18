@@ -100,14 +100,13 @@ ${onuSerial ? `- Serial ONU: ${onuSerial}` : "- Serial ONU: No disponible"}
 ${buildContractDetailsBlock(clientData.allContracts)}
 ${buildPaymentVerificationStatus(clientData.allContracts)}
 
-${serviceInstructions}
 ${buildClientTypePlanInstruction(clientData.clientType)}
 
 ### 🚨 REGLAS DE COMPORTAMIENTO:
 ${!isContractSelected ? `1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu respuesta DEBE empezar con el token __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).` : `1. **CONTRATO SELECCIONADO**: El cliente YA seleccionó el contrato #${clientData.contract}. NO vuelvas a pedirlo ni uses tokens de selección. Procede directo a la solución.`}
 2. **SALUDOS OFICIALES**: Si el cliente tiene deuda o está al día, usa los saludos oficiales definidos en SUSPENDED_SERVICE_PROMPT o ACTIVE_SERVICE_PROMPT.
 3. **BYPASS POR FRUSTRACIÓN**: Si el usuario usa lenguaje fuerte ("coño", "nojoda", "ladilla", "no sirve") o se muestra muy molesto, IGNORA los saludos oficiales y la petición de contrato. **PROSEGUIR INMEDIATAMENTE AL ESCALAMIENTO O SOLUCIÓN TÉCNICA**. La prioridad es calmar al cliente con resolutividad.
-`;
+`;`;
 
   const multiContractText = (hasMultipleContracts && !isContractSelected) ? `### ALERTA MULTI-CONTRATO
 Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : "";
@@ -119,6 +118,9 @@ ${multiContractText}
 ${suspendedText}
 
 ---
+### 🚨 INSTRUCCIONES DE ESTADO (MÁXIMA PRIORIDAD):
+${serviceInstructions}
+
 ### 🚨 REGLA DE ORO FINAL:
 ${!isContractSelected ? `- SI EL USUARIO SALUDA O INICIA CONVERSACIÓN: Usa el Saludo Oficial y pide contrato con __SELECT_CONTRACT__.` : `- CONTRATO YA SELECCIONADO: Prohibido pedir contrato o usar tokens de selección. Resuelve la intención directamente.`}
 - **SEGUIMIENTO**: Recuerda siempre terminar con "¿Hay algo más en lo que pueda ayudarte?" (excepto en el cierre).
@@ -141,10 +143,11 @@ function buildServiceInstructions(clientData: ClientContextData): string {
       
       // CASO CANCELADO: Prioridad técnica máxima (Bloqueante)
       if (status.includes('cancel')) {
-        return `### 🚨 BLOQUEO POR CONTRATO CANCELADO
+        return `### 🚨 REGLA SUPREMA: CONTRATO BLOQUEADO (CANCELADO)
 El contrato #${selectedContract.contractId} está **CANCELADO**.
-**INSTRUCCIÓN OBLIGATORIA**: Informa al cliente que debe solicitar una **Reactivación**.
-**PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos. Procede directo a generar el ticket de reactivación.` + multiContractWarning;
+**MENSAJE OBLIGATORIO AL CLIENTE**: "Tu servicio se encuentra actualmente **Cancelado**. Debes pagar tus facturas para poder seguir disfrutando del servicio de este contrato."
+**PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos ni fotos. PROHIBIDO intentar ayudar técnicamente.
+**ACCIÓN ADMINISTRATIVA**: Genera el ticket de reactivación de inmediato.` + multiContractWarning;
       }
 
       // CASO SUSPENDIDO POR DEUDA
