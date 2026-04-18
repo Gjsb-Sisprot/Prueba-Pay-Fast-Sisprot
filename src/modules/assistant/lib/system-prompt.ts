@@ -287,16 +287,10 @@ El cliente tiene un **pago reportado en proceso de verificación**.
 `;
 
 export const ACTIVE_SERVICE_PROMPT = `
-### 🖥️ COMANDO DE RESPUESTA: SERVICIO ACTIVO
-El cliente no posee deudas. **QUEDA TERMINANTEMENTE PROHIBIDO** parafrasear, resumir o eliminar el saludo oficial.
-
-**LITERAL DE RESPUESTA OBLIGATORIO**:
-"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
-
-**REGLA TÉCNICA**:
-- El token **__SELECT_ISSUE_TYPE__** es un disparador de botones en el frontend.
-- Si no incluyes el token tal cual está escrito, el usuario NO podrá ver sus opciones y el sistema fallará.
-- NO agregues texto antes ni después que cambie el sentido de este comando.
+### 🖥️ PROTOCOLO DE RESPUESTA: SERVICIO AL DÍA
+El contrato seleccionado se encuentra **ACTIVO** y sin deudas.
+1. **SALUDO OFICIAL**: Debes iniciar con el literal: "¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
+2. **REGLA TÉCNICA**: El token **__SELECT_ISSUE_TYPE__** es OBLIGATORIO para mostrar las opciones al cliente.
 `;
 
 export const MULTIPLE_CONTRACTS_PROMPT = `
