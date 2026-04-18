@@ -43,7 +43,15 @@ Como la conversación ya está en curso (ya hay historial), TU RESPUESTA DEBE IR
 NO DIGAS "Hola", NO DIGAS "Soy Susana", NO des los buenos días/tardes.
 IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD DEL USUARIO.` : "";
 
-    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + `
+    const statusInterceptor = (clientData?.serviceStatus === "cancelled" || (clientData?.cancelledContracts ?? 0) > 0)
+        ? `
+### 🚨 INTERCEPTOR DE SEGURIDAD (CONTRATO CANCELADO):
+SE HA DETECTADO QUE EL CONTRATO ESTÁ CANCELADO.
+- **PROHIBICIÓN REAL**: No diagnostiques, no uses herramientas de SmartOLT, no pidas fotos ni videos.
+- **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y que has generado un ticket administrativo.
+- **ESTRICTO**: Ignora cualquier protocolo técnico de asistencia que leas en el resto del prompt.` : "";
+
+    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + statusInterceptor + `
     
 ### REGLA SUPREMA DE SEGURIDAD:
 BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
