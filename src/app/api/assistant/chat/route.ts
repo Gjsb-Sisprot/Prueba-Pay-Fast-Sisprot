@@ -251,6 +251,36 @@ export async function POST(request: Request) {
             phone: activeClientData.phone || sisprotClient.contracts[0]?.phone || null,
             email: activeClientData.email || sisprotClient.contracts[0]?.email || null
           } as ClientContextData;
+
+          // 🎯 AISLAMIENTO DE CONTEXTO POR CONTRATO (CRÍTICO)
+          // Si hay un contrato seleccionado, FORZAMOS que los datos raíz sean de ESE contrato.
+          const currentContractId = activeClientData.contract;
+          if (currentContractId && activeClientData.allContracts) {
+            const selected = activeClientData.allContracts.find(c => c.contractId.toString() === currentContractId.toString());
+            if (selected) {
+              console.log(`[CONTEXT_ISOLATION] Forzando contexto raíz para contrato #${currentContractId} (${selected.statusName || selected.status})`);
+              
+              const statusName = (selected.statusName || selected.status || "").toLowerCase();
+              let serviceStatus: ClientContextData["serviceStatus"] = "active";
+              
+              if (statusName.includes("cancel")) serviceStatus = "cancelled";
+              else if (statusName.includes("suspend") || selected.contractTag === "with_debt") serviceStatus = "suspended";
+              else if (statusName.includes("paus")) serviceStatus = "paused";
+              else if (statusName.includes("pendien")) serviceStatus = "pending";
+
+              activeClientData = {
+                ...activeClientData,
+                serviceStatus,
+                planName: selected.planName || activeClientData.planName,
+                sector: selected.sector || activeClientData.sector,
+                parish: selected.parish || activeClientData.parish,
+                hasDebt: selected.hasDebt,
+                debtAmount: selected.debt,
+                onuSerial: selected.onuSerial || activeClientData.onuSerial,
+                contractTag: selected.contractTag,
+              };
+            }
+          }
         } else {
           console.log(`[SISPROT_ENRICH] No se obtuvieron resultados de la API.`);
         }
