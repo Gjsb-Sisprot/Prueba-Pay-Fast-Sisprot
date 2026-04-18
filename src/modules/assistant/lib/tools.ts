@@ -129,6 +129,7 @@ export const toolDefinitions: ToolDefinition[] = [
     schema: checkPaymentStatusSchema,
   },
   {
+    name: "create_glpi_ticket",
     description:
       "Crea un ticket de soporte en GLPI para seguimiento técnico o administrativo. " +
       "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera un registro oficial para seguimiento.",
@@ -230,11 +231,11 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const phone = conversation?.contact_phone || "No disponible";
     
     const displaySubReason = subReason || "Escalamiento General";
-    const prefix = isSurvey ? "[Encuesta] " : "";
+    const surveyPrefix = isSurvey ? "[Encuesta] " : "";
 
     // 2. Crear ticket en GLPI con el nuevo formato estructurado detallado
     const category = 17; // Default Soporte Técnico
-    const ticketName = `[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
+    const ticketName = `${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
     // Obtenemos campos técnicos si están disponibles en el contexto o toolResults anteriores
     // (En una implementación real, esto vendría de la auditoría o API expandida)
