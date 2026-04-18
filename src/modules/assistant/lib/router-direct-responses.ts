@@ -139,7 +139,7 @@ export function buildNoToolDirectResponse(
            "💰 **Pagos y Facturación**: Información sobre tu deuda actual y gestión de pagos.\n" +
            "🚀 **Planes e Instalación**: Información sobre velocidades, precios y promociones de nuevos servicios.\n" +
            "📍 **Información General**: Ubicación de nuestras oficinas, redes sociales y cobertura.\n" +
-           "👨‍💼 **Atención Humana**: Si no puedo resolver tu duda, puedo escalarte con un especialista.\n\n" +
+           "📋 **Gestión de Tickets**: Si no puedo resolver tu duda, puedo generarte un ticket de reporte oficial.\n\n" +
            "¿En qué te gustaría que te ayude hoy? ✨";
   }
 
