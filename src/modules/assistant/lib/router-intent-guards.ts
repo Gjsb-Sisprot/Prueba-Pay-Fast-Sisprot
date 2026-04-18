@@ -179,9 +179,9 @@ const AFFIRMATIVE_ESCALATION_PATTERNS: RegExp[] = [
 ];
 
 const ASSISTANT_ESCALATION_CONFIRM_PATTERNS: RegExp[] = [
-  /(deseas?|quieres?|te\s+gustar[ií]a|procedemos).{0,120}(escal|pas(e|ar)|transferi).{0,80}(especialista|agente|humano)/i,
-  /(confirm(?:ar|es|a|o)).{0,120}(escal|transferi|especialista|agente|humano)/i,
-  /(?:\bescalar\b|\bescalarte\b|\btransferirte\b|\btransferir\b|\bpasarte\b).{0,80}\?/i,
+  /(deseas?|quieres?|te\s+gustar[ií]a|procedemos).{0,120}(escal|pas(e|ar)|transferi|crear|generar|ticket|gestion|reporte).{0,80}(especialista|agente|humano|oficial|incidencia)/i,
+  /(confirm(?:ar|es|a|o)).{0,120}(escal|transferi|especialista|agente|humano|ticket|gestion|reporte)/i,
+  /(?:\bescalar\b|\bescalarte\b|\btransferirte\b|\btransferir\b|\bpasarte\b|\bticket\b|\breporte\b).{0,80}\?/i,
   /transferir[eé]?\s+tu\s+solicitud\s+a\s+(?:uno\s+de\s+)?nuestros\s+especialistas/i,
   /confirmas?.{0,50}(usar|utilizar).{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil)/i,
   /deseas?.{0,50}dejar.{0,50}(n[uú]mero|tel[eé]fono|contacto|m[oó]vil).{0,50}(alternativo|diferente)/i,
