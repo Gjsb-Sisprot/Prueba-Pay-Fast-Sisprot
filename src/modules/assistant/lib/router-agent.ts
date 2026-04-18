@@ -1,862 +1,544 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, stepCountIs } from "ai";
-import type { ClientContextData } from "./types";
-
-import { classifyIntent } from "./intent-classifier";
-import { buildRouterPrompt } from "./router-prompt";
-import { buildNoToolDirectResponse, buildSupportContractDisambiguationMessage } from "./router-direct-responses";
-import {
-  classifyNativeRouteDecision,
-  getFallbackSolverModel,
-  type PreferredSolverModel,
-} from "./router-route-classifier";
-import {
-  type RouterConversationMessage,
-  detectContextualEscalationSignal,
-  isExplicitCloseRequest,
-  isExplicitEscalationRequest,
-  isLikelyContextualFollowUp,
-  isLikelyFollowUpAcknowledgment,
-  hasExplicitContractReference,
-} from "./router-intent-guards";
-import {
-  type ToolCall,
-  type ToolResult,
-  type LocalToolSet,
-  filterToolsForRouter,
-  executeForced,
-  executeForcedClose,
-  executeForcedEscalation,
-  extractStepResults,
-  patchMissingResults,
-  isHighDemandError,
-  FAST_PATH_ELIGIBLE_TOOLS,
-  FAST_PATH_EXCLUDED_CATEGORIES,
-} from "./router-helpers";
-
-export type { IntentCategory, IntentClassification } from "./intent-classifier";
-export type { ToolCall, ToolResult } from "./router-helpers";
-export { buildNoToolDirectResponse } from "./router-direct-responses";
-
+import { generateText, streamText } from "ai";
+import type { ClientContextData, AssistantConfig, MediaAttachment } from "./types";
+import { buildSystemPrompt } from "./prompt-builder";
+import type { ToolResult } from "./router-agent";
 
 const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
-const ROUTER_PRIMARY_MODEL = process.env.ROUTER_PRIMARY_MODEL?.trim() || "gemini-1.5-flash";
-const ROUTER_FALLBACK_MODELS = ["gemini-1.5-flash-8b"] as const;
-const MODEL_CHAIN: string[] = [
-  ROUTER_PRIMARY_MODEL,
-  ...ROUTER_FALLBACK_MODELS.filter((model) => model !== ROUTER_PRIMARY_MODEL),
+const DEFAULT_SOLVER_MODEL = process.env.SOLVER_PRIMARY_MODEL?.trim() || "gemini-1.5-flash";
+const SOLVER_FALLBACK_MODELS = ["gemini-1.5-flash-8b"] as const;
+const MODEL_CHAIN = [
+    DEFAULT_SOLVER_MODEL,
+    ...SOLVER_FALLBACK_MODELS.filter((model) => model !== DEFAULT_SOLVER_MODEL),
 ];
-const MAX_TOOL_STEPS = 1;
 
-const ROUTER_TEMPERATURE = 0.0;
-
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-  const parsed = Number.parseInt(value ?? "", 10);
-  if (Number.isNaN(parsed) || parsed < 1000) return fallback;
-  return parsed;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function errorDetail(error: unknown): string {
+    return (error instanceof Error ? error.message : String(error)).substring(0, 300);
 }
 
-const ROUTER_PRIMARY_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_PRIMARY_TIMEOUT_MS, 10000);
-const ROUTER_FALLBACK_TIMEOUT_MS = parsePositiveInt(process.env.ROUTER_FALLBACK_TIMEOUT_MS, 7000);
+const TRUNCATION_THRESHOLD = 1000;
 
-function getRouterTimeoutMs(attemptIndex: number): number {
-  return attemptIndex === 0 ? ROUTER_PRIMARY_TIMEOUT_MS : ROUTER_FALLBACK_TIMEOUT_MS;
-}
+function buildSolverSystemPrompt(clientData: ClientContextData | undefined, hasHistory: boolean = false): string {
+    const portalChannelRule = clientData?.identification
+        ? `
 
-function buildPlansQueryForClientUsage(clientData: ClientContextData | undefined, message: string): string {
-  const normalizedType = clientData?.clientType?.toUpperCase() || "";
-  const msgLower = message.toLowerCase();
-  
-  let baseQuery = "planes de internet precios velocidades sisprot";
-  
-  if (normalizedType.includes("PYME") || normalizedType.includes("COMERCIAL") || normalizedType.includes("EMPRESA")) {
-    baseQuery = "planes pymes empresas internet precios velocidades sisprot";
-  } else if (normalizedType.includes("RESIDENCIAL")) {
-    baseQuery = "planes residenciales internet precios velocidades sisprot";
-  }
+### REGLA DE PORTAL AUTENTICADO:
+El cliente ya esta dentro del portal autenticado.
+- NO le indiques "ingresa al portal" ni compartas la URL http://portal.sisprotgf.com.
+- Si debe pagar o reportar pago, inicia con __PAYMENT_ACTION__ y guialo usando los accesos de pago visibles en esta misma interfaz.`
+        : `
 
-  // Enriquecer según el uso detectado
-  if (msgLower.includes("gamer") || msgLower.includes("jugar") || msgLower.includes("ps5") || msgLower.includes("xbox")) {
-    baseQuery += " gamer juegos latencia";
-  } else if (msgLower.includes("streaming") || msgLower.includes("netflix") || msgLower.includes("4k") || msgLower.includes("televisores")) {
-    baseQuery += " streaming peliculas tv";
-  } else if (msgLower.includes("trabajar") || msgLower.includes("zoom") || msgLower.includes("oficina") || msgLower.includes("home office")) {
-    baseQuery += " trabajo oficina zoom simetria";
-  }
+### REGLA DE PORTAL NO AUTENTICADO:
+Si no hay cliente autenticado y el usuario pide pagar o reportar pago, puedes compartir la URL oficial http://portal.sisprotgf.com.`;
 
-  return baseQuery;
-}
+    const noGreetingRule = hasHistory ? `
 
-function shouldKeepToolRouting(intent: ReturnType<typeof classifyIntent>): boolean {
-  if (intent.confidence === "baja") return false;
+### ⛔ REGLA MÁXIMA ANTI-SALUDOS (CRÍTICA):
+ESTÁ TOTALMENTE PROHIBIDO SALUDAR EN ESTE RESPUESTA.
+Como la conversación ya está en curso (ya hay historial), TU RESPUESTA DEBE IR DIRECTAMENTE AL GRANO.
+NO DIGAS "Hola", NO DIGAS "Soy Susana", NO des los buenos días/tardes.
+IGNORA la cortesía inicial y RESPONDE DIRECTAMENTE OBRANDO SEGÚN LA SOLICITUD DEL USUARIO.` : "";
 
-  const categoriesThatNeedTools = new Set([
-    "INFO_PLANES",
-    "INFO_COBERTURA",
-    "INFO_PAGOS",
-    "INFO_ADMINISTRATIVO",
-    "INFO_INSTALACION",
-    "PROBLEMA_TECNICO",
-    "ESCALACION",
-    "CIERRE_CONFIRMADO",
-  ] as const);
+    // Buscamos si el contrato SELECCIONADO específicamente es el cancelado
+    const selectedContractData = clientData?.allContracts?.find(c => c.contractId.toString() === clientData?.contract?.toString());
+    const isSelectedCancelled = selectedContractData?.statusName?.toLowerCase().includes("cancel") || 
+                               selectedContractData?.status?.toString().toLowerCase().includes("cancel");
 
-  return Boolean(intent.suggestedTool) && categoriesThatNeedTools.has(intent.category as (typeof categoriesThatNeedTools extends Set<infer U> ? U : never));
-}
+    const statusInterceptor = isSelectedCancelled
+        ? `
+### 🚨 INTERCEPTOR DE SEGURIDAD (CONTRATO SELECCIONADO CANCELADO):
+EL CONTRATO #${clientData?.contract} ESTÁ CANCELADO.
+- **PROHIBICIÓN REAL**: No diagnostiques, no uses herramientas de SmartOLT, no pidas fotos ni videos.
+- **RESPUESTA ÚNICA PERMITIDA**: Explica que el servicio está cancelado, que debe pagar sus facturas para reactivarlo y pregunta si desea que generes el ticket administrativo de reactivación.
+- **ACCIÓN TIPO COMANDO**: Si el usuario acepta, DEBES LLAMAR a la herramienta 'create_glpi_ticket' de inmediato.
+- **ESTRICTO**: Ignora cualquier protocolo técnico de asistencia que leas en el resto del prompt.` : "";
 
-function buildEscalationReason(
-  intent: ReturnType<typeof classifyIntent>,
-  contextualReason?: string
-): string {
-  if (contextualReason?.trim()) return contextualReason.trim();
-  if (intent.category === "ESCALACION") {
-    return "Cliente solicitó atención de un especialista humano.";
-  }
-  return "Cliente confirmó que desea escalar su solicitud con un especialista.";
-}
+    const uiTokenEnforcement = `
+### 🚨 REGLA DE CUMPLIMIENTO TÉCNICO (UI TOKENS):
+- Si el prompt incluye tokens como __SELECT_ISSUE_TYPE__, __PAYMENT_ACTION__, __CALENDAR_ACTION__ o __SELECT_CONTRACT__, DEBES USARLOS EXACTAMENTE.
+- **PROHIBICIÓN**: No parafrasees las opciones descritas por los tokens. El token ES el comando que genera los botones. Si escribes el texto por tu cuenta, el sistema fallará.
+- REVISA tu salida: Si debías saludar a un cliente activo, asegúrate de haber incluido __SELECT_ISSUE_TYPE__.`;
 
-function buildCloseResolution(message: string): string {
-  const compactMessage = message.trim().replace(/\s+/g, " ").slice(0, 160);
-  if (!compactMessage) {
-    return "Usuario confirmó que no requiere más asistencia.";
-  }
-  return `Usuario solicitó cerrar la conversación: ${compactMessage}`;
-}
-
-function buildRouterInputWithHistory(
-  message: string,
-  conversationHistory: RouterConversationMessage[] = []
-): string {
-  const recentTurns = conversationHistory
-    .filter((entry) => entry.role !== "tool" && entry.content?.trim())
-    .slice(-15)
-    .map((entry) => `${entry.role === "model" || entry.role === "assistant" ? "asistente" : "usuario"}: ${entry.content.trim()}`);
-
-  if (recentTurns.length === 0) {
-    return message;
-  }
-
-  return `Usa el historial solo como contexto para interpretar el mensaje actual.
-
-[HISTORIAL RECIENTE]
-${recentTurns.join("\n")}
-[/HISTORIAL RECIENTE]
-
-[MENSAJE ACTUAL]
-${message}`;
-}
-
-
-export interface RouterResult {
-  noToolNeeded: boolean;
-  toolCalls: ToolCall[];
-  toolResults: ToolResult[];
-  directResponse?: string;
-  routePolicy: RoutePolicy;
-  durationMs: number;
-  retriedModel?: string;
-}
-
-export interface RoutePolicy {
-  action: "direct_response" | "ask_clarification" | "tool_call" | "solver";
-  solverModel?: PreferredSolverModel;
-  source: "deterministic" | "native_classifier" | "fallback";
-  confidence?: number;
-  reason?: string;
-}
-
-function buildRoutePolicy(
-  action: RoutePolicy["action"],
-  source: RoutePolicy["source"],
-  options: Partial<Omit<RoutePolicy, "action" | "source">> = {}
-): RoutePolicy {
-  return {
-    action,
-    source,
-    ...options,
-  };
-}
-
-
-export async function routeRequest(
-  message: string,
-  clientData: ClientContextData | undefined,
-  tools: LocalToolSet,
-  sessionId?: string,
-  conversationLength?: number,
-  conversationHistory: RouterConversationMessage[] = []
-): Promise<RouterResult & { intentClassification?: ReturnType<typeof classifyIntent> }> {
-  const startTime = Date.now();
-  const elapsed = () => Date.now() - startTime;
-
-  const contextualEscalation = detectContextualEscalationSignal(message, conversationHistory, clientData);
-  
-  // PRIORIDAD MÁXIMA: Si estamos confirmando un detalle para escalamiento, FORZAR LA HERRAMIENTA AHORA.
-  if (contextualEscalation.shouldEnableEscalation && sessionId) {
-    const intent = classifyIntent(message);
-    const routerTools = filterToolsForRouter(tools, { allowEscalation: true, allowClose: true });
+    return buildSystemPrompt(clientData) + portalChannelRule + noGreetingRule + statusInterceptor + uiTokenEnforcement + `
     
-    // Si la razón indica una reactivación (cancelado), usamos create_glpi_ticket directamente
-    // Si es técnico, usamos el escalamiento estándar que rellena más campos.
-    const isAdministrative = contextualEscalation.reason?.toLowerCase().includes("reactivaci") || 
-                           clientData?.serviceStatus === "cancelled";
-                           
-    const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-    
-    console.log(`[ROUTER_DECISION] EJECUCIÓN FORZADA CONTEXTUAL: ${escalationReason}`);
-    
-    const forcedResult = isAdministrative
-      ? await executeForced("create_glpi_ticket", { name: "Reactivación de Servicio", content: escalationReason }, routerTools)
-      : await executeForcedEscalation(routerTools, sessionId, escalationReason);
-    
-    if (forcedResult) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forcedResult.toolName, args: isAdministrative ? { name: "Reactivación", content: escalationReason } : { sessionId, reason: escalationReason } }],
-        toolResults: [forcedResult],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: "pro",
-          reason: `Forzado por señal contextual: ${contextualEscalation.source}`,
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
+### REGLA SUPREMA DE SEGURIDAD:
+BAJO NINGUNA CIRCUNSTANCIA generes una respuesta vacía o en blanco.
+Si no sabes qué responder o hay un error técnico, di: "Disculpa, no entendí tu consulta o tuve un problema técnico momentáneo. ¿Podrías darme más detalles para ayudarte mejor o consultar nuestra web oficial www.sisprotgf.com?"
+SIEMPRE ESCRIBE ALGO.
 
-  
-  // GUARDIA AGRESIVO DE MULTICONTRATOS...
+### FORMATO DE RESPUESTA:
+- Responde DIRECTAMENTE al usuario.
+- NO incluyas bloques de pensamiento, "Wait...", "Analysis:", ni etiquetas XML de thinking.
+- Tu salida es lo que el usuario final leerá en su chat.
 
-  const intent = classifyIntent(message);
-  console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
+### REGLA DE COHERENCIA CONVERSACIONAL:
+Analiza el historial de la conversación ANTES de responder:
+1. Si el usuario dice "no respondiste", "incompleto", "faltó" → Completa la información ANTERIOR
+2. Si el usuario hace una pregunta NUEVA → Respóndela directamente
+3. NUNCA cambies de tema sin que el usuario lo pida
+4. Si estabas dando información y el usuario pide más → CONTINÚA con esa información
 
-  // OVERRIDE MULTICONTRACTO ESTÁTICO:
-  if ((clientData?.totalContracts ?? 0) > 1 && !clientData?.contract) {
-    // 1. Detección de selección numérica (ej: "4929")
-    const cleanMessage = message.trim().replace("#", "");
-    const matchingContract = clientData?.allContracts?.find(c => String(c.contractId) === cleanMessage);
+### REGLA DE NO USAR HERRAMIENTAS DIAGNÓSTICAS SIN CONTEXTO:
+Si el usuario NO ha reportado un problema técnico de internet:
+- NO diagnostiques la ONU
+- NO menciones deuda si no preguntó
+- NO inventes problemas que el usuario no reportó
+Responde SOLO a lo que el usuario preguntó.
 
-    if (matchingContract) {
-      console.log(`[ROUTER_DECISION] Selección de contrato detectada: ${cleanMessage}. Forzando confirmación.`);
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse: `¡Perfecto! He seleccionado el **Contrato #${cleanMessage}** (${matchingContract.planName || "Servicio Activo"}). ¿En qué puedo ayudarte ahora con este servicio? 🛠️`,
-        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-          reason: "Selección determinista de contrato por ID",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
+### REGLA DE COORDINACIÓN — VISITA Y TICKET (CRÍTICO):
 
-    const forcedResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
-    if (forcedResponse) {
-      console.log(`[ROUTER_DECISION] ¡Multicontrato Detectado! Forzando respuesta determinista inmediata.`);
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse: forcedResponse,
-        routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-          reason: "Multicontrato inicial forzado (Fast Path Ineludible)",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
+1. **FLUJO TÉCNICO (Requiere Visita)**:
+   - Si detectas una falla que requiere visita (luz roja, falla persistente), **PRIMERO** debes mostrar el calendario iniciando tu respuesta con **__CALENDAR_ACTION__**.
+   - **PROHIBICIÓN**: NO afirmes haber registrado un ticket ni des un número ID hasta que el usuario haya seleccionado su cita.
+   - Solo cuando el resultado de la herramienta \`escalate_to_specialist\` esté presente en [INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS], entrega el ID del ticket **#12345** y confirma la cita.
 
-  const fallbackSolverModel = getFallbackSolverModel(intent, clientData, conversationHistory);
+2. **FLUJO ADMINISTRATIVO / CANCELADOS (Sin Visita)**:
+   - Si el contrato está **CANCELADO** o es un reclamo administrativo, la prioridad es la inmediatez.
+   - **DEBES** entregar el número de ticket **#ID** en tu primera respuesta de confirmación si la herramienta ya fue ejecutada.
+   - NO pidas calendario ni bloquees al usuario con agendamientos.
 
-  if (!tools || Object.keys(tools).length === 0) {
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      routePolicy: buildRoutePolicy("solver", "fallback", {
-        solverModel: fallbackSolverModel,
-        reason: "Sin herramientas disponibles",
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
-  }
-
-  const explicitCloseRequest = isExplicitCloseRequest(message);
-  
-  const allowEscalationTool = true;
-  const allowCloseTool = true;
-
-  const routerTools = filterToolsForRouter(tools, {
-    allowEscalation: allowEscalationTool,
-    allowClose: allowCloseTool,
-  });
-  
-  const isAmbiguousSupportIssue =
-    (intent.category === "PROBLEMA_TECNICO" || 
-     intent.category === "ESCALACION" || 
-     intent.category === "CONSULTA_PERSONAL" || 
-     contextualEscalation.shouldEnableEscalation) &&
-    (clientData?.totalContracts ?? 0) > 1 &&
-    !clientData?.contract &&
-    !hasExplicitContractReference(message, clientData) &&
-    contextualEscalation.source !== "confirmation";
-
-  if (isAmbiguousSupportIssue) {
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse: buildSupportContractDisambiguationMessage(clientData),
-      routePolicy: buildRoutePolicy("ask_clarification", "deterministic", {
-        reason: "Soporte/escalamiento multi-contrato sin contrato explícito",
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
-  }
-
-  const shouldForceNoToolForShortAck =
-    intent.confidence === "baja" &&
-    intent.suggestedTool === null &&
-    isLikelyFollowUpAcknowledgment(message) &&
-    !contextualEscalation.shouldEnableEscalation &&
-    !explicitCloseRequest;
-
-  const shouldForceNoToolForContextualFollowUp =
-    intent.confidence === "baja" &&
-    intent.suggestedTool === null &&
-    isLikelyContextualFollowUp(message, conversationHistory, clientData) &&
-    !contextualEscalation.shouldEnableEscalation &&
-    !explicitCloseRequest;
-
-  const shortAckDirectResponse = shouldForceNoToolForShortAck
-    ? buildNoToolDirectResponse(message, clientData, conversationLength)
-    : undefined;
-
-  if (shouldForceNoToolForShortAck || shouldForceNoToolForContextualFollowUp) {
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse: shouldForceNoToolForContextualFollowUp ? undefined : shortAckDirectResponse,
-      routePolicy: shortAckDirectResponse
-        ? buildRoutePolicy("direct_response", "deterministic", {
-            reason: "Cortesía corta resuelta sin solver",
-          })
-        : buildRoutePolicy("solver", "fallback", {
-            solverModel: "flash",
-            reason: "Seguimiento corto sin necesidad de tools",
-          }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
-  }
-
-  const shouldForceEscalation =
-    Boolean(sessionId) &&
-    allowEscalationTool &&
-    (intent.category === "ESCALACION" || contextualEscalation.shouldEnableEscalation);
-
-  if (shouldForceEscalation) {
-    const isAdministrative =
-      contextualEscalation.reason?.toLowerCase().includes("reactivaci") ||
-      clientData?.serviceStatus === "cancelled" ||
-      intent.category === "INFO_ADMINISTRATIVO";
-
-    // Detectar si el mensaje contiene una fecha/hora (señal de que ya pasó por el calendario)
-    const hasDateTime = /(lunes|martes|miercoles|miercoles|jueves|viernes|sabado|domingo|\d{1,2}\/\d{1,2}|mañana|tarde|en la mañana|en la tarde)/i.test(message);
-
-    // Solo escalamos de inmediato si es administrativo O si ya tenemos fecha/hora de visita.
-    // Si es técnico y NO tiene fecha/hora, NO llamamos a la herramienta aquí; dejamos que el Solver muestre el calendario.
-    if (isAdministrative || hasDateTime) {
-      const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-      const forcedEscalation = isAdministrative
-        ? await executeForced("create_glpi_ticket", { name: "Reactivación/Admin", content: escalationReason }, routerTools)
-        : await executeForcedEscalation(routerTools, sessionId!, escalationReason);
-
-      if (forcedEscalation) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: forcedEscalation.toolName, args: isAdministrative ? { name: "Reporte", content: escalationReason } : { sessionId, reason: escalationReason } }],
-          toolResults: [forcedEscalation],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-            solverModel: "pro",
-            reason: isAdministrative ? "Escalamiento administrativo directo" : "Escalamiento técnico con cita confirmada",
-          }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
-      }
-    }
-  }
-
-  const shouldForceClose =
-    Boolean(sessionId) &&
-    allowCloseTool &&
-    intent.category === "CIERRE_CONFIRMADO" &&
-    explicitCloseRequest;
-
-  if (shouldForceClose) {
-    const closeResolution = buildCloseResolution(message);
-    const forcedClose = await executeForcedClose(routerTools, sessionId!, closeResolution);
-
-    if (forcedClose) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forcedClose.toolName, args: { sessionId, resolution: closeResolution, closedBy: "user" } }],
-        toolResults: [forcedClose],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: "pro",
-          reason: "Cierre determinista",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-
-  }
-
-  const shouldForcePlansSearch =
-    intent.category === "INFO_PLANES" &&
-    intent.confidence === "alta" &&
-    intent.suggestedTool === "search_knowledge_base";
-
-  if (shouldForcePlansSearch) {
-    const plansQuery = buildPlansQueryForClientUsage(clientData, message);
-    const forcedPlans = await executeForced("search_knowledge_base", plansQuery, routerTools);
-    if (forcedPlans) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forcedPlans.toolName, args: { query: plansQuery } }],
-        toolResults: [forcedPlans],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: "flash",
-          reason: "Busqueda de planes forzada y contextualizada por tipo de cliente",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
-
-  const directResponse = buildNoToolDirectResponse(message, clientData, conversationLength);
-  const isStandardFaq = ["CONVERSACIONAL", "CIERRE_CONFIRMADO", "INFO_EMPRESA", "INFO_COBERTURA", "INFO_PLANES"].includes(intent.category);
-
-  if (isStandardFaq && directResponse) {
-    const lastAssistantMsg = conversationHistory
-      .filter(m => m.role === "assistant" || m.role === "model")
-      .slice(-1)[0]?.content;
-
-    if (lastAssistantMsg && lastAssistantMsg.trim() === directResponse.trim()) {
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        routePolicy: buildRoutePolicy("solver", "fallback", {
-          solverModel: "flash",
-          reason: "Respuesta directa duplicada detectada, delegando al solver para variar",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse,
-      routePolicy: buildRoutePolicy("direct_response", "deterministic", {
-        reason: `Fast path sin herramienta para ${intent.category} (Respuesta determinista)`,
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
-  }
-
-  if (
-    intent.confidence === "alta" &&
-    intent.suggestedTool &&
-    FAST_PATH_ELIGIBLE_TOOLS.has(intent.suggestedTool) &&
-    !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)
-  ) {
-    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, routerTools);
-    if (forced) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
-        toolResults: [forced],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: fallbackSolverModel,
-          reason: `Tool forzada por regex (Short-circuit) para ${intent.category}`,
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
-
-  if (
-    intent.confidence === "alta" &&
-    intent.suggestedTool &&
-    FAST_PATH_ELIGIBLE_TOOLS.has(intent.suggestedTool) &&
-    !FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)
-  ) {
-    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, routerTools);
-    if (forced) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
-        toolResults: [forced],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: fallbackSolverModel,
-          reason: `Tool forzada por regex (Short-circuit) para ${intent.category}`,
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
-
-  const nativeRoute = await classifyNativeRouteDecision({
-    message,
-    clientData,
-    intent,
-    conversationHistory,
-  });
-
-  if (nativeRoute) {
-  }
-
-  const shouldDeferToRegexTool =
-    Boolean(nativeRoute) &&
-    nativeRoute!.route !== "tool_call" &&
-    (shouldKeepToolRouting(intent) || (intent.confidence === "alta" && Boolean(intent.suggestedTool) && nativeRoute!.confidence < 0.9));
-
-  const preferredToolSolverModel = nativeRoute?.answerComplexity ?? fallbackSolverModel;
-
-  if (nativeRoute && !shouldDeferToRegexTool && nativeRoute.route !== "tool_call") {
-    return {
-      noToolNeeded: true,
-      toolCalls: [],
-      toolResults: [],
-      directResponse: undefined,
-      routePolicy: buildRoutePolicy("solver", "native_classifier", {
-        solverModel: nativeRoute.answerComplexity,
-        confidence: nativeRoute.confidence,
-        reason: nativeRoute.reason,
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-    };
-  }
-
-  // Ya procesado arriba como short-circuit
-  
-
-  if (intent.confidence === "alta" && intent.suggestedTool && FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category)) {
-  }
-
-  try {
-    const { result, retriedModel } = await callGeminiWithFallback(message, clientData, routerTools, sessionId, conversationHistory);
-    const res = result as { text?: string; steps?: unknown[] };
-
-    const responseText = res.text?.trim() || "";
-    const { toolCalls, toolResults } = extractStepResults(res.steps || []);
-
-    if (toolCalls.some(tc => tc.toolName === "close_conversation") && !explicitCloseRequest && intent.category !== "CIERRE_CONFIRMADO") {
-    }
-    if (toolCalls.some(tc => tc.toolName === "escalate_to_specialist") && !contextualEscalation.shouldEnableEscalation && !isExplicitEscalationRequest(message) && intent.category !== "ESCALACION") {
-    }
-
-    if (
-      intent.confidence === "baja" &&
-      (isLikelyFollowUpAcknowledgment(message) || isLikelyContextualFollowUp(message, conversationHistory, clientData)) &&
-      !contextualEscalation.shouldEnableEscalation &&
-      toolCalls.length > 0
-    ) {
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse: undefined,
-        routePolicy: buildRoutePolicy("solver", "fallback", {
-          solverModel: "flash",
-          reason: "Guardrail de seguimiento ambiguo descarto tool calls",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-        retriedModel,
-      };
-    }
-
-    const modelSaidNoTool = responseText.includes("NO_TOOL_NEEDED");
-    const modelCalledTool = toolCalls.length > 0 || toolResults.length > 0;
-
-    if (!modelCalledTool && (modelSaidNoTool || responseText.length > 0)) {
-      const isExcludedCategory = FAST_PATH_EXCLUDED_CATEGORIES.has(intent.category);
-
-      const directResponse = undefined;
-      
-      // PRIORIDAD: Señal contextual (confirmación de detalles o flujo activo)
-      if (contextualEscalation.shouldEnableEscalation && sessionId) {
-        const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-        const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
-        if (forcedEscalation) {
-          return {
-            noToolNeeded: false,
-            toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
-            toolResults: [forcedEscalation],
-            routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-              solverModel: "pro",
-              reason: "Forzado por señal contextual (continuidad del flujo)",
-            }),
-            durationMs: elapsed(),
-            intentClassification: intent,
-            retriedModel,
-          };
-        }
-      }
-
-      if (intent.confidence === "alta" && intent.suggestedTool) {
-        if ((intent.suggestedTool === "escalate_to_specialist" || contextualEscalation.shouldEnableEscalation) && sessionId) {
-          const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-          const forcedEscalation = await executeForcedEscalation(routerTools, sessionId, escalationReason);
-          if (forcedEscalation) {
-            return {
-              noToolNeeded: false,
-              toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
-              toolResults: [forcedEscalation],
-              routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-                solverModel: "pro",
-                reason: contextualEscalation.shouldEnableEscalation ? "Forzado por señal contextual (confirmación)" : "Override de escalamiento por regex",
-              }),
-              durationMs: elapsed(),
-              intentClassification: intent,
-              retriedModel,
-            };
-          }
-        }
-
-        if (intent.suggestedTool === "close_conversation" && sessionId) {
-          const closeResolution = buildCloseResolution(message);
-          const forcedClose = await executeForcedClose(routerTools, sessionId, closeResolution);
-          if (forcedClose) {
-            return {
-              noToolNeeded: false,
-              toolCalls: [{ toolName: forcedClose.toolName, args: { sessionId, resolution: closeResolution, closedBy: "user" } }],
-              toolResults: [forcedClose],
-              routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-                solverModel: "pro",
-                reason: "Override de cierre por regex",
-              }),
-              durationMs: elapsed(),
-              intentClassification: intent,
-              retriedModel,
-            };
-          }
-        }
-
-        const query = isExcludedCategory ? message : (intent.suggestedQuery || message);
-        const forced = await executeForced(intent.suggestedTool, query, routerTools);
-        if (forced) {
-          return {
-            noToolNeeded: false,
-            toolCalls: [{ toolName: forced.toolName, args: { query } }],
-            toolResults: [forced],
-            routePolicy: buildRoutePolicy("tool_call", nativeRoute ? "native_classifier" : "fallback", {
-              solverModel: preferredToolSolverModel,
-              confidence: nativeRoute?.confidence,
-              reason: nativeRoute?.reason || `Override de tool para ${intent.category}`,
-            }),
-            durationMs: elapsed(),
-            intentClassification: intent,
-            retriedModel,
-          };
-        }
-      }
-
-      return {
-        noToolNeeded: true,
-        toolCalls: [],
-        toolResults: [],
-        directResponse,
-        routePolicy: buildRoutePolicy("solver", nativeRoute ? "native_classifier" : "fallback", {
-          solverModel: nativeRoute?.answerComplexity ?? fallbackSolverModel,
-          confidence: nativeRoute?.confidence,
-          reason: nativeRoute?.reason || "Gemini Router no llamó tools",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-        retriedModel,
-      };
-    }
-
-    patchMissingResults(toolCalls, toolResults);
-
-    return {
-      noToolNeeded: toolCalls.length === 0,
-      toolCalls,
-      toolResults,
-      routePolicy: buildRoutePolicy(toolCalls.length === 0 ? "solver" : "tool_call", nativeRoute ? "native_classifier" : "fallback", {
-        solverModel: toolCalls.length === 0 ? nativeRoute?.answerComplexity ?? fallbackSolverModel : preferredToolSolverModel,
-        confidence: nativeRoute?.confidence,
-        reason: nativeRoute?.reason || (toolCalls.length === 0 ? "Gemini Router no requirió tools" : "Gemini Router ejecutó tools"),
-      }),
-      durationMs: elapsed(),
-      intentClassification: intent,
-      retriedModel,
-    };
-  } catch {
-    return buildErrorFallback(message, clientData, tools, intent, elapsed, sessionId, contextualEscalation.reason, explicitCloseRequest);
-  }
+3. **VERIFICACIÓN FINAL**:
+   - Solo afirma "ya registré tu ticket/reporte" si ves el resultado exitoso en el contexto técnico.
+   - Si el ticket es técnico exitoso, recuerda incluir la frase de SLA (24 horas).
+   - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".`;
 }
 
+export interface SolverOptions {
+    config?: Partial<AssistantConfig>;
+    sessionId?: string;
+    conversationHistory?: SolverMessage[];
+    attachments?: MediaAttachment[];
+}
 
-async function callGeminiWithFallback(
-  message: string,
-  clientData: ClientContextData | undefined,
-  routerTools: LocalToolSet,
-  sessionId?: string,
-  conversationHistory: RouterConversationMessage[] = []
-): Promise<{ result: unknown; retriedModel?: string }> {
-  const promptWithHistory = buildRouterInputWithHistory(message, conversationHistory);
+interface SolverMessage {
+    role: "user" | "assistant";
+    content: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType?: string }>;
+}
 
-  for (let i = 0; i < MODEL_CHAIN.length; i++) {
-    const modelName = MODEL_CHAIN[i];
-    const isLast = i === MODEL_CHAIN.length - 1;
-    let timeoutId: NodeJS.Timeout | undefined;
+export function generateResponse(
+    message: string,
+    clientData: ClientContextData | undefined,
+    toolResults: ToolResult[] = [],
+    options: SolverOptions = {}
+) {
+    const { config, conversationHistory = [], attachments = [] } = options;
+
+    const assistantConfig = {
+        model: MODEL_CHAIN[0],
+        temperature: 0.7,
+        ...config
+    };
+
+    const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
+
+    // Truncamos historial de forma agresiva (últimos 8 mensajes previos)
+    const truncatedHistory = conversationHistory.slice(-15);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
+
+    const result = streamText({
+        model: google(assistantConfig.model),
+        system: systemPrompt,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: messages as any,
+        temperature: assistantConfig.temperature,
+        maxRetries: 0,
+        maxOutputTokens: 8192,
+    });
+
+    return result;
+}
+
+export interface BufferedResponse {
+    text: string;
+    finishReason: string;
+    model: string;
+    retried: boolean;
+}
+
+export async function generateResponseBuffered(
+    message: string,
+    clientData: ClientContextData | undefined,
+    toolResults: ToolResult[] = [],
+    options: SolverOptions = {}
+): Promise<BufferedResponse> {
+    const { config, conversationHistory = [], attachments = [] } = options;
+
+    const primaryModel = config?.model || MODEL_CHAIN[0];
+    const temperature = config?.temperature ?? 0.7;
+
+    const chain = primaryModel === MODEL_CHAIN[0]
+        ? MODEL_CHAIN
+        : [primaryModel, ...MODEL_CHAIN.filter(m => m !== primaryModel)];
+
+    const systemPrompt = buildSolverSystemPrompt(clientData, conversationHistory.length > 0);
+    const truncatedHistory = conversationHistory.slice(-8);
+    const messages = buildSolverMessages(message, toolResults, truncatedHistory, attachments);
+
+    for (let i = 0; i < chain.length; i++) {
+        const modelName = chain[i];
+        const isLast = i === chain.length - 1;
+
+        try {
+            const result = await generateText({
+                model: google(modelName),
+                system: systemPrompt,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                messages: messages as any,
+                temperature,
+                maxOutputTokens: 8192,
+                maxRetries: isLast ? 2 : 0,
+            });
+
+            const text = result.text?.trim() || "";
+            const reason = result.finishReason || "unknown";
+
+            if (reason === "stop" && text.length >= TRUNCATION_THRESHOLD) {
+                return { text: result.text, finishReason: reason, model: modelName, retried: i > 0 };
+            }
+
+            if (reason === "stop" && toolResults.length === 0) {
+                return { text: result.text, finishReason: reason, model: modelName, retried: i > 0 };
+            }
+
+            if (!isLast) {
+                continue;
+            }
+
+            return { text: result.text || "", finishReason: reason, model: modelName, retried: i > 0 };
+        } catch {
+            // const isAbort = errorDetail(err).includes("abort") || (err instanceof Error && err.name === "AbortError");
+            if (!isLast) {
+                continue;
+            }
+        }
+    }
+
+    return {
+        text: "",
+        finishReason: "error",
+        model: chain[chain.length - 1],
+        retried: true,
+    }
+}
+
+function buildSolverMessages(
+    userMessage: string,
+    toolResults: ToolResult[],
+    conversationHistory: SolverMessage[],
+    attachments?: MediaAttachment[]
+): SolverMessage[] {
+    const messages: SolverMessage[] = [...conversationHistory];
+    const hasCloseConversationResult = toolResults.some((tr) => tr.toolName === "close_conversation");
+    const closeConversationInstruction = hasCloseConversationResult
+        ? `
+
+8. **CIERRE CON RECORDATORIO DE CANALES**:
+   - Como este mensaje cerrará la conversación, despídete de forma cordial y breve.
+   - Incluye un recordatorio para visitar las redes oficiales de Sisprot, su canal de YouTube y WhatsApp.
+   - Si ya tienes enlaces concretos en el contexto disponible, compártelos; si no, deja el recordatorio en formato general.`
+        : "";
+
+    const followUpPatterns = /no respond|incompleto|falt[óa]|continúa|más información|explica mejor|no entendí/i;
+    const isFollowUp = followUpPatterns.test(userMessage);
+
+    const toolContext = toolResults.length > 0 ? formatToolResults(toolResults, userMessage) : "";
+
+    const content: SolverMessage['content'] = [];
+    
+    // 1. Agregar texto principal
+    let promptSuffix = "";
+    if (toolResults.length > 0) {
+        promptSuffix = `\n\n---\n[INFORMACIÓN OBTENIDA DE LAS HERRAMIENTAS]\n${toolContext}\n---\n\nINSTRUCCIONES CRÍTICAS PARA EL AGENTE:\n\n1. **PRIORIDAD AL RAG (Knowledge Base)**:\n   - Si los resultados incluyen información corporativa o planes desde el Knowledge Base, **USA TODA la información disponible**.\n   - Si devolvió un PROCEDIMIENTO técnico, **SIGUE SUS PASOS EXACTOS**.\n   - **NO omitas datos** - el usuario quiere información completa.\n\n2. **RESPUESTA COMPLETA**:\n   - Si la información viene del KB, incluye TODOS los puntos relevantes.\n   - Formatea con listas si hay múltiples elementos.\n   - Si hay dirección, teléfono, horarios, etc., inclúyelos.\n\n3. **MANEJO DE ERRORES DE HERRAMIENTAS**:\n   - Si una herramienta técnica falla (success: false, error 401/Not Found):\n     * NO inventes datos.\n     * Informa al usuario que no pudiste obtener la información.\n\n4. **REGLA DE ORO**:\n   - SIEMPRE genera una respuesta útil que responda la pregunta del usuario.\n    - NO cambies de tema ni diagnostiques cosas que el usuario no pidió.\n\n5. **REPORTE VERIFICABLE**:\n     - Solo di que "el reporte fue registrado" o "el ticket fue creado" si en los resultados aparece la herramienta "escalate_to_specialist" o "create_glpi_ticket".\n     - Si no aparecen esas herramientas, pide confirmación antes de sugerir el registro oficial del caso.\n\n6. **REDES Y CANALES DIGITALES**:\n   - Si el usuario pregunta por Instagram, YouTube, Facebook, WhatsApp o redes de Sisprot:\n   - Usa preferentemente el bloque [ENLACES_Y_CANALES_DETECTADOS] del contexto de herramientas.\n    - Comparte enlaces/handles exactos, en líneas separadas, sin omitirlos ni resumirlos como texto genérico.\n\n7. **PORTAL AUTENTICADO Y PAGOS**:\n    - Si en el contexto aparece que el cliente ya esta autenticado en el portal, NO le indiques entrar al portal ni compartas la URL http://portal.sisprotgf.com.\n    - Para acciones de pago o reporte, guia al cliente dentro de la interfaz actual y usa __PAYMENT_ACTION__ cuando aplique.${closeConversationInstruction}`;
+    } else if (isFollowUp && conversationHistory.length > 0) {
+        promptSuffix = `\n\nINSTRUCCIÓN IMPORTANTE: El usuario indica que tu respuesta anterior fue incompleta o insuficiente.\n- NO cambies de tema\n- NO uses nuevas herramientas (no tienes nuevos datos)\n- COMPLETA la información que estabas dando antes\n- Si ya diste toda la información disponible, díselo amablemente`;
+    } else {
+        promptSuffix = `\n\nIMPORTANTE: SIEMPRE genera una respuesta. Si no tienes suficiente información, pide al usuario que describa mejor su situación o pregúntale en qué puedes ayudarle. NUNCA dejes la respuesta en blanco. Responde SOLO a lo que el usuario preguntó. Además, en este turno no tienes evidencia de herramientas terminales: NO afirmes que el reporte ya fue registrado o el ticket cerrado.`;
+    }
+
+    content.push({ type: 'text', text: userMessage + promptSuffix });
+
+    // 2. Integrar imágenes si existen en este turno
+    if (attachments && attachments.length > 0) {
+        attachments.forEach(att => {
+            if (att.type === 'image' && att.url) {
+                // Extraer base64 si es data URL o usar URL si es pública
+                const base64Match = att.url.match(/^data:image\/\w+;base64,(.+)$/);
+                if (base64Match) {
+                    content.push({ 
+                        type: 'image', 
+                        image: base64Match[1],
+                        mimeType: att.mimeType || 'image/png'
+                    });
+                }
+            } else if (att.type === 'video' && att.frames && att.frames.length > 0) {
+                att.frames.forEach((frame: string) => {
+                    const b64 = frame.match(/^data:image\/\w+;base64,(.+)$/);
+                    if (b64) {
+                        content.push({ 
+                            type: 'image', 
+                            image: b64[1],
+                            mimeType: 'image/png'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    messages.push({
+        role: "user",
+        content: content as SolverMessage['content']
+    });
+
+    return messages;
+}
+
+function formatToolResults(toolResults: ToolResult[], userMessage: string): string {
+    const preserveLinksSummary = shouldPreserveLinksSummary(userMessage);
+
+    return toolResults
+        .map((tr, index) => {
+            let resultText: string;
+
+            if (tr.error) {
+                resultText = `⚠️ Error en herramienta: ${tr.error}`;
+            } else {
+                // Limpieza inteligente según la herramienta
+                resultText = cleanToolResult(tr.toolName, tr.result);
+            }
+
+            const linksSummary = preserveLinksSummary ? buildLinksSummary(resultText) : "";
+
+            // Truncado inteligente: Si hay enlaces, dejamos menos espacio para el contenido
+            const maxContentLength = linksSummary ? 2500 : 3000;
+            if (resultText.length > maxContentLength) {
+                resultText = resultText.substring(0, maxContentLength) + "... [CONTENIDO TRUNCADO POR BREVEDAD]";
+            }
+
+            const finalText = linksSummary
+                ? `${linksSummary}\n\n[RESUMEN DE CONTENIDO]\n${resultText}`
+                : resultText;
+
+            return `[HERRAMIENTA ${index + 1}: ${tr.toolName}]\n${finalText}`;
+        })
+        .join("\n\n---\n\n");
+}
+
+/**
+ * Limpia y resume el resultado de una herramienta específica para el Solver
+ */
+function cleanToolResult(toolName: string, result: unknown): string {
+    if (!result) return "Sin datos devueltos.";
 
     try {
-      const abortController = new AbortController();
-      const timeoutMs = getRouterTimeoutMs(i);
-      timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
-
-      const result = await generateText({
-        model: google(modelName),
-        system: buildRouterPrompt(clientData, sessionId),
-        prompt: promptWithHistory,
-        tools: routerTools as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        stopWhen: stepCountIs(MAX_TOOL_STEPS),
-        temperature: ROUTER_TEMPERATURE,
-        maxOutputTokens: 1024,
-        maxRetries: 0,
-        abortSignal: abortController.signal,
-      });
-      clearTimeout(timeoutId);
-      return { result, retriedModel: i > 0 ? modelName : undefined };
-    } catch (err) {
-      if (timeoutId) clearTimeout(timeoutId);
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      const isAbort = errorMsg.includes("abort") || (err instanceof Error && err.name === "AbortError");
-      const isNotFound = errorMsg.includes("not found") || errorMsg.includes("404");
-
-      if ((isHighDemandError(err) || isAbort || isNotFound) && !isLast) {
-        continue;
-      }
-      throw err;
+        switch (toolName) {
+            case "search_knowledge_base":
+                return cleanKnowledgeBaseResult(result);
+            case "get_onu_diagnostic":
+                return cleanOnuDiagnosticResult(result);
+            case "get_client_status":
+                return cleanClientStatusResult(result);
+            case "sisprot": // Si viene del módulo completo
+                return cleanClientStatusResult(result);
+            case "create_glpi_ticket":
+            case "escalate_to_specialist":
+                return cleanTicketResult(result);
+            default:
+                // Para otras herramientas, devolvemos un JSON compacto si es objeto
+                return typeof result === "object" 
+                    ? JSON.stringify(result, null, 1) 
+                    : String(result);
+        }
+    } catch {
+        return typeof result === "object" ? JSON.stringify(result) : String(result);
     }
-  }
-  throw new Error("Todos los modelos fallaron");
 }
 
-async function buildErrorFallback(
-  message: string,
-  clientData: ClientContextData | undefined,
-  tools: LocalToolSet,
-  intent: ReturnType<typeof classifyIntent>,
-  elapsed: () => number,
-  sessionId?: string,
-  contextualEscalationReason?: string,
-  explicitCloseRequest?: boolean
-): Promise<RouterResult & { intentClassification?: ReturnType<typeof classifyIntent> }> {
-  if (sessionId && explicitCloseRequest) {
-    const closeResolution = buildCloseResolution(message);
-    const forcedClose = await executeForcedClose(tools, sessionId, closeResolution);
-    if (forcedClose) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forcedClose.toolName, args: { sessionId, resolution: closeResolution, closedBy: "user" } }],
-        toolResults: [forcedClose],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: "pro",
-          reason: "Fallback por cierre explícito",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
+function cleanTicketResult(result: unknown): string {
+    try {
+        const res = result as { message?: string; success?: boolean; data?: { ticketId?: number } };
+        if (res.message) return res.message;
+        const text = (result as { content?: Array<{ type: string; text: string }> })?.content?.[0]?.text;
+        if (text) {
+            const parsed = JSON.parse(text);
+            return parsed.message || JSON.stringify(parsed);
+        }
+        return JSON.stringify(result);
+    } catch {
+        return String(result);
     }
-  }
+}
 
-  if (intent.confidence !== "baja" && intent.suggestedTool) {
-    if (intent.suggestedTool === "escalate_to_specialist" && sessionId) {
-      const escalationReason = buildEscalationReason(intent, contextualEscalationReason);
-      const forcedEscalation = await executeForcedEscalation(tools, sessionId, escalationReason);
-      if (forcedEscalation) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
-          toolResults: [forcedEscalation],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-            solverModel: "pro",
-            reason: "Fallback por escalamiento",
-          }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
-      }
+function cleanKnowledgeBaseResult(result: unknown): string {
+    interface KBDocument {
+        title?: string;
+        content?: string;
+        text?: string;
+        metadata?: { title?: string };
+    }
+    interface KBResult {
+        documents?: KBDocument[];
+        results?: KBDocument[];
     }
 
-    if (intent.suggestedTool === "close_conversation" && sessionId) {
-      const closeResolution = buildCloseResolution(message);
-      const forcedClose = await executeForcedClose(tools, sessionId, closeResolution);
-      if (forcedClose) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: forcedClose.toolName, args: { sessionId, resolution: closeResolution, closedBy: "user" } }],
-          toolResults: [forcedClose],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-            solverModel: "pro",
-            reason: "Fallback por cierre",
-          }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
-      }
+    const res = result as (KBDocument[] | KBResult);
+    const documents = Array.isArray(res) ? res : (res.documents || res.results || []);
+    if (documents.length === 0) return "No se encontró información relevante en la base de conocimientos.";
+
+    return documents
+        .slice(0, 3) // Solo los 3 documentos más relevantes
+        .map((doc, i) => {
+            const title = doc.title || doc.metadata?.title || `Documento ${i + 1}`;
+            const content = doc.content || doc.text || "";
+            // Limpiar saltos de línea excesivos y espacios, y reducir drásticamente a 800 chars
+            const cleanContent = content.replace(/\s+/g, " ").trim().substring(0, 800);
+            return `DOC: ${title}\nCONTENIDO: ${cleanContent}`;
+        })
+        .join("\n\n");
+}
+
+function cleanOnuDiagnosticResult(result: unknown): string {
+    interface OnuData {
+        status?: string;
+        state?: string;
+        signal?: string;
+        rxPower?: string;
+        offlineCause?: string;
+        lastDyingGasp?: string;
+        uptime?: string;
+        serialNumber?: string;
+        sn?: string;
+        error?: string;
+        oltContext?: string;
+    }
+    const res = result as { data?: OnuData } | OnuData;
+    const data = ('data' in res && res.data) ? res.data : (res as OnuData);
+    if (!data || data.error) return `Error de diagnóstico: ${data?.error || "Datos no encontrados"}`;
+
+    const status = data.status || data.state || "Desconocido";
+    const signal = data.signal || data.rxPower || "N/A";
+    const cause = data.offlineCause || data.lastDyingGasp || "Ninguna";
+    const uptime = data.uptime || "N/A";
+    const sn = data.serialNumber || data.sn || "N/A";
+
+    return [
+        `ESTADO: ${status}`,
+        `SEÑAL (RX): ${signal} dBm`,
+        `CAUSA_OFFLINE: ${cause}`,
+        `TIEMPO_LINEA: ${uptime}`,
+        `SERIAL_ONU: ${sn}`,
+        data.oltContext ? `CONTEXTO_OLT: ${data.oltContext}` : ""
+    ].filter(Boolean).join("\n");
+}
+
+function cleanClientStatusResult(result: unknown): string {
+    interface ContractMini {
+        contractId: number | string;
+        status: string;
+        isActive: boolean;
+        debt: number | string;
+        planName?: string;
+    }
+    interface ClientStatusData {
+        name?: string;
+        identification?: string;
+        serviceStatus?: string;
+        debtAmount?: number | string;
+        totalContracts?: number | string;
+        allContracts?: ContractMini[];
+        planName?: string;
+        sector?: string;
+    }
+    const res = result as { client?: ClientStatusData, data?: ClientStatusData } | ClientStatusData;
+    const data = ('client' in res && res.client) ? res.client : (('data' in res && res.data) ? res.data : (res as ClientStatusData));
+    
+    if (!data) return "Datos de cliente inaccesibles.";
+
+    const header = [
+        `CLIENTE: ${data.name || "N/A"} (${data.identification || "N/A"})`,
+        `SERVICIO GLOBAL: ${data.serviceStatus === 'active' ? 'ACTIVO' : 'SUSPENDIDO/OTRO'}`,
+        `DEUDA TOTAL: ${data.debtAmount ?? "0"} USD`,
+        `TOTAL CONTRATOS: ${data.totalContracts || "1"}`
+    ];
+
+    if (data.allContracts && Array.isArray(data.allContracts) && data.allContracts.length > 0) {
+        const contractsList = data.allContracts.map(c => 
+            `- Contrato #${c.contractId}: ${c.status} (${c.isActive ? 'Activo' : 'No Activo'}) | Plan: ${c.planName || 'N/A'} | Deuda: $${c.debt}`
+        );
+        return [...header, "DETALLE DE CONTRATOS:", ...contractsList].join("\n");
     }
 
-    const forced = await executeForced(intent.suggestedTool, intent.suggestedQuery || message, tools);
-    if (forced) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forced.toolName, args: { query: intent.suggestedQuery || message } }],
-        toolResults: [forced],
-        routePolicy: buildRoutePolicy("tool_call", "fallback", {
-          solverModel: getFallbackSolverModel(intent, clientData, [], 1),
-          reason: "Fallback con pre-clasificación regex",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
-    }
-  }
+    return [
+        ...header,
+        `PLAN: ${data.planName || "N/A"}`,
+        `SECTOR: ${data.sector || "N/A"}`
+    ].join("\n");
+}
 
-  return {
-    noToolNeeded: true,
-    toolCalls: [],
-    toolResults: [],
-    directResponse: undefined,
-    routePolicy: buildRoutePolicy("solver", "fallback", {
-      solverModel: getFallbackSolverModel(intent, clientData),
-      reason: "Fallback general del router",
-    }),
-    durationMs: elapsed(),
-    intentClassification: intent,
-  };
+
+function shouldPreserveLinksSummary(userMessage: string): boolean {
+    const normalized = userMessage.toLowerCase();
+    return /(red(es|es\s*sociales?)|instagram|youtube|whatsapp|facebook|canales?|enlaces?|links?|contacto\s*digital|rrss)/i.test(normalized);
+}
+
+function buildLinksSummary(text: string): string {
+    const urls = extractUrls(text);
+    const instagramHandles = extractInstagramHandles(text);
+
+    const normalizedInstagramUrls = instagramHandles.map((handle) => `https://www.instagram.com/${handle}`);
+
+    const uniqueLines = Array.from(new Set([
+        ...urls,
+        ...instagramHandles.map((handle) => `@${handle}`),
+        ...normalizedInstagramUrls,
+    ]));
+
+    if (uniqueLines.length === 0) return "";
+
+    const lines = uniqueLines.map((line) => `- ${line}`).join("\n");
+    return `[ENLACES_Y_CANALES_DETECTADOS]\n${lines}`;
+}
+
+function extractUrls(text: string): string[] {
+    const urlRegex = /https?:\/\/[^\s)\]"'`]+/gi;
+    const matches = text.match(urlRegex) ?? [];
+
+    return matches
+        .map((url) => url.replace(/[.,;:!?]+$/g, ""))
+        .filter(Boolean);
+}
+
+function extractInstagramHandles(text: string): string[] {
+    const handleRegex = /(^|[^\w.])@([a-z0-9._]{3,30})\b/gi;
+    const handles = new Set<string>();
+    let match: RegExpExecArray | null;
+
+    while ((match = handleRegex.exec(text)) !== null) {
+        const handle = (match[2] || "").toLowerCase();
+        if (!handle) continue;
+        if (handle.includes(".com") || handle.includes(".net")) continue;
+        handles.add(handle);
+    }
+
+    return Array.from(handles);
+}
+
+export async function generateResponseSync(
+    message: string,
+    clientData: ClientContextData | undefined,
+    toolResults: ToolResult[] = [],
+    options: SolverOptions = {}
+): Promise<string> {
+    const stream = generateResponse(message, clientData, toolResults, options);
+
+    let fullText = "";
+    for await (const chunk of stream.textStream) {
+        fullText += chunk;
+    }
+
+    return fullText;
 }
