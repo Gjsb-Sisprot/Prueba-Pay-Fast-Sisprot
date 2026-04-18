@@ -131,81 +131,61 @@ ${!isContractSelected ? `- SI EL USUARIO SALUDA O INICIA CONVERSACIÓN: Usa el S
 function buildServiceInstructions(clientData: ClientContextData): string {
   const hasMultipleContracts = (clientData.totalContracts ?? 0) > 1;
   const multiContractWarning = hasMultipleContracts 
-    ? `\n**ATENCION - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Consulta la tabla de contratos para dar información precisa por contrato y NO generalices un estado si hay contratos con estados distintos.\n`
+    ? `\n**ATENCIÓN - MULTIPLES CONTRATOS**: Este cliente tiene ${clientData.totalContracts} contratos. Consulta la tabla de contratos para dar información precisa por contrato y NO generalices un estado si hay contratos con estados distintos.\n`
     : "";
 
-  // 1. PRIORIDAD ABSOLUTA: Estado del contrato seleccionado por el usuario
-  if (clientData.contract && clientData.allContracts) {
+  const isContractSelected = !!clientData.contract;
+
+  // 1. PRIORIDAD ABSOLUTA: Si hay un contrato seleccionado, usamos exclusivamente su estado
+  if (isContractSelected && clientData.allContracts) {
     const selectedContract = clientData.allContracts.find(c => c.contractId.toString() === clientData.contract?.toString());
     
     if (selectedContract) {
       const status = (selectedContract.statusName || selectedContract.status || "").toLowerCase();
-      
-      // CASO CANCELADO: Prioridad técnica máxima (Bloqueante)
-      if (status.includes('cancel')) {
+      const isCancelled = status.includes('cancel');
+      const isSuspended = selectedContract.contractTag === "with_debt" || status.includes('suspend') || selectedContract.debt > 0;
+      const isVerify = selectedContract.contractTag === "verify";
+
+      if (isCancelled) {
         return `### 🚨 REGLA SUPREMA: CONTRATO BLOQUEADO (CANCELADO)
 El contrato #${selectedContract.contractId} está **CANCELADO**.
-**MENSAJE OBLIGATORIO AL CLIENTE**: "Tu servicio se encuentra actualmente **Cancelado**. Debes pagar tus facturas para poder seguir disfrutando del servicio de este contrato."
-**PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos ni fotos. PROHIBIDO intentar ayudar técnicamente.
+**MENSAJE OBLIGATORIO AL CLIENTE**: "Tu servicio para el contrato #${selectedContract.contractId} se encuentra actualmente **Cancelado**. Debes pagar tus facturas pendientes para poder procesar una **Reactivación** y recuperar la navegación."
+**PROHIBICIÓN ABSOLUTA**: No realices diagnósticos técnicos, no pidas WiFiman, no pidas videos ni fotos. PROHIBIDO dar el saludo "Genial! No tienes deudas".
 **ACCIÓN ADMINISTRATIVA**: Genera el ticket de reactivación de inmediato.` + multiContractWarning;
       }
 
-      // CASO SUSPENDIDO POR DEUDA
-      if (selectedContract.contractTag === "with_debt" || status.includes('suspend') || selectedContract.debt > 0) {
+      if (isSuspended) {
         return `### 🚫 CONTRATO SUSPENDIDO POR DEUDA (CONTRATO #${selectedContract.contractId})
-El servicio en el sector **${selectedContract.sector}** está suspendido.
+El servicio en el sector **${selectedContract.sector}** está suspendido por falta de pago.
 **ACCIÓN OBLIGATORIA**: Indica que el monto pendiente para este contrato es de **$${selectedContract.debt.toFixed(2)}**. Envía el token **__PAYMENT_ACTION__** y guía al portal de pagos.` + multiContractWarning;
       }
 
-      // CASO EN VERIFICACIÓN
-      if (selectedContract.contractTag === "verify") {
+      if (isVerify) {
         return VERIFY_PENDING_PROMPT + ` (Contrato #${selectedContract.contractId})` + multiContractWarning;
       }
-    }
-  }
 
-  // 2. FALLBACK: Si no hay contrato seleccionado o no se encontró el específico, usar lógica general
-  if (clientData.serviceStatus === "cancelled") {
-      return `### ⚠️ AVISO DE SERVICIO CANCELADO
-Tu cuenta principal se encuentra **CANCELADA**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
-  }
-
-  if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
-    return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
-  }
-
-  if (clientData.contractTag === "verify") {
-    return VERIFY_PENDING_PROMPT + multiContractWarning;
-  }
-
-  const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
-  
-  const isContractSelected = !!clientData.contract;
-  if (isContractSelected) {
-    const selectedContract = clientData.allContracts?.find(c => c.contractId.toString() === clientData.contract?.toString());
-    const isSelectedActive = selectedContract?.isActive || (selectedContract?.statusName?.toLowerCase().includes('activ') || selectedContract?.status?.toLowerCase().includes('activ'));
-    
-    if (isSelectedActive) {
-      if (clientData.hasDebt) {
-        return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
+      // Si está activo (no es ninguno de los anteriores)
+      if (selectedContract.debt === 0) {
+          return ACTIVE_SERVICE_PROMPT + multiContractWarning;
       }
-      return `### [PREFIJO DE RESPUESTA OBLIGATORIO]
-Debes usar el literal de ACTIVE_SERVICE_PROMPT para iniciar tu mensaje:
-"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
-` + multiContractWarning;
     }
-    // Si el seleccionado no es activo, las instrucciones específicas ya habrán sido devueltas arriba en buildServiceInstructions
-  } else if (hasAtLeastOneActive) {
-    if (clientData.hasDebt) {
-      return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
-    }
-    return `### [PREFIJO DE RESPUESTA OBLIGATORIO]
-Debes usar el literal de ACTIVE_SERVICE_PROMPT para iniciar tu mensaje:
-"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
-` + multiContractWarning;
   }
 
-  return ACTIVE_SERVICE_PROMPT;
+  // 2. FALLBACK: Si NO hay contrato seleccionado, usamos lógica por defecto
+  if (!isContractSelected) {
+    if (clientData.serviceStatus === "cancelled") {
+        return `### ⚠️ AVISO DE SERVICO CANCELADO
+Tu cuenta se encuentra actualmente **CANCELADA**. Es necesario procesar una **Reactivación** para recuperar la navegación.` + multiContractWarning;
+    }
+    if (clientData.serviceStatus === "suspended" || clientData.contractTag === "with_debt") {
+      return SUSPENDED_SERVICE_PROMPT + multiContractWarning;
+    }
+    if (clientData.activeContracts && clientData.activeContracts > 0) {
+      return ACTIVE_SERVICE_PROMPT + multiContractWarning;
+    }
+  }
+
+  return "";
 }
 
 
