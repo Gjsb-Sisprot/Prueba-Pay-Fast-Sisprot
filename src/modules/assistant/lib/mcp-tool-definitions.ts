@@ -91,7 +91,7 @@ export const MCP_TOOL_DEFINITIONS: MCPToolDefinition[] = [
   },
   {
     name: "escalate_to_specialist",
-    description: "Escala la conversación a un especialista humano",
+    description: "Registra oficialmente la conversación como un ticket de soporte técnico",
     inputSchema: {
       type: "object",
       properties: {
@@ -115,7 +115,7 @@ export const MCP_TOOL_DEFINITIONS: MCPToolDefinition[] = [
   },
   {
     name: "takeover_conversation",
-    description: "Especialista toma control de la conversación",
+    description: "Un agente externo toma control de la conversación",
     inputSchema: {
       type: "object",
       properties: {
