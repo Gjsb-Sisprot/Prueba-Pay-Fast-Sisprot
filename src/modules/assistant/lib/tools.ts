@@ -129,10 +129,9 @@ export const toolDefinitions: ToolDefinition[] = [
     schema: checkPaymentStatusSchema,
   },
   {
-    name: "create_glpi_ticket",
     description:
       "Crea un ticket de soporte en GLPI para seguimiento técnico o administrativo. " +
-      "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera atención humana.",
+      "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera un registro oficial para seguimiento.",
     schema: createGlpiTicketSchema,
   },
   {
@@ -233,18 +232,37 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const displaySubReason = subReason || "Escalamiento General";
     const prefix = isSurvey ? "[Encuesta] " : "";
 
-    // 2. Crear ticket en GLPI con el nuevo formato estructurado
-    const ticketName = `${prefix}${displaySubReason} - Contrato ${contractId} - ${clientName}`;
+    // 2. Crear ticket en GLPI con el nuevo formato estructurado detallado
+    const category = 17; // Default Soporte Técnico
+    const ticketName = `[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
+    // Obtenemos campos técnicos si están disponibles en el contexto o toolResults anteriores
+    // (En una implementación real, esto vendría de la auditoría o API expandida)
+    const ipActual = conversation?.ip_actual || conversation?.metadata?.ip_actual || "10.0.0.x (Consulta pendiente)";
+    const vlan = conversation?.vlan_actual || conversation?.metadata?.vlan || "VLAN_PENDIENTE";
+    const gponSerial = conversation?.onu_serial || "QXTLCB... (No detectado)";
+    const address = conversation?.address || "No registrada";
+    const location = conversation?.sector || "No especificada";
+    const plan = conversation?.plan_name || "Plan no detectado";
+
     const ticketContent = `
-Resumen IA: ${aiSummary || 'El cliente requiere atención especializada.'}
+Resumen IA: ${aiSummary || 'El cliente reporta una incidencia en su servicio.'}
 Submotivo: ${displaySubReason}
 Comentario Original del Cliente: ${originalComment || reason}
-Observación: ${observation || 'Sin observaciones adicionales.'}
+
+Observación: ${observation || 'Registro automático de incidencia técnica.'}
+
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
+IP Actual: ${ipActual}
 Teléfono: ${phone}
+VLAN Actual: ${vlan}
+Serial GPON: ${gponSerial}
+Plan Contratado: ${plan}
+
+Dirección: ${address}
+Ubicación: ${location}
 ---
 ID Sesión: ${sessionId}
 Identificación: ${identification}
@@ -253,7 +271,9 @@ Identificación: ${identification}
     const ticketResult = await createGlpiTicketInternal({
       name: ticketName,
       content: ticketContent,
-      urgency: 5,
+      urgency: 3,
+      itilcategories_id: category,
+      type: 1
     });
 
     if (ticketResult.success) {
@@ -267,9 +287,9 @@ Identificación: ${identification}
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket en GLPI es el **#${ticketResult.ticketId}**. 📝
-
-A partir de este momento, un especialista humano revisará tu caso y se pondrá en contacto contigo a la brevedad posible. Esta conversación ha sido transferida al área técnica. ¡Que tengas un excelente día! 🤖👋`,
+        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket en GLPI es el **#${ticketResult.ticketId}**. 🎫
+        
+Según nuestro SLA, en un lapso no mayor a 24 Horas un Técnico solventará la falla reportada. Quedo a tu disposición si necesitas algo más mientras se procesa tu requerimiento. 📝⚡`,
         data: { 
           glpiTicketId: ticketResult.ticketId,
           ticketId: ticketResult.ticketId,
