@@ -40,9 +40,16 @@ export async function GET(request: NextRequest) {
     const suspendedCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("suspendido")).length;
     const cancelledCount = contracts.filter(c => (c.statusName || "").toLowerCase().includes("cancelado")).length;
 
-    const serviceStatus = (firstContract.statusName || "").toLowerCase().includes("cancel") 
-      ? "cancelled" 
-      : (firstContract.isActive ? "active" : "suspended");
+    // Lógica de estado global más inteligente: 
+    // Si hay estados mixtos, el serviceStatus global no debe ser "cancelled" por defecto si hay activos.
+    let globalServiceStatus: "active" | "suspended" | "cancelled" | "mixed" = "active";
+    
+    if (activeCount === 0) {
+      if (cancelledCount > 0) globalServiceStatus = "cancelled";
+      else if (suspendedCount > 0) globalServiceStatus = "suspended";
+    } else if (cancelledCount > 0 || suspendedCount > 0) {
+      globalServiceStatus = "mixed";
+    }
 
     const clientData: ClientContextData = {
       identification: normalizedId,
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
       sector: firstContract.sector,
       address: firstContract.address,
       planName: firstContract.planName,
-      serviceStatus: serviceStatus,
+      serviceStatus: globalServiceStatus as any,
       hasDebt: totalDebt > 0,
       debtAmount: totalDebt,
       onuSerial: firstContract.onuSerial,
