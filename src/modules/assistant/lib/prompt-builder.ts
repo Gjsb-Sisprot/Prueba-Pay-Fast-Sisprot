@@ -179,7 +179,23 @@ Tu cuenta principal se encuentra **CANCELADA**. Es necesario procesar una **Reac
   }
 
   const hasAtLeastOneActive = (clientData.activeContracts ?? 0) > 0;
-  if (hasAtLeastOneActive) {
+  
+  // Si hay un contrato seleccionado, NO usamos la lógica global de "Al día" si el seleccionado no lo está.
+  if (isContractSelected) {
+    const selectedContract = clientData.allContracts?.find(c => c.contractId.toString() === clientData.contract?.toString());
+    const isSelectedActive = selectedContract?.isActive || (selectedContract?.statusName?.toLowerCase().includes('activ') || selectedContract?.status?.toLowerCase().includes('activ'));
+    
+    if (isSelectedActive) {
+      if (clientData.hasDebt) {
+        return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
+      }
+      return `### [PREFIJO DE RESPUESTA OBLIGATORIO]
+Debes usar el literal de ACTIVE_SERVICE_PROMPT para iniciar tu mensaje:
+"¡Genial! Actualmente no tienes deudas de pendientes. ✅ __SELECT_ISSUE_TYPE__ Si necesitas realizar otra gestión o consultar algo más, cuéntame y te guiaré al instante. ⚡"
+` + multiContractWarning;
+    }
+    // Si el seleccionado no es activo, las instrucciones específicas ya habrán sido devueltas arriba en buildServiceInstructions
+  } else if (hasAtLeastOneActive) {
     if (clientData.hasDebt) {
       return DEBT_WITH_ACTIVE_SERVICE_PROMPT + multiContractWarning;
     }
