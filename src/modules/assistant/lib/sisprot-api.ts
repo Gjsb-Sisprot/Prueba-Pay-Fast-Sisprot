@@ -116,7 +116,7 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       address: item.address || item.address_tax || "",
       onuSerial: item.onu_serial || "",
       debt: item.debt?.toString() || "0",
-      isActive: (item.status_name || "").toLowerCase().includes('activo') || 
+      isActive: ((item.status_name || "").toLowerCase().includes('activo') && !(item.status_name || "").toLowerCase().includes('cancel')) || 
                 (item.status_code || "").toLowerCase() === 'active' || 
                 item.status === 16 || 
                 item.status === '16' || 
