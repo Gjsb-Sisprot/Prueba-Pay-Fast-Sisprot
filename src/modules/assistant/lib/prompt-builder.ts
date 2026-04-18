@@ -106,7 +106,7 @@ ${buildClientTypePlanInstruction(clientData.clientType)}
 ${!isContractSelected ? `1. **CONTRATO OBLIGATORIO**: El cliente NO ha seleccionado su contrato aún. Tu respuesta DEBE empezar con el token __SELECT_CONTRACT__ (o variantes :ADMIN/:TECH).` : `1. **CONTRATO SELECCIONADO**: El cliente YA seleccionó el contrato #${clientData.contract}. NO vuelvas a pedirlo ni uses tokens de selección. Procede directo a la solución.`}
 2. **SALUDOS OFICIALES**: Si el cliente tiene deuda o está al día, usa los saludos oficiales definidos en SUSPENDED_SERVICE_PROMPT o ACTIVE_SERVICE_PROMPT.
 3. **BYPASS POR FRUSTRACIÓN**: Si el usuario usa lenguaje fuerte ("coño", "nojoda", "ladilla", "no sirve") o se muestra muy molesto, IGNORA los saludos oficiales y la petición de contrato. **PROSEGUIR INMEDIATAMENTE AL ESCALAMIENTO O SOLUCIÓN TÉCNICA**. La prioridad es calmar al cliente con resolutividad.
-`;`;
+`;
 
   const multiContractText = (hasMultipleContracts && !isContractSelected) ? `### ALERTA MULTI-CONTRATO
 Este cliente posee ${clientData.totalContracts} servicios. NO PUEDES CONTINUAR sin usar el token __SELECT_CONTRACT__.` : "";
