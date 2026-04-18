@@ -364,23 +364,36 @@ export async function routeRequest(
     (intent.category === "ESCALACION" || contextualEscalation.shouldEnableEscalation);
 
   if (shouldForceEscalation) {
-    const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-    const forcedEscalation = await executeForcedEscalation(routerTools, sessionId!, escalationReason);
+    const isAdministrative =
+      contextualEscalation.reason?.toLowerCase().includes("reactivaci") ||
+      clientData?.serviceStatus === "cancelled" ||
+      intent.category === "INFO_ADMINISTRATIVO";
 
-    if (forcedEscalation) {
-      return {
-        noToolNeeded: false,
-        toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
-        toolResults: [forcedEscalation],
-        routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-          solverModel: "pro",
-          reason: "Escalamiento determinista",
-        }),
-        durationMs: elapsed(),
-        intentClassification: intent,
-      };
+    // Detectar si el mensaje contiene una fecha/hora (señal de que ya pasó por el calendario)
+    const hasDateTime = /(lunes|martes|miercoles|miercoles|jueves|viernes|sabado|domingo|\d{1,2}\/\d{1,2}|mañana|tarde|en la mañana|en la tarde)/i.test(message);
+
+    // Solo escalamos de inmediato si es administrativo O si ya tenemos fecha/hora de visita.
+    // Si es técnico y NO tiene fecha/hora, NO llamamos a la herramienta aquí; dejamos que el Solver muestre el calendario.
+    if (isAdministrative || hasDateTime) {
+      const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
+      const forcedEscalation = isAdministrative
+        ? await executeForced("create_glpi_ticket", { name: "Reactivación/Admin", content: escalationReason }, routerTools)
+        : await executeForcedEscalation(routerTools, sessionId!, escalationReason);
+
+      if (forcedEscalation) {
+        return {
+          noToolNeeded: false,
+          toolCalls: [{ toolName: forcedEscalation.toolName, args: isAdministrative ? { name: "Reporte", content: escalationReason } : { sessionId, reason: escalationReason } }],
+          toolResults: [forcedEscalation],
+          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+            solverModel: "pro",
+            reason: isAdministrative ? "Escalamiento administrativo directo" : "Escalamiento técnico con cita confirmada",
+          }),
+          durationMs: elapsed(),
+          intentClassification: intent,
+        };
+      }
     }
-
   }
 
   const shouldForceClose =
