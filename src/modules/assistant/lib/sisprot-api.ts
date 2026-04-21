@@ -98,7 +98,28 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
       debt?: string | number;
       is_active?: boolean;
       phone?: string;
+      mobile?: string;
       email?: string;
+    }
+
+    /**
+     * Limpia y formatea el número de teléfono para compatibilidad con WhatsApp 
+     * (Reemplaza 0 inicial por 58, o agrega 58 si falta).
+     */
+    function formatWhatsAppNumber(raw: string | undefined): string | undefined {
+      if (!raw) return undefined;
+      const clean = raw.replace(/\D/g, "");
+      if (!clean) return undefined;
+
+      if (clean.startsWith("0")) {
+        return "58" + clean.substring(1);
+      }
+      
+      if (!clean.startsWith("58")) {
+        return "58" + clean;
+      }
+
+      return clean;
     }
 
     const results = (Array.isArray(data) ? data : (data.results || [])) as RawSisprotContract[];
@@ -121,7 +142,7 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
                 item.status === 16 || 
                 item.status === '16' || 
                 !!item.is_active,
-      phone: item.phone,
+      phone: formatWhatsAppNumber(item.mobile || item.phone),
       email: item.email
     }));
 
