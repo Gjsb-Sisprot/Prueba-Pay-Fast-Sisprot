@@ -71,6 +71,7 @@ interface UnifiedContract {
   debt: string;
   onuSerial: string;
   planName: string;
+  phone?: string;
 }
 
 function buildEnhancedClientData(
@@ -94,7 +95,8 @@ function buildEnhancedClientData(
         sector: c.sector,
         debt: c.debt,
         onuSerial: c.onuSerial,
-        planName: c.planName
+        planName: c.planName,
+        phone: c.phone
       }))
     : mcpContracts.map(c => ({
         contractId: c.contractId,
@@ -104,7 +106,8 @@ function buildEnhancedClientData(
         sector: c.sector,
         debt: String(c.debt || "0"),
         onuSerial: c.onuSerial,
-        planName: "" // El mcp-types no tiene planName actualmente
+        planName: "", // El mcp-types no tiene planName actualmente
+        phone: undefined
       }));
 
   const activeContract = unifiedContracts.find(c => c.isActive);
@@ -116,7 +119,7 @@ function buildEnhancedClientData(
     identification,
     name,
     email: frontendData?.email || undefined,
-    phone: frontendData?.phone || undefined,
+    phone: frontendData?.phone || primaryContract?.phone,
     contract: frontendData?.contract || (unifiedContracts.length === 1 ? primaryContract?.contractId?.toString() : undefined),
     sector: primaryContract?.sector,
     serviceStatus: (activeContract ? "active" : "suspended") as "active" | "suspended" | "paused" | "cancelled" | "pending",
