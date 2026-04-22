@@ -218,7 +218,7 @@ export async function POST(request: Request) {
         
         return createTextStreamResponse(
           `**${messageHeader}**\n\nEn este momento ${agentRole} cuenta con el control de esta conversación. Por favor, espera a que te respondan directamente.`,
-          { status } as any
+          undefined
         );
       }
 
