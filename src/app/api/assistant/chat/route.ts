@@ -5,6 +5,7 @@ import { after } from 'next/server';
 import { DEFAULT_ASSISTANT_CONFIG, CLOSE_OFFER_PREFIX, PAYMENT_ACTION_PREFIX } from "@/modules/assistant/lib/types";
 import {
   loadConversationHistory,
+  getConversationBySessionId,
   saveInteraction,
   updateConversationSummary,
   updateSummaryFromHistory,
@@ -189,6 +190,38 @@ export async function POST(request: Request) {
     let summaryPromise: Promise<void> | null = null;
 
     try {
+      const convData = await getConversationBySessionId(sessionId);
+      const status = convData?.status || "active";
+
+      // 🚨 INTERCEPTOR DE ESTADO: Si está pausado o en manos de un agente, la IA NO debe responder.
+      if (status === "paused" || status === "handed_over") {
+        console.log(`[CHAT_INTERCEPTOR] Estado ${status} detectado. Bloqueando respuesta de IA.`);
+        
+        // Guardamos el mensaje del usuario de todas formas para que el agente lo vea
+        if (lastMessage) {
+            await saveInteraction({
+              sessionId,
+              role: "user",
+              content: userMessageText,
+              attachments: lastMessage.attachments,
+              identification: activeClientData?.identification,
+              contract: activeClientData?.contract,
+              sector: activeClientData?.sector,
+              contactName: activeClientData?.name,
+              contactEmail: activeClientData?.email,
+              contactPhone: activeClientData?.phone,
+            }).catch((err) => console.error("[SUPABASE_USER_SAVE_ERROR]", err));
+        }
+
+        const agentRole = status === "handed_over" ? "un especialista" : "el equipo de soporte";
+        const messageHeader = status === "handed_over" ? "👩‍💻 Atención en curso" : "⏸️ Asistente en pausa";
+        
+        return createTextStreamResponse(
+          `**${messageHeader}**\n\nEn este momento ${agentRole} cuenta con el control de esta conversación. Por favor, espera a que te respondan directamente.`,
+          { status } as any
+        );
+      }
+
       conversationHistory = await loadConversationHistory(sessionId);
 
       if (loadHistoryOnly) {
