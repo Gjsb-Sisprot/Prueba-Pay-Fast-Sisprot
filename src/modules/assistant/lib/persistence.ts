@@ -400,7 +400,15 @@ export async function updateConversationSummary(
         contract: clientData.contract,
         sector: clientData.sector,
         contact_name: clientData.name,
-        updated_at: new Date()
+        updated_at: new Date(),
+        metadata: {
+          allContracts: clientData.allContracts,
+          ipActual: clientData.ipActual,
+          vlanActual: clientData.vlanActual,
+          gponSerial: clientData.gponSerial,
+          planContratado: clientData.planName,
+          direccion: clientData.address,
+        }
       })
       .eq("id", conversationId);
 
