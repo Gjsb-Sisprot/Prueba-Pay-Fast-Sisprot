@@ -68,27 +68,30 @@ function ChatMessageComponent({
   const [paymentOfferDismissed, setPaymentOfferDismissed] = useState(false);
 
   const cleanContent = (text: string) => {
-    return text
-      // Eliminar tokens de UI y marcadores técnicos
-      .replace(/__CALENDAR_ACTION__/gi, "")
-      .replace(/__PAYMENT_ACTION__/gi, "")
-      .replace(/__SELECT_CONTRACT(?:_ADMIN|_TECH)?__/gi, "")
-      .replace(/__SELECT_TIME__/gi, "")
-      .replace(/__SELECT_ISSUE_TYPE__/gi, "")
-      .replace(/\[TICKET_ID:[0-9]+\]/gi, "")
-      .replace(/__CLOSE_CHAT__/gi, "")
-      .replace(/CLOSE_OFFER/gi, "")
-      .replace(/CLOSE_CHAT/gi, "")
-      .replace(/CLO[A-Z_]+CHAT/gi, "")
-      // Eliminar fugas de JSON crudo - MUY AGRESIVO
-      .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "") // Bloques content: []
-      .replace(/\{\s*"content":\s*\[[\s\S]*?\}\s*\}/g, "") // Objetivos de contenido
-      .replace(/\{\s*"success":\s*true[\s\S]*?\}\}/g, "") // Bloques success JSON
-      .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "") // Bloques GLPI JSON
-      .replace(/\{?"content":\s*\[\s*\{"type":"text","text":"[\s\S]*?\}\s*\]\s*\}?/g, "") // Echo de Gemini del input (más flexible)
-      .replace(/"?success"?:?\s*true,\s*"message":[\s\S]*?}/g, "") // Fragmentos de éxito sueltos
-      .replace(/"?glpiTicketId"?:?\s*\d+,[\s\S]*?}/g, "") // Fragmentos de ticket sueltos
-      .replace(/"?status"?:\s*"waiting_specialist"[\s\S]*?}/g, "") // Fragmentos de status sueltos
+    // Si el texto parece ser un objeto JSON de sistema, lo limpiamos, 
+    // pero si es texto normal (ej: "Hola"), lo dejamos pasar.
+    const technicalPatterns = [
+      /__CALENDAR_ACTION__/gi,
+      /__PAYMENT_ACTION__/gi,
+      /__SELECT_CONTRACT(?:_ADMIN|_TECH)?__/gi,
+      /__SELECT_TIME__/gi,
+      /__SELECT_ISSUE_TYPE__/gi,
+      /\[TICKET_ID:[0-9]+\]/gi,
+      /__CLOSE_CHAT__/gi,
+      /CLOSE_OFFER/gi,
+      /CLOSE_CHAT/gi
+    ];
+
+    let cleaned = text;
+    technicalPatterns.forEach(p => { cleaned = cleaned.replace(p, ""); });
+
+    return cleaned
+      // Eliminar fugas de JSON crudo - Menos agresivo para no borrar texto legítimo
+      .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "") 
+      .replace(/\{\s*"content":\s*\[[\s\S]*?\}\s*\}/g, "")
+      .replace(/\{\s*"success":\s*true[\s\S]*?\}\}/g, "") 
+      .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "")
+      .replace(/\{?"content":\s*\[\s*\{"type":"text","text":"[\s\S]*?\}\s*\]\s*\}?/g, "")
       .trim();
   };
 
@@ -98,7 +101,7 @@ function ChatMessageComponent({
         const rawSegments = content.split("\n\n")
           .map(s => s.trim())
           .map(s => ({ original: s, cleaned: cleanContent(s) }))
-          .filter(seg => seg.cleaned.length > 5); // Evitar burbujas vacías o irrelevantes
+          .filter(seg => seg.cleaned.length > 0); // Permitir burbujas cortas ("Ok", "Si")
 
         const seenNorm = new Set<string>();
         return rawSegments.filter(seg => {
