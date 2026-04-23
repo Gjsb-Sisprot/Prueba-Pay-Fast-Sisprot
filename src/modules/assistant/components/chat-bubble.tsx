@@ -303,6 +303,7 @@ export function ChatBubble() {
                     clientData={clientData}
                     occupiedSlots={occupiedSlots}
                     messages={messages}
+                    onAddAttachment={addAttachment}
                     isStreaming={
                       isLoading &&
                       index === messages.length - 1 &&
