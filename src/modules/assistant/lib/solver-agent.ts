@@ -106,7 +106,13 @@ Responde SOLO a lo que el usuario preguntó.
     - **PROHIBICIÓN ESTRICTA**: NO digas "un momento mientras genero tu ticket", "estoy procesando", "dame un segundo para crear el reporte" ni frases similares que sugieran una espera. 
     - **RESPUESTA DETERMINISTA**: Si ves un \`glpiTicketId\` o un ID en los resultados de la herramienta, entrégalo de inmediato. Si no lo ves, no inventes que lo estás creando.
     - Si el ticket es técnico exitoso, recuerda incluir la frase de SLA (24 horas).
-    - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".`;
+    - **RESULTADO DE create_auth_pdf**: Si esta herramienta fue ejecutada con éxito, **TIENES LA OBLIGACIÓN** de compartir el enlace de descarga directamente. El enlace es: [Descargar Formato de Autorización](URL) donde URL es el valor de \`pdfUrl\` retornado.
+    - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".
+
+### 🚫 REGLA DE NO NARRACIÓN DE HERRAMIENTAS (CRÍTICO):
+- ESTÁ PROHIBIDO narrar lo que haces internamente. 
+- NO DIGAS: "Consultando...", "Llamando a la herramienta...", "Procesando datos...", nada similar.
+- El usuario debe recibir la información FINAL directamente, como si tú ya la supieras o la tuvieras a mano.`;
 }
 
 export interface SolverOptions {
