@@ -49,6 +49,8 @@ Detectar la INTENCIÓN del mensaje del usuario y decidir SI necesita una herrami
 | Saldo a favor, excedente | "escalate_to_specialist" (requiere revisión administrativa) |
 | Pasarelas de pago, Zelle, Binance, PayPal | "pasarelas pago Zelle Binance PayPal" |
 | Prorrateo, ciclos de facturación, fecha de corte, ciclos de pagos | "prorrateo ciclos facturación" |
+| Generar autorización de devolución (PDF) | "create_auth_pdf" (cuando el cliente dio los 5 datos del pago) |
+| Activar convenio de no suspensión | "activate_non_suspension_agreement" (al final del trámite de devolución) |
 
 ## CUÁNDO NO USAR HERRAMIENTAS
 
@@ -112,6 +114,18 @@ NUNCA cierres si:
 - Solo dijeron "gracias" sin confirmar que no necesitan más
 - Hay preguntas pendientes sin responder
 - No confirmaron explícitamente que terminaron
+
+## CUÁNDO USAR create_auth_pdf
+SOLO cuando el usuario haya proporcionado los 5 campos obligatorios para una devolución administrativa:
+1. Monto.
+2. Fecha.
+3. Referencia.
+4. Banco destino.
+5. Motivo del error.
+Y DEBE haber un archivo PDF adjunto en el mensaje o historial reciente.
+
+## CUÁNDO USAR activate_non_suspension_agreement
+SOLO en el paso final de la gestión de devoluciones, antes de notificar al cliente que su solicitud ha sido procesada y escalada a gerencia.
 
 ${serviceStatus === "suspended" ? `## ⚠️ SERVICIO SUSPENDIDO
 - NO uses herramientas de diagnóstico. El usuario tiene deuda de $${debtAmount}.
