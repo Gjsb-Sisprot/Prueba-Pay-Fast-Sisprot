@@ -318,6 +318,7 @@ export async function POST(request: Request) {
       } catch (err) {
         console.log(`[SISPROT_ENRICH] Error en consulta:`, err);
         // Fallback al dato original si falla la API
+      }
     }
     
     // 🎯 INTERCEPTOR DE SELECCIÓN DE CONTRATO (OBLIGATORIEDAD)
