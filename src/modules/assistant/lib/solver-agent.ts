@@ -118,7 +118,11 @@ export interface SolverOptions {
 
 interface SolverMessage {
     role: "user" | "assistant";
-    content: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType?: string }>;
+    content: string | Array<
+        { type: 'text'; text: string } | 
+        { type: 'image'; image: string; mimeType?: string } |
+        { type: 'file'; data: string; mediaType: string }
+    >;
 }
 
 export function generateResponse(
@@ -287,6 +291,15 @@ function buildSolverMessages(
                         });
                     }
                 });
+            } else if (att.type === 'file' && att.url) {
+                const base64Match = att.url.match(/^data:[^;]+;base64,(.+)$/);
+                if (base64Match) {
+                    content.push({
+                        type: 'file',
+                        data: base64Match[1],
+                        mediaType: att.mimeType || 'application/pdf'
+                    });
+                }
             }
         });
     }
