@@ -528,7 +528,7 @@ export async function createSupportVisit(
 
     // 🚀 NOTIFICACIÓN: Enviar confirmación a n8n para avisar al cliente
     try {
-      fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
+      await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -537,7 +537,7 @@ export async function createSupportVisit(
           fecha: date,
           hora: time
         })
-      }).catch(err => console.error("[WEBHOOK_NOTIFICATION_FAILED]", err));
+      });
     } catch (err) {
       console.error("[NOTIFY_N8N_ERROR]", err);
     }
