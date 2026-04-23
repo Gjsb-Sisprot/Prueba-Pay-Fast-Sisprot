@@ -300,6 +300,8 @@ export function ChatBubble() {
                     onSelectDate={handleSelectDate}
                     onSelectTime={handleSelectTime}
                     onSelectContract={handleSelectContract}
+                    pendingAttachments={pendingAttachments}
+                    onRemoveAttachment={removeAttachment}
                     clientData={clientData}
                     occupiedSlots={occupiedSlots}
                     messages={messages}
