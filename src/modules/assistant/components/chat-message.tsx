@@ -42,6 +42,7 @@ interface ChatMessageProps {
   messages?: AssistantChatMessage[]; 
   isStreaming?: boolean;
   occupiedSlots?: string[];
+  onAddAttachment?: (file: File) => Promise<{ success: boolean; error?: string }>;
 }
 
 function ChatMessageComponent({
@@ -61,6 +62,7 @@ function ChatMessageComponent({
   messages = [],
   isStreaming,
   occupiedSlots = [],
+  onAddAttachment,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
   const isToolResult = role === "tool";
@@ -78,6 +80,7 @@ function ChatMessageComponent({
       /__SELECT_CONTRACT(?:_ADMIN|_TECH)?__/gi,
       /__SELECT_TIME__/gi,
       /__SELECT_ISSUE_TYPE__/gi,
+      /__REFUND_FORM__/gi,
       /\[TICKET_ID:[0-9]+\]/gi,
       /__CLOSE_CHAT__/gi,
       /CLOSE_OFFER/gi,
@@ -530,6 +533,111 @@ function ChatMessageComponent({
                       <span className="text-[10px] text-gray-500 leading-tight">Devoluciones, cambios de planes y ciclos</span>
                     </div>
                   </div>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {isAssistant && content.includes("__REFUND_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Formulario de Reembolso</h4>
+                  <p className="text-[10px] text-gray-500">Completa los datos para procesar tu solicitud</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Monto Pagado</label>
+                    <input type="text" placeholder="Ej: 50$ o 1800 Bs" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Fecha</label>
+                      <input type="text" placeholder="DD/MM/AAAA" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Referencia</label>
+                      <input type="text" placeholder="Mín 6-8 dígitos" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Banco Destino</label>
+                    <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1em_1em]">
+                      <option>Seleccionar banco...</option>
+                      <option>Banco de Venezuela (Sisprot)</option>
+                      <option>Banesco (Sisprot)</option>
+                      <option>Mercantil (Sisprot)</option>
+                      <option>Pago Móvil (Sisprot)</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Motivo del Error</label>
+                    <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200 appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1em_1em]">
+                      <option>Seleccionar motivo...</option>
+                      <option>Pago duplicado</option>
+                      <option>Excedente en el pago</option>
+                      <option>Cuenta errada</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1 block mb-1">Comprobante (Solo PDF)</label>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full h-14 border-dashed border-2 border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-300 group transition-all rounded-xl flex flex-col items-center justify-center gap-0.5 shadow-none"
+                    onClick={() => {
+                      const realInput = document.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement;
+                      if (realInput) {
+                        realInput.click();
+                      } else {
+                        alert("Por favor, usa el icono de adjuntar en la barra de texto para subir tu PDF.");
+                      }
+                    }}
+                  >
+                    <Paperclip className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[11px] font-semibold text-blue-900 leading-tight">Haz clic para insertar aquí</span>
+                    <span className="text-[9px] text-blue-400 font-medium font-sans">Busca el archivo en tu dispositivo</span>
+                  </Button>
+                </div>
+                
+                <Button 
+                  className="w-full bg-black text-white hover:bg-gray-800 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                  onClick={() => {
+                    // Buscar los inputs dentro de esta card específica
+                    const container = document.querySelector('.mt-3.bg-white') as HTMLElement;
+                    if (!container) return;
+                    const inputs = container.querySelectorAll('input, select');
+                    const values = Array.from(inputs).map(i => (i as HTMLInputElement | HTMLSelectElement).value);
+                    const [monto, fecha, ref, banco, motivo] = values;
+                    
+                    if (!monto || !fecha || !ref || monto.trim() === "" || banco.includes('Seleccionar')) {
+                      alert("Por favor completa todos los campos del formulario.");
+                      return;
+                    }
+
+                    const text = `Monto: ${monto}\nFecha: ${fecha}\nRef: ${ref}\nBanco: ${banco}\nMotivo: ${motivo}`;
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Confirmar y Enviar Datos
                 </Button>
               </div>
             </div>
