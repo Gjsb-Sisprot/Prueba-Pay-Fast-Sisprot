@@ -644,16 +644,29 @@ function ChatMessageComponent({
                 
                 <Button 
                   className="w-full bg-black text-white hover:bg-gray-800 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
-                  onClick={() => {
-                    // Buscar los inputs dentro de esta card específica
-                    const container = document.querySelector('.mt-3.bg-white') as HTMLElement;
+                  onClick={(e) => {
+                    // Buscar los inputs dentro del contenedor actual del botón
+                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
                     if (!container) return;
-                    const inputs = container.querySelectorAll('input, select');
-                    const values = Array.from(inputs).map(i => (i as HTMLInputElement | HTMLSelectElement).value);
-                    const [monto, fecha, ref, banco, motivo] = values;
                     
-                    if (!monto || !fecha || !ref || monto.trim() === "" || banco.includes('Seleccionar')) {
-                      alert("Por favor completa todos los campos del formulario.");
+                    const inputs = container.querySelectorAll('input');
+                    const selects = container.querySelectorAll('select');
+                    
+                    const monto = inputs[0]?.value;
+                    const fecha = inputs[1]?.value;
+                    const ref = inputs[2]?.value;
+                    const banco = selects[0]?.value;
+                    const motivo = selects[1]?.value;
+                    
+                    const hasPdf = pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file');
+
+                    if (!monto || !fecha || !ref || banco.includes('Seleccionar') || motivo.includes('Seleccionar')) {
+                      alert("Por favor completa todos los campos de texto y selección.");
+                      return;
+                    }
+                    
+                    if (!hasPdf) {
+                      alert("Por favor adjunta el comprobante oficial en formato PDF.");
                       return;
                     }
 
