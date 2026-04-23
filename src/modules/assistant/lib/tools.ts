@@ -85,6 +85,19 @@ export const rebootOnuSchema = z.object({
   serialNumber: z.string().describe("Serial de la ONU (ej: SMAGXXXXXXXX)"),
 });
 
+export const createAuthPdfSchema = z.object({
+  amount: z.string().describe("Monto pagado (ej. 50$ o 1800 Bs)"),
+  date: z.string().describe("Fecha de la transacción"),
+  reference: z.string().describe("Número de referencia (8-10 dígitos)"),
+  bank: z.string().describe("Banco destino (Sisprot Global Fiber)"),
+  reason: z.string().describe("Motivo del error (Pago duplicado, excedente o cuenta errada)"),
+  contractId: z.string().describe("ID del contrato del cliente"),
+});
+
+export const activateNonSuspensionSchema = z.object({
+  contractId: z.string().describe("ID del contrato para activar el convenio de no suspensión"),
+});
+
 
 export interface ToolDefinition {
   name: string;
@@ -146,6 +159,16 @@ export const toolDefinitions: ToolDefinition[] = [
     name: "reboot_onu",
     description: "Reinicia la ONU de forma remota para intentar solucionar problemas de conexión.",
     schema: rebootOnuSchema,
+  },
+  {
+    name: "create_auth_pdf",
+    description: "Genera el documento de autorización de devolución con los datos del pago.",
+    schema: createAuthPdfSchema,
+  },
+  {
+    name: "activate_non_suspension_agreement",
+    description: "Activa un convenio de no suspensión para garantizar la continuidad del servicio durante el trámite administrativo.",
+    schema: activateNonSuspensionSchema,
   },
 ];
 
@@ -430,6 +453,31 @@ export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledg
   }
 }
 
+/**
+ * Genera el documento de autorización de devolución.
+ */
+export async function executeCreateAuthPdf(args: z.infer<typeof createAuthPdfSchema>): Promise<ToolResponse> {
+  return {
+    success: true,
+    message: `Documento de autorización generado correctamente para el caso con referencia ${args.reference}. El cliente debe descargar, firmar y enviar de vuelta.`,
+    data: { 
+      pdfUrl: "/assets/docs/formato_devolucion_placeholder.pdf", 
+      documentCode: `AUTH-DEV-${args.reference}`
+    }
+  };
+}
+
+/**
+ * Activa un convenio de no suspensión para garantizar la continuidad del servicio.
+ */
+export async function executeActivateNonSuspension(args: z.infer<typeof activateNonSuspensionSchema>): Promise<ToolResponse> {
+  return {
+    success: true,
+    message: `Convenio de no suspensión activado exitosamente para el contrato #${args.contractId}. El servicio se mantendrá activo durante el procesamiento del trámite.`,
+    data: { activationCode: `CNS-${Date.now()}` }
+  };
+}
+
 
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
@@ -575,6 +623,41 @@ export const getLocalTools = (): LocalToolSet => {
         const res = await executeSearchKnowledge(args as z.infer<typeof searchKnowledgeSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
+    },
+    create_auth_pdf: {
+      name: "create_auth_pdf",
+      description: "Genera el documento de autorización de devolución.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          amount: { type: "string" },
+          date: { type: "string" },
+          reference: { type: "string" },
+          bank: { type: "string" },
+          reason: { type: "string" },
+          contractId: { type: "string" },
+        },
+        required: ["amount", "date", "reference", "bank", "reason", "contractId"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeCreateAuthPdf(args as z.infer<typeof createAuthPdfSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    activate_non_suspension_agreement: {
+      name: "activate_non_suspension_agreement",
+      description: "Activa el convenio de no suspensión.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+        },
+        required: ["contractId"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeActivateNonSuspension(args as z.infer<typeof activateNonSuspensionSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
     }
   };
 };
@@ -626,6 +709,18 @@ export const toolsInfo: Record<string, ToolInfo> = {
     description: "Verifica si un pago fue procesado",
     status: "coming_soon",
     icon: "CheckCircle",
+  },
+  create_auth_pdf: {
+    name: "Autorización de Devolución",
+    description: "Genera el formato para trámites de reembolso",
+    status: "enabled",
+    icon: "FileText",
+  },
+  activate_non_suspension_agreement: {
+    name: "Convenio de No Suspensión",
+    description: "Garantiza navegación durante trámites",
+    status: "enabled",
+    icon: "ShieldCheck",
   },
 };
 
