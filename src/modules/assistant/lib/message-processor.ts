@@ -57,7 +57,7 @@ export function processAttachments(
       parts.push({
         type: "file",
         data: base64,
-        mimeType: attachment.mimeType || "application/pdf",
+        mediaType: attachment.mimeType || "application/pdf",
       } as FilePart);
       
       // También añadimos una pista textual para el modelo si no soporta archivos directamente en todas las vistas
