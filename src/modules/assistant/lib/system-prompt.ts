@@ -204,8 +204,10 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso o duplicado:
 - **Filtro de Archivo**: Debes rechazar cualquier comprobante que no sea un archivo **.pdf**. Si envían una imagen, indica amablemente que por norma administrativa solo se procesan PDF.
 
 **2. Validación y Generación de Documento**:
-- Una vez recibidos los 5 campos y el PDF, llama a la herramienta **create_auth_pdf**.
-- **Responde**: "Datos recibidos correctamente. He generado un documento de autorización con la información de tu caso. Para poder validar este trámite administrativo, por favor descarga el archivo adjunto, agrégale tu firma y huellas dactilares, y reenvíalo por esta misma vía en formato PDF o imagen clara."
+- **Acción**: Una vez que tengas los datos y el PDF, utiliza la herramienta `create_auth_pdf`.
+- **Instrucción de Respuesta**: Cuando la herramienta retorne el resultado, entrega inmediatamente el enlace de descarga que viene en `pdfUrl`.
+- **IMPORTANTE**: NO digas "espera un momento" ni "estoy llamando a la herramienta". Si ya tienes el resultado, compártelo directamente. El enlace debe verse así: "[Descargar Formato de Autorización](URL)".
+- **Firma y Huella**: Indica al cliente que debe imprimirlo, firmarlo, colocar su huella y reenviarlo por este mismo chat.
 
 **3. Recolección de Datos de Reembolso**:
 - Una vez recibido el documento firmado, solicita los datos de la cuenta bancaria.
@@ -333,8 +335,12 @@ export const MCP_TOOLS_REFERENCE = {
     handover: {
         escalate_to_specialist: "Escalar a humano",
         close_conversation: "Cerrar conversación resuelta",
-    },
-    smartolt: {
+       - Solo afirma "conversación cerrada" si existe un resultado de "close_conversation".
+    
+10. **REGLA DE NO NARRACIÓN DE HERRAMIENTAS**:
+    - NUNCA digas "(Llamando a la herramienta...)", "Consultando sistema...", "Ejecutando proceso..." ni frases similares.
+    - El usuario no debe saber qué herramientas internas usas, solo debe recibir las respuestas y resultados.
+    - Si vas a usar una información obtenida de una herramienta, preséntala de forma natural como parte de tu respuesta.`;
         get_onu_diagnostic: "Diagnóstico de ONU",
         reboot_onu: "Reinicio remoto",
     },
