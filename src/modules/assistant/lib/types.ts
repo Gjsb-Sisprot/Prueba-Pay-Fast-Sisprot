@@ -4,7 +4,7 @@ export type MessageRole = "user" | "assistant" | "system" | "tool";
 
 export interface MediaAttachment {
   id: string;
-  type: "image" | "video";
+  type: "image" | "video" | "file" | "document";
   url: string;
   mimeType: string;
   size: number;
