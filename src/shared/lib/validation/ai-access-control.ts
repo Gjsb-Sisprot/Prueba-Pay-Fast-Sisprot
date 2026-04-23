@@ -15,6 +15,7 @@ const AUTHORIZED_IDENTIFICATIONS = Object.freeze([
   "14943068", //Robert
   "27434628", //Diego
   "29808275", // Bryant
+  "18221823", // Sandy
   "27434622", // Derwing
 ] as const);
 
