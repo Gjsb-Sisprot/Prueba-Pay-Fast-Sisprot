@@ -104,6 +104,7 @@ export function ChatBubble() {
     handleSelectTime,
     handleSelectContract,
     clientData,
+    occupiedSlots,
   } = useAssistantChat({
     identification,
     clientName,
@@ -300,6 +301,7 @@ export function ChatBubble() {
                     onSelectTime={handleSelectTime}
                     onSelectContract={handleSelectContract}
                     clientData={clientData}
+                    occupiedSlots={occupiedSlots}
                     messages={messages}
                     isStreaming={
                       isLoading &&
