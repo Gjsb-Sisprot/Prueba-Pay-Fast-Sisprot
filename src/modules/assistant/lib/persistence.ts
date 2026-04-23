@@ -466,7 +466,7 @@ export async function getOccupiedSlots(date: string): Promise<string[]> {
 
     if (error) throw error;
 
-    return (data || []).map((v: any) => {
+    return (data || []).map((v: { visit_date: string }) => {
       const d = new Date(v.visit_date);
       const hours = d.getHours();
       const ampm = hours >= 12 ? "PM" : "AM";
@@ -495,7 +495,9 @@ export async function createSupportVisit(
     // Construir fecha completa
     // time format: "08:00 AM"
     const [t, ampm] = time.split(" ");
-    let [hours, minutes] = t.split(":").map(Number);
+    const [hoursRaw, minutes] = t.split(":").map(Number);
+    let hours = hoursRaw;
+    
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
 
@@ -525,9 +527,10 @@ export async function createSupportVisit(
     });
 
     return { success: true, data };
-  } catch (error: any) {
-    console.error("[CREATE_SUPPORT_VISIT_ERROR]", error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    console.error("[CREATE_SUPPORT_VISIT_ERROR]", message);
+    return { success: false, error: message };
   }
 }
 
