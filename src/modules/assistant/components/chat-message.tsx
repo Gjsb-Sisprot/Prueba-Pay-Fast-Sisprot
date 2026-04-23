@@ -689,6 +689,98 @@ function ChatMessageComponent({
               </div>
             </div>
           )}
+
+          {isAssistant && content.includes("__SIGNED_DOCUMENT_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-green-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Autorización Firmada</h4>
+                  <p className="text-[10px] text-gray-500">Sube el documento con tu firma y huella</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-green-50/30 rounded-lg p-3 border border-green-100/50">
+                  <p className="text-[11px] text-green-800 leading-relaxed font-medium">
+                    Por favor, adjunta aquí el documento que descargaste, una vez firmado y con tu huella digital.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1 block mb-1">Documento Firmado (Solo PDF)</label>
+                  
+                  {pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file') ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50/50 border border-green-100 rounded-xl animate-in zoom-in-95 duration-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-green-900 truncate max-w-[150px]">
+                            {pendingAttachments.find(a => a.mimeType === 'application/pdf' || a.type === 'file')?.fileName || 'autorizacion_firmada.pdf'}
+                          </span>
+                          <span className="text-[10px] text-green-400">Listo para validar</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const pdf = pendingAttachments.find(a => a.mimeType === 'application/pdf' || a.type === 'file');
+                          if (pdf && onRemoveAttachment) onRemoveAttachment(pdf.id);
+                        }}
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="w-full h-14 border-dashed border-2 border-green-100 bg-green-50/20 hover:bg-green-50 hover:border-green-300 group transition-all rounded-xl flex flex-col items-center justify-center gap-0.5 shadow-none"
+                      onClick={() => {
+                        const realInput = document.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement;
+                        if (realInput) {
+                          realInput.click();
+                        } else {
+                          alert("Por favor, usa el icono de adjuntar en la barra de texto para subir tu PDF.");
+                        }
+                      }}
+                    >
+                      <Paperclip className="w-4 h-4 text-green-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-semibold text-green-900 leading-tight">Adjuntar documento firmado</span>
+                      <span className="text-[9px] text-green-400 font-medium font-sans italic">Hacer clic aquí</span>
+                    </Button>
+                  )}
+                </div>
+                
+                <Button 
+                  className="w-full bg-green-600 text-white hover:bg-green-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all disabled:opacity-50"
+                  disabled={!pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file')}
+                  onClick={() => {
+                    const text = `He enviado el documento de autorización firmado.`;
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Enviar Documento Firmado
+                </Button>
+              </div>
+            </div>
+          )}
           
           {showCloseOffer && (
             <div className="flex gap-2 mt-2">
