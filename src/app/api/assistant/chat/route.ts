@@ -318,7 +318,20 @@ export async function POST(request: Request) {
       } catch (err) {
         console.log(`[SISPROT_ENRICH] Error en consulta:`, err);
         // Fallback al dato original si falla la API
-      }
+    }
+    
+    // 🎯 INTERCEPTOR DE SELECCIÓN DE CONTRATO (OBLIGATORIEDAD)
+    // Si el cliente tiene múltiples contratos y aún no ha seleccionado ninguno, forcejeamos la selección.
+    if (activeClientData && (activeClientData.allContracts?.length || 0) > 1 && !activeClientData.contract) {
+        console.log(`[CONTRACT_VALIDATOR] Cliente con ${(activeClientData.allContracts?.length || 0)} contratos no ha seleccionado ninguno. Interceptando.`);
+        
+        // Solo interceptamos si ya hay historia (no es el saludo inicial)
+        if (conversationHistory.length > 0) {
+            return createTextStreamResponse(
+              `⚠️ **Selección Requerida**\n\nHe detectado que posees múltiples servicios con nosotros. Para poder brindarte la asistencia correcta, **por favor selecciona uno de los contratos que te muestro abajo**.\n\nEs necesario que elijas una opción para continuar. __SELECT_CONTRACT__`,
+              undefined
+            );
+        }
     }
 
     // Persistencia del mensaje del usuario (BLOQUEANTE para asegurar registro en Vercel)
