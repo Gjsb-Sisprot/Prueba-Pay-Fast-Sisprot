@@ -229,7 +229,47 @@ export async function routeRequest(
   }
 
   
-  // GUARDIA AGRESIVO DE MULTICONTRATOS...
+  // 💸 DETECCIÓN DE FORMULARIO DE REEMBOLSO (FAST PATH)
+  if (message.includes("Monto:") && message.includes("Fecha:") && message.includes("Ref:") && message.includes("Banco:")) {
+    const lines = message.split("\n");
+    const monto = lines.find(l => l.includes("Monto:"))?.split(":")[1]?.trim();
+    const fecha = lines.find(l => l.includes("Fecha:"))?.split(":")[1]?.trim();
+    const ref = lines.find(l => l.includes("Ref:"))?.split(":")[1]?.trim();
+    const banco = lines.find(l => l.includes("Banco:"))?.split(":")[1]?.trim();
+    const motivo = lines.find(l => l.includes("Motivo:"))?.split(":")[1]?.trim();
+
+    if (monto && fecha && ref && banco) {
+      console.log(`[ROUTER_DECISION] Formulario de reembolso detectado. Ejecutando create_auth_pdf.`);
+      const forcedRefund = await executeForced("create_auth_pdf", { 
+        amount: monto, 
+        date: fecha, 
+        reference: ref, 
+        bank: banco, 
+        reason: motivo || "No especificado",
+        contractId: clientData?.contract || "unknown"
+      }, tools);
+      
+      if (forcedRefund) {
+        return {
+          noToolNeeded: false,
+          toolCalls: [{ toolName: "create_auth_pdf", args: { amount: monto, date: fecha, reference: ref, bank: banco, reason: motivo || "No especificado", contractId: clientData?.contract || "unknown" } }],
+          toolResults: [forcedRefund],
+          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
+            solverModel: "pro",
+            reason: "Procesamiento automático de formulario de reembolso",
+          }),
+          durationMs: elapsed(),
+          intentClassification: { 
+            category: "INFO_ADMINISTRATIVO", 
+            confidence: "alta", 
+            suggestedTool: "create_auth_pdf", 
+            suggestedQuery: null, 
+            reasoning: "Detección determinista de campos de formulario de reembolso" 
+          },
+        };
+      }
+    }
+  }
 
   const intent = classifyIntent(message);
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
