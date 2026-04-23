@@ -1,4 +1,4 @@
-import type { ModelMessage, TextPart, ImagePart } from "ai";
+import type { ModelMessage, TextPart, ImagePart, FilePart } from "ai";
 import type { MediaAttachment, ClientContextData, ConversationMessage } from "./types";
 
 
@@ -24,8 +24,8 @@ export interface ChatRequestBody {
 export function processAttachments(
   content: string,
   attachments?: MediaAttachment[]
-): (TextPart | ImagePart)[] {
-  const parts: (TextPart | ImagePart)[] = [];
+): (TextPart | ImagePart | FilePart)[] {
+  const parts: (TextPart | ImagePart | FilePart)[] = [];
 
   if (content) {
     parts.push({ type: "text", text: content });
@@ -52,6 +52,20 @@ export function processAttachments(
           mimeType: "image/jpeg",
         } as ImagePart);
       }
+      }
+    } else if (attachment.type === "file" || attachment.type === "document") {
+      const base64 = attachment.url.split(",")[1] || attachment.url;
+      parts.push({
+        type: "file",
+        data: base64,
+        mimeType: attachment.mimeType || "application/pdf",
+      } as FilePart);
+      
+      // También añadimos una pista textual para el modelo si no soporta archivos directamente en todas las vistas
+      parts.push({
+        type: "text",
+        text: `[Archivo adjunto: ${attachment.fileName || 'documento'} (${attachment.mimeType})]`
+      } as TextPart);
     }
   }
 
