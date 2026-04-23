@@ -535,7 +535,8 @@ export async function createSupportVisit(
           id_tickect: conversation.glpi_ticket_id || conversation.id,
           contrato: conversation.contract || "N/A",
           fecha: date,
-          hora: time
+          hora: time,
+          motivo: reason || "Agendado vía Chat Susana"
         })
       });
     } catch (err) {
