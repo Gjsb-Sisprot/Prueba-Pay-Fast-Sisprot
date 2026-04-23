@@ -49,6 +49,7 @@ const PAYMENT_ACTION_TOKEN_REGEX = /(?:__PAYMENT_ACTION__|PAYMENT_ACTION)\s*:?/g
 const CALENDAR_ACTION_TOKEN_REGEX = /__CALENDAR_ACTION__/gi;
 const CLOSE_CHAT_TOKEN_REGEX = /__CLOSE_CHAT__/gi;
 const REFUND_FORM_TOKEN_REGEX = /__REFUND_FORM__/gi;
+const SIGNED_DOCUMENT_TOKEN_REGEX = /__SIGNED_DOCUMENT_FORM__/gi;
 const TECHNICAL_TOKEN_REGEX = /fcl_[a-z0-9_]+|fcall_[a-z0-9_]+|\[TOOL_CALL:[a-z0-9_]+\]/gi;
 
 function stripUiControlTokens(content: string): string {
@@ -67,6 +68,7 @@ function stripUiControlTokens(content: string): string {
     .replace(CALENDAR_ACTION_TOKEN_REGEX, "")
     .replace(CLOSE_CHAT_TOKEN_REGEX, "")
     .replace(REFUND_FORM_TOKEN_REGEX, "")
+    .replace(SIGNED_DOCUMENT_TOKEN_REGEX, "")
     .replace(TECHNICAL_TOKEN_REGEX, "")
     // Eliminar fugas de JSON crudo antes de guardar persistentemente
     .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "")
