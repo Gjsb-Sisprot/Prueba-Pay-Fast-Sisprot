@@ -23,9 +23,10 @@ export function useMediaAttachments() {
     async (file: File): Promise<{ success: boolean; error?: string }> => {
       const isImage = file.type.startsWith("image/");
       const isVideo = file.type.startsWith("video/");
+      const isPdf = file.type === "application/pdf";
 
-      if (!isImage && !isVideo) {
-        return { success: false, error: "Solo se permiten imágenes y videos" };
+      if (!isImage && !isVideo && !isPdf) {
+        return { success: false, error: "Solo se permiten imágenes, videos y documentos PDF" };
       }
 
       if (isImage && mediaUsage.imagesUsed >= DEFAULT_MEDIA_LIMITS.maxImages) {
@@ -77,7 +78,7 @@ export function useMediaAttachments() {
 
       const attachment: MediaAttachment = {
         id: generateMediaId(),
-        type: isImage ? "image" : "video",
+        type: isImage ? "image" : isVideo ? "video" : "file",
         url: dataUrl,
         mimeType: file.type,
         size: file.size,
