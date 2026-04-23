@@ -126,7 +126,7 @@ export function ChatInput({
       { }
       {pendingAttachments.length > 0 && (
         <div className="flex flex-wrap gap-2 p-2 pb-0">
-          {pendingAttachments.map((attachment) => (
+          {pendingAttachments.filter(a => a.type !== "file").map((attachment) => (
             <div
               key={attachment.id}
               className="relative group w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
