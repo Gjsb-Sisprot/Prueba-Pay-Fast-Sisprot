@@ -14,7 +14,8 @@ import {
   CreditCard, 
   X,
   Building2,
-  Paperclip
+  Paperclip,
+  FileText
 } from "lucide-react";
 import Image from "next/image";
 
@@ -44,6 +45,8 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   occupiedSlots?: string[];
   onAddAttachment?: (file: File) => Promise<{ success: boolean; error?: string }>;
+  pendingAttachments?: MediaAttachment[];
+  onRemoveAttachment?: (id: string) => void;
 }
 
 function ChatMessageComponent({
@@ -64,6 +67,8 @@ function ChatMessageComponent({
   isStreaming,
   occupiedSlots = [],
   onAddAttachment: _onAddAttachment,
+  pendingAttachments = [],
+  onRemoveAttachment,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
   const isToolResult = role === "tool";
@@ -172,7 +177,7 @@ function ChatMessageComponent({
                 isAssistant ? "justify-start" : "justify-end"
               )}
             >
-              {attachments.map((attachment) => (
+              {attachments.filter(a => a.type !== "file").map((attachment) => (
                 <div
                   key={attachment.id}
                   className="relative group w-20 h-20 rounded-lg overflow-hidden cursor-pointer"
@@ -590,23 +595,51 @@ function ChatMessageComponent({
 
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold text-gray-400 ml-1 block mb-1">Comprobante (Solo PDF)</label>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="w-full h-14 border-dashed border-2 border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-300 group transition-all rounded-xl flex flex-col items-center justify-center gap-0.5 shadow-none"
-                    onClick={() => {
-                      const realInput = document.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement;
-                      if (realInput) {
-                        realInput.click();
-                      } else {
-                        alert("Por favor, usa el icono de adjuntar en la barra de texto para subir tu PDF.");
-                      }
-                    }}
-                  >
-                    <Paperclip className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-                    <span className="text-[11px] font-semibold text-blue-900 leading-tight">Haz clic para insertar aquí</span>
-                    <span className="text-[9px] text-blue-400 font-medium font-sans">Busca el archivo en tu dispositivo</span>
-                  </Button>
+                  
+                  {pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file') ? (
+                    <div className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-xl animate-in zoom-in-95 duration-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-blue-900 truncate max-w-[150px]">
+                            {pendingAttachments.find(a => a.mimeType === 'application/pdf' || a.type === 'file')?.fileName || 'comprobante.pdf'}
+                          </span>
+                          <span className="text-[10px] text-blue-400">Listo para enviar</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const pdf = pendingAttachments.find(a => a.mimeType === 'application/pdf' || a.type === 'file');
+                          if (pdf && onRemoveAttachment) onRemoveAttachment(pdf.id);
+                        }}
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="w-full h-14 border-dashed border-2 border-blue-100 bg-blue-50/20 hover:bg-blue-50 hover:border-blue-300 group transition-all rounded-xl flex flex-col items-center justify-center gap-0.5 shadow-none"
+                      onClick={() => {
+                        const realInput = document.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement;
+                        if (realInput) {
+                          realInput.click();
+                        } else {
+                          alert("Por favor, usa el icono de adjuntar en la barra de texto para subir tu PDF.");
+                        }
+                      }}
+                    >
+                      <Paperclip className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-semibold text-blue-900 leading-tight">Haz clic para insertar aquí</span>
+                      <span className="text-[9px] text-blue-400 font-medium font-sans">El PDF se cargará en este formulario</span>
+                    </Button>
+                  )}
                 </div>
                 
                 <Button 
