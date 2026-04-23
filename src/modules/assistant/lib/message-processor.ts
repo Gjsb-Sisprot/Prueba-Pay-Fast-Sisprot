@@ -52,7 +52,6 @@ export function processAttachments(
           mimeType: "image/jpeg",
         } as ImagePart);
       }
-      }
     } else if (attachment.type === "file" || attachment.type === "document") {
       const base64 = attachment.url.split(",")[1] || attachment.url;
       parts.push({
