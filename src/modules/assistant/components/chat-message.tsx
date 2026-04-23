@@ -13,7 +13,8 @@ import {
   MessageSquarePlus, 
   CreditCard, 
   X,
-  Building2
+  Building2,
+  Paperclip
 } from "lucide-react";
 import Image from "next/image";
 
@@ -62,7 +63,7 @@ function ChatMessageComponent({
   messages = [],
   isStreaming,
   occupiedSlots = [],
-  onAddAttachment,
+  onAddAttachment: _onAddAttachment,
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
   const isToolResult = role === "tool";
