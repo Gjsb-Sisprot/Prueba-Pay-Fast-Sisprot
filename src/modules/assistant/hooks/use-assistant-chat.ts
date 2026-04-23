@@ -422,14 +422,37 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     }
   }, [messages, sendMessage]);
   
+  const [occupiedSlots, setOccupiedSlots] = useState<string[]>([]);
+  const lastDateRef = useRef<Date | null>(null);
+
   const handleSelectDate = useCallback(async (date: Date) => {
     const formattedDate = format(date, "EEEE d 'de' MMMM", { locale: es });
     const message = `Mi disponibilidad para la visita es el día ${formattedDate}`;
     
+    lastDateRef.current = date;
+
     // 1. Enviar mensaje al chat
     await sendMessage(message);
     
-    // 2. Sincronizar con Supabase de forma persistente
+    // 2. Consultar disponibilidad real en la tabla de visitas
+    try {
+      const resp = await fetch(`/api/assistant/conversations/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "busy_slots",
+          date: format(date, "yyyy-MM-dd")
+        }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setOccupiedSlots(data.occupied || []);
+      }
+    } catch (err) {
+      console.error("[FETCH_BUSY_SLOTS_ERROR]", err);
+    }
+
+    // 3. Sincronizar metadatos
     try {
       await fetch(`/api/assistant/conversations/${sessionId}`, {
         method: "POST",
@@ -450,18 +473,22 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     // 1. Enviar mensaje al chat
     await sendMessage(message);
     
-    // 2. Sincronizar hora con Supabase
+    // 2. PERSISTENCIA OFICIAL: Crear registro en la tabla support_visits
     try {
-      await fetch(`/api/assistant/conversations/${sessionId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update_metadata",
-          metadata: { visitTime: time }
-        }),
-      });
+      if (lastDateRef.current) {
+        await fetch(`/api/assistant/conversations/${sessionId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "confirm_visit",
+            date: format(lastDateRef.current, "yyyy-MM-dd"),
+            time: time,
+            reason: "Agendado por el usuario a través de Susana AI"
+          }),
+        });
+      }
     } catch (err) {
-      console.error("[SYNC_VISIT_TIME_ERROR]", err);
+      console.error("[CONFIRM_VISIT_ERROR]", err);
     }
   }, [sessionId, sendMessage]);
 
@@ -540,5 +567,6 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     handleSelectDate,
     handleSelectTime,
     handleSelectContract,
+    occupiedSlots,
   };
 }
