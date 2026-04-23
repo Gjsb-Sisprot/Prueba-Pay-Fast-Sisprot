@@ -4,7 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { 
   updateConversationStatus, 
   syncConversationMetadata,
-  saveInteraction
+  saveInteraction,
+  getOccupiedSlots,
+  createSupportVisit
 } from "@/modules/assistant/lib/persistence";
 import {
   buildCloseConversationMessage,
@@ -17,7 +19,7 @@ export async function POST(
   try {
     const { sessionId } = await params;
     const body = await request.json();
-    const { action, summary, role, content, attachments, specialistName } = body;
+    const { action, summary, role, content, attachments, specialistName, date, time, reason } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -29,6 +31,21 @@ export async function POST(
     let result;
 
     switch (action) {
+      case "busy_slots": {
+        const { date } = body;
+        if (!date) return NextResponse.json({ error: "Fecha requerida" }, { status: 400 });
+        const occupied = await getOccupiedSlots(date);
+        result = { success: true, occupied };
+        break;
+      }
+
+      case "confirm_visit": {
+        if (!date || !time) {
+          return NextResponse.json({ error: "Fecha y hora requeridas" }, { status: 400 });
+        }
+        result = await createSupportVisit(sessionId, date, time, reason);
+        break;
+      }
       case "close": {
         const finalSummary = summary ? `${summary} | Cerrada por el agente` : "Cerrada por el agente";
         
