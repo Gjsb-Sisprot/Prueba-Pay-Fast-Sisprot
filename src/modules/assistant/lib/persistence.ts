@@ -452,6 +452,85 @@ export async function updateSummaryFromHistory(
   }
 }
 
+/**
+ * Obtiene los horarios ocupados para una fecha específica.
+ */
+export async function getOccupiedSlots(date: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("support_visits")
+      .select("visit_date")
+      .gte("visit_date", `${date}T00:00:00`)
+      .lte("visit_date", `${date}T23:59:59`)
+      .not("status", "eq", "cancelled");
+
+    if (error) throw error;
+
+    return (data || []).map((v: any) => {
+      const d = new Date(v.visit_date);
+      const hours = d.getHours();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+      return `${displayHour.toString().padStart(2, '0')}:00 ${ampm}`;
+    });
+  } catch (error) {
+    console.error("[GET_OCCUPIED_SLOTS_ERROR]", error);
+    return [];
+  }
+}
+
+/**
+ * Registra una visita técnica oficial en la tabla support_visits.
+ */
+export async function createSupportVisit(
+  sessionId: string,
+  date: string,
+  time: string,
+  reason: string
+) {
+  try {
+    const conversation = await getConversationBySessionId(sessionId);
+    if (!conversation) throw new Error("Conversación no encontrada");
+
+    // Construir fecha completa
+    // time format: "08:00 AM"
+    const [t, ampm] = time.split(" ");
+    let [hours, minutes] = t.split(":").map(Number);
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+
+    const visitDate = new Date(date);
+    visitDate.setHours(hours, minutes, 0, 0);
+
+    const { data, error } = await supabase
+      .from("support_visits")
+      .insert([{
+        client_name: conversation.contact_name || conversation.name || "Cliente AI",
+        client_identification: conversation.identification || "",
+        contract_number: conversation.contract || "",
+        visit_date: visitDate.toISOString(),
+        reason: reason || "Agendado por Susana AI",
+        status: "scheduled",
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // También sincronizamos los metadatos en la conversación por si acaso
+    await syncConversationMetadata(sessionId, {
+      visitDate: date,
+      visitTime: time
+    });
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("[CREATE_SUPPORT_VISIT_ERROR]", error);
+    return { success: false, error: error.message };
+  }
+}
+
 
 function transformToMessages(rows: {
   role: string;
