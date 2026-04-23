@@ -41,6 +41,7 @@ interface ChatMessageProps {
   clientData?: ClientContextData; 
   messages?: AssistantChatMessage[]; 
   isStreaming?: boolean;
+  occupiedSlots?: string[];
 }
 
 function ChatMessageComponent({
@@ -59,6 +60,7 @@ function ChatMessageComponent({
   clientData,
   messages = [],
   isStreaming,
+  occupiedSlots = [],
 }: ChatMessageProps) {
   const isAssistant = role === "assistant";
   const isToolResult = role === "tool";
@@ -430,16 +432,25 @@ function ChatMessageComponent({
                       slots.push(timeStr);
                     }
 
-                    return slots.map((time) => (
-                      <Button
-                        key={time}
-                        variant="outline"
-                        className="w-full justify-center h-12 text-sm font-bold border-gray-200 hover:border-gray-900 hover:bg-gray-50 transition-all rounded-lg"
-                        onClick={() => onSelectTime?.(time)}
-                      >
-                        {time}
-                      </Button>
-                    ));
+                    return slots.map((time) => {
+                      const isOccupied = occupiedSlots.includes(time);
+                      return (
+                        <Button
+                          key={time}
+                          variant="outline"
+                          disabled={isOccupied}
+                          className={cn(
+                            "w-full justify-center h-12 text-sm font-bold border-gray-200 transition-all rounded-lg",
+                            isOccupied 
+                              ? "bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed" 
+                              : "hover:border-gray-900 hover:bg-gray-50 bg-white"
+                          )}
+                          onClick={() => onSelectTime?.(time)}
+                        >
+                          {time} {isOccupied && <span className="ml-2 text-[10px] font-normal uppercase">(Ocupado)</span>}
+                        </Button>
+                      );
+                    });
                   })()}
                 </div>
               </div>
