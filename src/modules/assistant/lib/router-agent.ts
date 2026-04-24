@@ -264,11 +264,11 @@ export async function routeRequest(
     const planIdMatch = message.match(/ID (\d+)/);
     const planId = planIdMatch ? planIdMatch[1] : null;
 
-    if (planId && clientData?.contractId) {
+    if (planId && clientData?.contract) {
       console.log(`[ROUTER_FAST_PATH] Solicitando presupuesto de Upgrade para plan: ${planId}`);
       const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
       const budgetResult = await executeForced("get_plan_change_budget", { 
-        contractId: String(clientData.contractId), 
+        contractId: String(clientData.contract), 
         newPlanId: String(planId) 
       }, routerTools);
 
@@ -291,8 +291,8 @@ export async function routeRequest(
     const planId = planIdMatch ? parseInt(planIdMatch[1]) : null;
     const type = message.includes("DOWNGRADE") ? "DOWNGRADE" : "UPGRADE";
 
-    if (planId && clientData?.contractId) {
-      const gsoftId = clientData.contractId;
+    if (planId && clientData?.contract) {
+      const gsoftId = clientData.contract;
       console.log(`[ROUTER_FAST_PATH] Solicitando ejecución de ${type} para plan: ${planId}`);
       
       const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
