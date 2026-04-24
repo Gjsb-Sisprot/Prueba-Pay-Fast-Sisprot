@@ -259,6 +259,63 @@ export async function routeRequest(
   }
 
   
+  // 📈 DETECCIÓN DE FORMULARIO DE CAMBIO DE PLAN (FAST PATH)
+  if (message.includes("Deseo calcular el presupuesto para un UPGRADE")) {
+    const planIdMatch = message.match(/ID (\d+)/);
+    const planId = planIdMatch ? planIdMatch[1] : null;
+
+    if (planId && clientData?.contractId) {
+      console.log(`[ROUTER_FAST_PATH] Solicitando presupuesto de Upgrade para plan: ${planId}`);
+      const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
+      const budgetResult = await executeForced("get_plan_change_budget", { 
+        contractId: String(clientData.contractId), 
+        newPlanId: String(planId) 
+      }, routerTools);
+
+      if (budgetResult) {
+        return {
+          noToolNeeded: false,
+          toolCalls: [{ toolName: "get_plan_change_budget", args: { contractId: String(clientData.contractId), newPlanId: String(planId) } }],
+          toolResults: [budgetResult],
+          routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Budget calculation fast-path" }),
+          durationMs: elapsed(),
+          intentClassification: intent,
+        };
+      }
+    }
+  }
+
+  // --- FAST PATH: Cambio de Plan (Ejecución Upgrade/Downgrade) ---
+  if (message.includes("Deseo solicitar un DOWNGRADE") || message.includes("__PLAN_CHANGE_CONFIRMED__")) {
+    const planIdMatch = message.match(/ID (\d+)/);
+    const planId = planIdMatch ? parseInt(planIdMatch[1]) : null;
+    const type = message.includes("DOWNGRADE") ? "DOWNGRADE" : "UPGRADE";
+
+    if (planId && clientData?.contractId) {
+      const gsoftId = clientData.contractId;
+      console.log(`[ROUTER_FAST_PATH] Solicitando ejecución de ${type} para plan: ${planId}`);
+      
+      const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
+      const requestResult = await executeForced("request_plan_change", {
+        contractGsoftId: Number(gsoftId),
+        changeType: type,
+        newPlan: Number(planId),
+        notes: `Solicitado via Chat Susana - ${type}`
+      }, routerTools);
+
+      if (requestResult) {
+        return {
+          noToolNeeded: false,
+          toolCalls: [{ toolName: "request_plan_change", args: { contractGsoftId: Number(gsoftId), changeType: type, newPlan: Number(planId) } }],
+          toolResults: [requestResult],
+          routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Plan change execution fast-path" }),
+          durationMs: elapsed(),
+          intentClassification: intent,
+        };
+      }
+    }
+  }
+
   // 💸 DETECCIÓN DE FORMULARIO DE REEMBOLSO (FAST PATH)
   if (message.includes("Monto:") && message.includes("Fecha:") && message.includes("Ref:") && message.includes("Banco:")) {
     const lines = message.split("\n");
