@@ -325,6 +325,42 @@ export async function routeRequest(
     }
   }
 
+  // 📈 DETECCIÓN DE FORMULARIO DE CAMBIO DE PLAN (Upgrade/Downgrade)
+  if (message.includes("Solicitud de Cambio de Plan:")) {
+    const type = message.split("Tipo:")[1]?.split("\n")[0]?.trim();
+    const planNuevo = message.split("Plan Nuevo:")[1]?.split("\n")[0]?.trim();
+    
+    console.log(`[ROUTER_DECISION] Formulario de cambio de plan detectado (${type}). Creando ticket GLPI.`);
+    
+    const ticket = await executeForced("create_glpi_ticket", { 
+      name: `Cambio de Plan: ${type} - ${planNuevo}`, 
+      content: `Solicitud de gestión administrativa para el contrato #${clientData?.contract}.\n- Tipo: ${type}\n- Plan Destino: ${planNuevo}\n- Estatus Solvencia: Confirmado por usuario`, 
+      categoryId: 22 
+    }, tools);
+    
+    if (ticket) {
+      return {
+        noToolNeeded: false,
+        toolCalls: [
+          { toolName: "create_glpi_ticket", args: { name: `Cambio de Plan: ${type}`, content: "..." } }
+        ],
+        toolResults: [ticket],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", { 
+          solverModel: "pro", 
+          reason: `Procesamiento automático de ${type} de plan` 
+        }),
+        durationMs: elapsed(),
+        intentClassification: { 
+          category: "INFO_ADMINISTRATIVO", 
+          confidence: "alta", 
+          suggestedTool: "create_glpi_ticket", 
+          suggestedQuery: null, 
+          reasoning: "Detección determinista de formulario de cambio de plan" 
+        },
+      };
+    }
+  }
+
   // ✅ DETECCIÓN DE DOCUMENTO FIRMADO (Fase B -> C)
   if (message.includes("He enviado el documento de autorización firmado.")) {
     const isCancellation = conversationHistory.some(m => m.content.toString().toLowerCase().includes("cancelación") || m.content.toString().toLowerCase().includes("baja"));
