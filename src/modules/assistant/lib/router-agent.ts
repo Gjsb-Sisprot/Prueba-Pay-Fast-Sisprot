@@ -271,6 +271,103 @@ export async function routeRequest(
     }
   }
 
+  // 📝 DETECCIÓN DE FORMULARIO DE CANCELACIÓN (Fase A -> B)
+  if (message.includes("Solicitud de Cancelación:")) {
+    const motivo = message.split("Motivo:")[1]?.split("\n")[0]?.trim();
+    const detalle = message.split("Detalle:")[1]?.split("\n")[0]?.trim();
+    
+    console.log(`[ROUTER_DECISION] Formulario de cancelación detectado. Generando PDF Fase B.`);
+    const forcedPdf = await executeForced("create_auth_pdf", { 
+      amount: "0.00", // No aplica para cancelación pero el esquema lo pide
+      date: new Date().toLocaleDateString(), 
+      reference: clientData?.contract || "0000", 
+      bank: "N/A", 
+      reason: `Cancelación: ${motivo} - ${detalle}`,
+      contractId: clientData?.contract || "unknown"
+    }, tools);
+    
+    if (forcedPdf) {
+      return {
+        noToolNeeded: false,
+        toolCalls: [{ toolName: "create_auth_pdf", args: { amount: "0", date: new Date().toLocaleDateString(), reference: clientData?.contract || "0000", bank: "N/A", reason: `Cancelación: ${motivo}`, contractId: clientData?.contract || "unknown" } }],
+        toolResults: [forcedPdf],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Procesamiento Fase A Cancelación -> Fase B PDF" }),
+        durationMs: elapsed(),
+        intentClassification: { category: "INFO_ADMINISTRATIVO", confidence: "alta", suggestedTool: "create_auth_pdf", suggestedQuery: null, reasoning: "Fase A Cancelación -> Fase B" },
+      };
+    }
+  }
+
+  // 🔄 DETECCIÓN DE FORMULARIO DE REACTIVACIÓN (Fase A -> B)
+  if (message.includes("Solicitud de Reactivación:")) {
+    const plan = message.split("Plan:")[1]?.split("\n")[0]?.trim();
+    const ciclo = message.split("Ciclo:")[1]?.split("\n")[0]?.trim() || "No especificado";
+    
+    console.log(`[ROUTER_DECISION] Formulario de reactivación detectado. Generando PDF Fase B.`);
+    const forcedPdf = await executeForced("create_auth_pdf", { 
+      amount: "Variables", // Deuda + Mensualidad
+      date: new Date().toLocaleDateString(), 
+      reference: clientData?.contract || "0000", 
+      bank: "Pendiente", 
+      reason: `Reactivación a Plan: ${plan} | Ciclo: ${ciclo}`,
+      contractId: clientData?.contract || "unknown"
+    }, tools);
+    
+    if (forcedPdf) {
+      return {
+        noToolNeeded: false,
+        toolCalls: [{ toolName: "create_auth_pdf", args: { amount: "Variables", date: new Date().toLocaleDateString(), reference: clientData?.contract || "0000", bank: "Pendiente", reason: `Reactivación: ${plan}`, contractId: clientData?.contract || "unknown" } }],
+        toolResults: [forcedPdf],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Procesamiento Fase A Reactivación -> Fase B PDF" }),
+        durationMs: elapsed(),
+        intentClassification: { category: "INFO_ADMINISTRATIVO", confidence: "alta", suggestedTool: "create_auth_pdf", suggestedQuery: null, reasoning: "Fase A Reactivación -> Fase B" },
+      };
+    }
+  }
+
+  // ✅ DETECCIÓN DE DOCUMENTO FIRMADO (Fase B -> C)
+  if (message.includes("He enviado el documento de autorización firmado.")) {
+    const isCancellation = conversationHistory.some(m => m.content.toString().toLowerCase().includes("cancelación") || m.content.toString().toLowerCase().includes("baja"));
+    const isReactivation = conversationHistory.some(m => m.content.toString().toLowerCase().includes("reactivación") || m.content.toString().toLowerCase().includes("reingreso"));
+
+    if (isCancellation) {
+      console.log(`[ROUTER_DECISION] Documento firmado para cancelación. Ejecutando Fase C.`);
+      const ticket = await executeForced("create_glpi_ticket", { name: "Cancelación de Servicio", content: `Solicitud formal de cancelación procesada para el contrato #${clientData?.contract}`, categoryId: 22 }, tools);
+      const terminate = await executeForced("terminate_service", { contractId: clientData?.contract || "unknown", reason: "Solicitud del cliente con documento firmado" }, tools);
+      
+      return {
+        noToolNeeded: false,
+        toolCalls: [
+          { toolName: "create_glpi_ticket", args: { name: "Cancelación", content: "..." } },
+          { toolName: "terminate_service", args: { contractId: clientData?.contract } }
+        ],
+        toolResults: [ticket!, terminate!],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Fase C Cancelación: Ticket + Cierre Técnico" }),
+        durationMs: elapsed(),
+      };
+    }
+
+    if (isReactivation) {
+      console.log(`[ROUTER_DECISION] Documento firmado para reactivación. Ejecutando Fase C.`);
+      const ticket = await executeForced("create_glpi_ticket", { name: "Reactivación de Servicio", content: `Solicitud formal de reactivación procesada para el contrato #${clientData?.contract}`, categoryId: 22 }, tools);
+      const activate = await executeForced("activate_service", { contractId: clientData?.contract || "unknown", planName: clientData?.planName || "Plan Residencial" }, tools);
+      const visit = await executeForced("schedule_tech_visit", { contractId: clientData?.contract || "unknown", visitType: "Validación de Reactivación" }, tools);
+      
+      return {
+        noToolNeeded: false,
+        toolCalls: [
+          { toolName: "create_glpi_ticket", args: { name: "Reactivación", content: "..." } },
+          { toolName: "activate_service", args: { contractId: clientData?.contract, planName: "..." } },
+          { toolName: "schedule_tech_visit", args: { contractId: clientData?.contract, visitType: "..." } }
+        ],
+        toolResults: [ticket!, activate!, visit!],
+        routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Fase C Reactivación: Ticket + Activación + Visita" }),
+        durationMs: elapsed(),
+      };
+    }
+  }
+
+
   const intent = classifyIntent(message);
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
 
