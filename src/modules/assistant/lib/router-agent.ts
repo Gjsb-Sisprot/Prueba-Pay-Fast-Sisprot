@@ -4,7 +4,7 @@ import type { ClientContextData } from "./types";
 
 import { classifyIntent } from "./intent-classifier";
 import { buildRouterPrompt } from "./router-prompt";
-import { buildNoToolDirectResponse, buildSupportContractDisambiguationMessage } from "./router-direct-responses";
+import { buildNoToolDirectResponse, buildSupportContractDisambiguationMessage, buildSectorConflictMessage } from "./router-direct-responses";
 import {
   classifyNativeRouteDecision,
   getFallbackSolverModel,
@@ -242,7 +242,6 @@ export async function routeRequest(
     if ((isTechModule && isAdminIntent) || (isAdminModule && isTechIntent)) {
       console.log(`[ROUTER_CONFLICT] Sector ${selectedSector} vs Intención ${intent.category}. Interceptando.`);
       
-      const { buildSectorConflictMessage } = require("./router-direct-responses");
       const conflictMsg = buildSectorConflictMessage(selectedSector, intent.category);
       
       return {
@@ -435,7 +434,6 @@ export async function routeRequest(
   }
 
 
-  const intent = classifyIntent(message);
   console.log(`[ROUTER_DECISION] Clasificada intención: ${intent.category} (Confianza: ${intent.confidence})`);
 
   // OVERRIDE MULTICONTRACTO ESTÁTICO:
@@ -1065,4 +1063,3 @@ async function buildErrorFallback(
     intentClassification: intent,
   };
 }
-
