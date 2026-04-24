@@ -66,7 +66,6 @@ function ChatMessageComponent({
   messages = [],
   isStreaming,
   occupiedSlots = [],
-  onAddAttachment: _onAddAttachment,
   pendingAttachments = [],
   onRemoveAttachment,
 }: ChatMessageProps) {
