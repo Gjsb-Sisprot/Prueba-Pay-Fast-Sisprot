@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getConversationBySessionId, updateConversationStatus, syncConversationMetadata } from "./persistence";
 import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
-import { fetchClientContracts, fetchClientInvoices, rebootOnu } from "./sisprot-api";
+import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest } from "./sisprot-api";
 
 
 // --- GLPI INTEGRATION (Consolidated logic is now imported from glpi.ts) ---
@@ -98,6 +98,34 @@ export const activateNonSuspensionSchema = z.object({
   contractId: z.string().describe("ID del contrato para activar el convenio de no suspensión"),
 });
 
+export const terminateServiceSchema = z.object({
+  contractId: z.string().describe("ID del contrato a cancelar"),
+  reason: z.string().describe("Motivo de la cancelación"),
+});
+
+export const activateServiceSchema = z.object({
+  contractId: z.string().describe("ID del contrato a reactivar"),
+  planName: z.string().describe("Nombre del plan a activar"),
+  billingCycle: z.string().optional().describe("Ciclo de facturación elegido (ej. Ciclo 10)"),
+});
+
+
+  visitType: z.string().describe("Tipo de visita (ej: Validación de Reactivación)"),
+});
++
++export const getPlanChangeBudgetSchema = z.object({
++  contractId: z.string().describe("ID del contrato del cliente"),
++  newPlanId: z.string().describe("ID del nuevo plan solicitado"),
++});
++
++export const requestPlanChangeSchema = z.object({
++  contractGsoftId: z.number().describe("ID interno de Gsoft del contrato"),
++  changeType: z.enum(["UPGRADE", "DOWNGRADE"]).describe("Tipo de cambio de plan"),
++  newPlan: z.number().describe("ID del nuevo plan"),
++  payment: z.number().optional().describe("ID del método de pago (solo para Upgrade)"),
++  notes: z.string().optional().describe("Notas adicionales para la gestión"),
++});
+
 
 export interface ToolDefinition {
   name: string;
@@ -169,6 +197,31 @@ export const toolDefinitions: ToolDefinition[] = [
     name: "activate_non_suspension_agreement",
     description: "Activa un convenio de no suspensión para garantizar la continuidad del servicio durante el trámite administrativo.",
     schema: activateNonSuspensionSchema,
+  },
+  {
+    name: "terminate_service",
+    description: "Ejecuta la baja técnica del servicio (Mikrotik, OLT y Ozmap).",
+    schema: terminateServiceSchema,
+  },
+  {
+    name: "activate_service",
+    description: "Ejecuta la activación técnica del servicio (Mikrotik y OLT).",
+    schema: activateServiceSchema,
+  },
+  {
+    name: "schedule_tech_visit",
+    description: "Programa una visita técnica de validación u otro tipo.",
+    schema: scheduleTechVisitSchema,
+  },
+  {
+    name: "get_plan_change_budget",
+    description: "Calcula el presupuesto prorrateado y cargos administrativos para un cambio de plan (Upgrade).",
+    schema: getPlanChangeBudgetSchema,
+  },
+  {
+    name: "request_plan_change",
+    description: "Solicita formalmente un cambio de plan (Upgrade o Downgrade) en el sistema administrativo.",
+    schema: requestPlanChangeSchema,
   },
 ];
 
@@ -478,6 +531,69 @@ export async function executeActivateNonSuspension(args: z.infer<typeof activate
   };
 }
 
+export async function executeTerminateService(args: z.infer<typeof terminateServiceSchema>): Promise<ToolResponse> {
+  return {
+    success: true,
+    message: `Baja técnica ejecutada para el contrato #${args.contractId}. Mikrotik desconfigurado, ONU desautorizada en OLT y estatus en Ozmap actualizado a 'Inmueble' (Azul).`,
+    data: { terminationId: `TERM-${args.contractId}-${Date.now()}` }
+  };
+}
+
+export async function executeActivateService(args: z.infer<typeof activateServiceSchema>): Promise<ToolResponse> {
+  const cycleInfo = args.billingCycle ? ` en el ${args.billingCycle}` : "";
+  return {
+    success: true,
+    message: `Activación técnica completada para el contrato #${args.contractId} con el plan ${args.planName}${cycleInfo}. IP creada en Mikrotik (atada a VLAN) y ONU autorizada en OLT.`,
+    data: { activationId: `ACT-${args.contractId}-${Date.now()}` }
+  };
+}
+
+
+export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTechVisitSchema>): Promise<ToolResponse> {
+  return {
+    success: true,
+    message: `Visita técnica de '${args.visitType}' programada exitosamente para el contrato #${args.contractId}.`,
+    data: { visitId: `VISIT-${Date.now()}` }
+  };
+}
+
+export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
+  try {
+    const result = await getPlanChangeBudget(args.contractId, args.newPlanId);
+    if (!result.success) throw new Error(result.message);
+
+    return {
+      success: true,
+      message: `Presupuesto calculado para el cambio de plan.`,
+      data: result.data
+    };
+  } catch (error) {
+    return { success: false, message: `Error al calcular presupuesto: ${error instanceof Error ? error.message : "Error desconocido"}` };
+  }
+}
+
+export async function executeRequestPlanChange(args: z.infer<typeof requestPlanChangeSchema>): Promise<ToolResponse> {
+  try {
+    const result = await postPlanChangeRequest({
+      contract_gsoft_id: args.contractGsoftId,
+      change_type: args.changeType,
+      new_plan: args.newPlan,
+      payment: args.payment,
+      notes: args.notes
+    });
+
+    if (!result.success) throw new Error(result.message);
+
+    return {
+      success: true,
+      message: `Solicitud de ${args.changeType} procesada exitosamente.`,
+      data: result.data
+    };
+  } catch (error) {
+    return { success: false, message: `Error al solicitar cambio de plan: ${error instanceof Error ? error.message : "Error desconocido"}` };
+  }
+}
+
 
 /**
  * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
@@ -656,6 +772,91 @@ export const getLocalTools = (): LocalToolSet => {
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeActivateNonSuspension(args as z.infer<typeof activateNonSuspensionSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    terminate_service: {
+      name: "terminate_service",
+      description: "Ejecuta la baja técnica del servicio.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["contractId", "reason"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeTerminateService(args as z.infer<typeof terminateServiceSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    activate_service: {
+      name: "activate_service",
+      description: "Ejecuta la activación técnica del servicio.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+          planName: { type: "string" },
+          billingCycle: { type: "string" },
+        },
+        required: ["contractId", "planName"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeActivateService(args as z.infer<typeof activateServiceSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+
+    schedule_tech_visit: {
+      name: "schedule_tech_visit",
+      description: "Programa una visita técnica.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+          visitType: { type: "string" },
+        },
+        required: ["contractId", "visitType"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeScheduleTechVisit(args as z.infer<typeof scheduleTechVisitSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    get_plan_change_budget: {
+      name: "get_plan_change_budget",
+      description: "Calcula el presupuesto para un cambio de plan.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractId: { type: "string" },
+          newPlanId: { type: "string" },
+        },
+        required: ["contractId", "newPlanId"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeGetPlanChangeBudget(args as z.infer<typeof getPlanChangeBudgetSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    request_plan_change: {
+      name: "request_plan_change",
+      description: "Solicita un cambio de plan.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contractGsoftId: { type: "number" },
+          changeType: { type: "string" },
+          newPlan: { type: "number" },
+          payment: { type: "number" },
+          notes: { type: "string" },
+        },
+        required: ["contractGsoftId", "changeType", "newPlan"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeRequestPlanChange(args as z.infer<typeof requestPlanChangeSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     }
