@@ -228,6 +228,37 @@ export async function routeRequest(
     }
   }
 
+  const intent = classifyIntent(message);
+
+  // 🚨 DETECCIÓN DE CONFLICTO DE SECTOR (Módulo seleccionado vs Intención real)
+  if (activeClientData?.sector && intent.confidence !== "baja") {
+    const selectedSector = activeClientData.sector;
+    const isTechModule = selectedSector === "Soporte Técnico";
+    const isAdminModule = selectedSector === "Gestión Administrativa";
+
+    const isTechIntent = intent.category === "PROBLEMA_TECNICO";
+    const isAdminIntent = intent.category === "INFO_ADMINISTRATIVO" || intent.category === "INFO_PAGOS";
+
+    if ((isTechModule && isAdminIntent) || (isAdminModule && isTechIntent)) {
+      console.log(`[ROUTER_CONFLICT] Sector ${selectedSector} vs Intención ${intent.category}. Interceptando.`);
+      
+      const { buildSectorConflictMessage } = require("./router-direct-responses");
+      const conflictMsg = buildSectorConflictMessage(selectedSector, intent.category);
+      
+      return {
+        noToolNeeded: true,
+        toolCalls: [],
+        toolResults: [],
+        directResponse: conflictMsg,
+        routePolicy: buildRoutePolicy("direct_response", "deterministic", { 
+          reason: "Conflicto de sector detectado" 
+        }),
+        durationMs: elapsed(),
+        intentClassification: intent,
+      };
+    }
+  }
+
   
   // 💸 DETECCIÓN DE FORMULARIO DE REEMBOLSO (FAST PATH)
   if (message.includes("Monto:") && message.includes("Fecha:") && message.includes("Ref:") && message.includes("Banco:")) {
@@ -1034,3 +1065,4 @@ async function buildErrorFallback(
     intentClassification: intent,
   };
 }
+
