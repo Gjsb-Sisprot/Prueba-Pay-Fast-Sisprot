@@ -178,6 +178,9 @@ export const INTENT_RULES: IntentRule[] = [
       /upgrade/i,
       /downgrade/i,
       /plan\s*m[aá]s\s*(barato|econ[oó]mico|r[aá]pido)/i,
+      /presupuesto\s*(de\s*)?(upgrade|cambio)/i,
+      /cu[aá]nto\s*cuesta\s*subir/i,
+      /monto\s*total\s*a\s*pagar\s*hoy/i,
     ],
   },
 
