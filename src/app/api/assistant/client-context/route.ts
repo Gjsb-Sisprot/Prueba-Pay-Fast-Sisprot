@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       name: firstContract.clientName,
       email: firstContract.email,
       phone: firstContract.phone,
-      contract: firstContract.contractId.toString(),
+      contract: firstContract.id.toString(),
       sector: firstContract.sector,
       address: firstContract.address,
       planName: firstContract.planName,
