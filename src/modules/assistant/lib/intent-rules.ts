@@ -138,6 +138,33 @@ export const INTENT_RULES: IntentRule[] = [
   },
   {
     category: "INFO_ADMINISTRATIVO",
+    tool: null,
+    query: null,
+    confidence: "alta",
+    patterns: [
+      /cancelar\s*(el\s*)?(servicio|internet|fibra)/i,
+      /baja\s*(del\s*)?servicio/i,
+      /quiero\s*retirar(me)?/i,
+      /suspender\s*definitivamente/i,
+      /sgf-atc-003/i,
+    ],
+  },
+  {
+    category: "INFO_ADMINISTRATIVO",
+    tool: null,
+    query: null,
+    confidence: "alta",
+    patterns: [
+      /reactivar\s*(el\s*)?(servicio|internet|fibra)/i,
+      /volver\s*a\s*tener\s*internet/i,
+      /retomar\s*el\s*servicio/i,
+      /reingreso/i,
+      /sgf-atc-004/i,
+    ],
+  },
+
+  {
+    category: "INFO_ADMINISTRATIVO",
     tool: "search_knowledge_base",
     query: "mudanzas cambio titular",
     confidence: "alta",
