@@ -275,7 +275,7 @@ export async function routeRequest(
       if (budgetResult) {
         return {
           noToolNeeded: false,
-          toolCalls: [{ toolName: "get_plan_change_budget", args: { contractId: String(clientData.contractId), newPlanId: String(planId) } }],
+          toolCalls: [{ toolName: "get_plan_change_budget", args: { contractId: String(clientData.contract), newPlanId: String(planId) } }],
           toolResults: [budgetResult],
           routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Budget calculation fast-path" }),
           durationMs: elapsed(),
