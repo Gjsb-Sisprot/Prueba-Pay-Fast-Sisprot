@@ -89,6 +89,7 @@ function ChatMessageComponent({
       /__CANCELLATION_FORM__/gi,
       /__REACTIVATION_FORM__/gi,
       /__PLAN_CHANGE_FORM__/gi,
+      /__PLAN_BUDGET_INFO__/gi,
       /__SIGNED_DOCUMENT_FORM__/gi,
       /\[TICKET_ID:[0-9]+\]/gi,
       /__CLOSE_CHAT__/gi,
@@ -947,10 +948,87 @@ function ChatMessageComponent({
             </div>
           )}
           
+          {isAssistant && content.includes("__PLAN_BUDGET_INFO__") && !isLoading && (
+            <div className="mt-3 bg-white border border-green-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center border border-green-100">
+                  <CreditCard className="w-4 h-4 text-green-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Presupuesto de Upgrade</h4>
+                  <p className="text-[10px] text-gray-500">Desglose de cargos para tu nuevo plan</p>
+                </div>
+              </div>
+
+              {(() => {
+                // Intentamos extraer datos del budget si vienen en formato JSON o simplemente usamos placeholders
+                // Susana debería haber puesto el JSON justo después o antes del token
+                const jsonMatch = content.match(/\{[\s\S]*"total_amount"[\s\S]*\}/);
+                const budget = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+                if (!budget) return <p className="text-[10px] text-red-500">Error al cargar presupuesto</p>;
+
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <p className="text-[8px] text-gray-400 font-bold uppercase">Plan Destino</p>
+                        <p className="text-[11px] font-bold text-gray-700 truncate">{budget.new_plan_name}</p>
+                      </div>
+                      <div className="bg-green-50/50 p-2 rounded-lg border border-green-100">
+                        <p className="text-[8px] text-green-600 font-bold uppercase">Total a Pagar</p>
+                        <p className="text-[11px] font-extrabold text-green-700">{budget.total_amount?.usd || "0.00"}$</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 border-t border-dashed border-gray-100 pt-2">
+                       <div className="flex justify-between text-[10px]">
+                         <span className="text-gray-500">Cargo Administrativo:</span>
+                         <span className="font-medium text-gray-700">{budget.admin_fee?.usd}$</span>
+                       </div>
+                       <div className="flex justify-between text-[10px]">
+                         <span className="text-gray-500">Diferencial Prorrateado:</span>
+                         <span className="font-medium text-gray-700">{budget.upgrade_charge?.usd}$</span>
+                       </div>
+                    </div>
+
+                    <div className="bg-amber-50 p-2 rounded-lg border border-amber-100 flex items-start gap-2">
+                      <Info className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-[9px] text-amber-700 leading-tight">
+                        Al confirmar, se generará una factura adicional por este monto para procesar el cambio de inmediato.
+                      </p>
+                    </div>
+
+                    <Button 
+                      className="w-full bg-green-600 text-white hover:bg-green-700 text-xs font-bold py-3 rounded-xl mt-1 shadow-lg active:scale-[0.98] transition-all"
+                      onClick={() => {
+                        const planId = budget.new_plan_id || "5"; // Placeholder id if missing
+                        const text = `__PLAN_CHANGE_CONFIRMED__ ID ${planId}`;
+
+                        const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                        if (chatTextarea) {
+                          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                          nativeInputValueSetter?.call(chatTextarea, text);
+                          chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                          setTimeout(() => {
+                            const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                            sendButton?.click();
+                          }, 100);
+                        }
+                      }}
+                    >
+                      Confirmar y Procesar Upgrade
+                    </Button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          
           {isAssistant && content.includes("__PLAN_CHANGE_FORM__") && !isLoading && (
             <div className="mt-3 bg-white border border-blue-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center border border-indigo-100">
                   <Maximize2 className="w-4 h-4 text-indigo-500" />
                 </div>
                 <div>
@@ -959,76 +1037,104 @@ function ChatMessageComponent({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Tipo de Gestión</label>
-                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none">
-                    <option>Seleccionar...</option>
-                    <option>🚀 Upgrade (Aumentar Velocidad)</option>
-                    <option>📉 Downgrade (Reducir Plan)</option>
-                  </select>
-                </div>
+              {(() => {
+                const isPyme = (clientData?.planName || "").toLowerCase().match(/pyme|comercial|empresa/i);
+                const currentPlanText = clientData?.planName || "Plan No Detectado";
+                
+                return (
+                  <div className="space-y-3">
+                    <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100/50 mb-1">
+                      <p className="text-[9px] text-blue-600 font-bold uppercase tracking-wider">Plan Actual:</p>
+                      <p className="text-xs font-semibold text-gray-700">{currentPlanText}</p>
+                    </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Plan Destino</label>
-                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none">
-                    <option>Seleccionar plan...</option>
-                    <optgroup label="Residenciales">
-                      <option>300 Megas - $27.60</option>
-                      <option>450 Megas - $34.50</option>
-                      <option>600 Megas - $40.25</option>
-                      <option>650 Megas - $46.00</option>
-                      <option>750 Megas - $49.50</option>
-                      <option>800 Megas - $55.00</option>
-                      <option>1 Giga - $74.70</option>
-                    </optgroup>
-                    <optgroup label="PYMES">
-                      <option>150 Megas - $27.60</option>
-                      <option>300 Megas - $39.09</option>
-                      <option>400 Megas - $51.74</option>
-                      <option>650 Megas - $70.18</option>
-                      <option>800 Megas - $110.40</option>
-                      <option>1 Giga - $161.00</option>
-                    </optgroup>
-                  </select>
-                </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Tipo de Gestión</label>
+                      <select 
+                        id="plan-change-type"
+                        className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none font-medium"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="UPGRADE">🚀 Upgrade (Aumentar Velocidad)</option>
+                        <option value="DOWNGRADE">📉 Downgrade (Reducir Plan)</option>
+                      </select>
+                    </div>
 
-                <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                  <input type="checkbox" id="solvencia" className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                  <label htmlFor="solvencia" className="text-[10px] text-gray-600 font-medium">Confirmo que el contrato está solvente</label>
-                </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Plan Destino</label>
+                      <select 
+                        id="plan-change-target"
+                        className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none font-medium"
+                      >
+                        <option value="">Seleccionar plan...</option>
+                        {isPyme ? (
+                          <>
+                            <option value="150">150 Megas - $27.60</option>
+                            <option value="300">300 Megas - $39.09</option>
+                            <option value="400">400 Megas - $51.74</option>
+                            <option value="650">650 Megas - $70.18</option>
+                            <option value="800">800 Megas - $110.40</option>
+                            <option value="1000">1 Giga - $161.00</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="300">300 Megas - $27.60</option>
+                            <option value="450">450 Megas - $34.50</option>
+                            <option value="600">600 Megas - $40.25</option>
+                            <option value="650">650 Megas - $46.00</option>
+                            <option value="750">750 Megas - $49.50</option>
+                            <option value="800">800 Megas - $55.00</option>
+                            <option value="1000">1 Giga - $74.70</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
 
-                <Button 
-                  className="w-full bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
-                  onClick={(e) => {
-                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
-                    if (!container) return;
-                    const selects = container.querySelectorAll('select');
-                    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+                    <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                      <input type="checkbox" id="plan-solvencia" className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      <label htmlFor="plan-solvencia" className="text-[10px] text-gray-600 font-medium">Confirmo que el contrato está solvente</label>
+                    </div>
 
-                    if (selects[0].value.includes('...') || selects[1].value.includes('...') || !checkbox.checked) {
-                      alert("Por favor selecciona el tipo de gestión, el plan nuevo y confirma tu solvencia.");
-                      return;
-                    }
+                    <Button 
+                      className="w-full bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                      onClick={(e) => {
+                        const container = (e.currentTarget as HTMLElement).closest('.mt-3');
+                        if (!container) return;
+                        const typeSelect = container.querySelector('#plan-change-type') as HTMLSelectElement;
+                        const targetSelect = container.querySelector('#plan-change-target') as HTMLSelectElement;
+                        const checkbox = container.querySelector('#plan-solvencia') as HTMLInputElement;
 
-                    const type = selects[0].value.includes('Upgrade') ? 'Upgrade' : 'Downgrade';
-                    const text = `Solicitud de Cambio de Plan:\nTipo: ${type}\nPlan Nuevo: ${selects[1].value}\nSolvencia confirmada: Sí`;
+                        if (!typeSelect.value || !targetSelect.value || !checkbox.checked) {
+                          alert("Por favor selecciona el tipo de gestión, el plan nuevo y confirma tu solvencia.");
+                          return;
+                        }
 
-                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
-                    if (chatTextarea) {
-                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-                      nativeInputValueSetter?.call(chatTextarea, text);
-                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                      setTimeout(() => {
-                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
-                        sendButton?.click();
-                      }, 100);
-                    }
-                  }}
-                >
-                  Confirmar Cambio de Plan
-                </Button>
-              </div>
+                        const planName = targetSelect.options[targetSelect.selectedIndex].text;
+                        const planId = targetSelect.value;
+                        const type = typeSelect.value;
+
+                        // Si es UPGRADE, primero solicitamos presupuesto
+                        const text = type === "UPGRADE" 
+                          ? `Deseo calcular el presupuesto para un UPGRADE al plan ${planName} con ID ${planId}`
+                          : `Deseo solicitar un DOWNGRADE al plan ${planName} con ID ${planId} para el final del ciclo`;
+
+                        const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                        if (chatTextarea) {
+                          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                          nativeInputValueSetter?.call(chatTextarea, text);
+                          chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                          setTimeout(() => {
+                            const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                            sendButton?.click();
+                          }, 100);
+                        }
+                      }}
+                    >
+                      Continuar con Gestión
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
           )}
           
