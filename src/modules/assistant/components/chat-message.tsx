@@ -1069,22 +1069,21 @@ function ChatMessageComponent({
                         <option value="">Seleccionar plan...</option>
                         {isPyme ? (
                           <>
-                            <option value="150">150 Megas - $27.60</option>
-                            <option value="300">300 Megas - $39.09</option>
-                            <option value="400">400 Megas - $51.74</option>
-                            <option value="650">650 Megas - $70.18</option>
-                            <option value="800">800 Megas - $110.40</option>
-                            <option value="1000">1 Giga - $161.00</option>
+                            <option value="102">150 Megas - $27.60</option>
+                            <option value="34">300 Megas - $39.09</option>
+                            <option value="103">400 Megas - $51.74</option>
+                            <option value="36">650 Megas - $70.18</option>
+                            <option value="38">800 Megas - $110.40</option>
+                            <option value="104">1 Giga - $161.00</option>
+                            <option value="99">1.2 Giga Proyecto - $464.00</option>
                           </>
                         ) : (
                           <>
-                            <option value="300">300 Megas - $27.60</option>
-                            <option value="450">450 Megas - $34.50</option>
-                            <option value="600">600 Megas - $40.25</option>
-                            <option value="650">650 Megas - $46.00</option>
-                            <option value="750">750 Megas - $49.50</option>
-                            <option value="800">800 Megas - $55.00</option>
-                            <option value="1000">1 Giga - $74.70</option>
+                            <option value="97">10 Megas - $18.00</option>
+                            <option value="2">30 Megas - $20.00</option>
+                            <option value="100">300 Megas - $27.60</option>
+                            <option value="21">450 Megas - $34.50</option>
+                            <option value="19">1 Giga - $74.70</option>
                           </>
                         )}
                       </select>
