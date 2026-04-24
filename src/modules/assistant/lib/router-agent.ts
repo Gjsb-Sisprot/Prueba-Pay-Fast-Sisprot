@@ -242,7 +242,7 @@ export async function routeRequest(
     if ((isTechModule && isAdminIntent) || (isAdminModule && isTechIntent)) {
       console.log(`[ROUTER_CONFLICT] Sector ${selectedSector} vs Intención ${intent.category}. Interceptando.`);
       
-      const conflictMsg = buildSectorConflictMessage(selectedSector, intent.category);
+      const conflictMsg = buildSectorConflictMessage(selectedSector);
       
       return {
         noToolNeeded: true,
