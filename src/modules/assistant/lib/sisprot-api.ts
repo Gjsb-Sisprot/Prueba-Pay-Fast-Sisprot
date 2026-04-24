@@ -242,10 +242,10 @@ export async function postPlanChangeRequest(params: {
   contract_gsoft_id: number;
   change_type: "UPGRADE" | "DOWNGRADE";
   new_plan: number;
-  payment?: number;
+  payment?: string | number;
   notes?: string;
 }) {
-  const url = `${SISPROT_API_BASE}/contracts/plan-change-request/`;
+  const url = `${SISPROT_API_BASE}/plan/change_request/`;
   
   try {
     const response = await fetch(url, {
