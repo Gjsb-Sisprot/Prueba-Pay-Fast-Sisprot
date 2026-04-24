@@ -69,6 +69,11 @@ export function filterToolsForRouter(tools: LocalToolSet, options: RouterToolFil
 export const FAST_PATH_ELIGIBLE_TOOLS = new Set([
   "search_knowledge_base",
   "create_auth_pdf",
+  "terminate_service",
+  "activate_service",
+  "schedule_tech_visit",
+  "get_plan_change_budget",
+  "request_plan_change",
 ]);
 
 export const FAST_PATH_EXCLUDED_CATEGORIES = new Set([
