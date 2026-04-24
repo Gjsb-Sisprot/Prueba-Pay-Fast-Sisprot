@@ -221,3 +221,19 @@ function buildContractList(clientData?: ClientContextData): string {
     .map((contract) => `**#${contract.contractId}**${contract.sector ? ` en ${contract.sector}` : ""}`)
     .join(", ");
 }
+
+export function buildSectorConflictMessage(selectedSector: string, detectedCategory: string): string {
+  const isTechSelected = selectedSector === "Soporte Técnico";
+  const moduleName = isTechSelected ? "Soporte Técnico" : "Gestión Administrativa";
+  const alternativeModule = isTechSelected ? "Gestión Administrativa" : "Soporte Técnico";
+  
+  let reason = "";
+  if (isTechSelected) {
+    reason = "gestiones administrativas, pagos o planes";
+  } else {
+    reason = "reportar fallas técnicas o problemas de conexión";
+  }
+
+  return `⚠️ **Módulo Incorrecto**\n\nHe notado que seleccionaste el módulo de **${moduleName}**, pero tu consulta actual se refiere a **${reason}**.\n\nPara poder ayudarte correctamente, por favor pulsa el botón de **${alternativeModule}** que te mostré al inicio o escribe "Ir a ${alternativeModule}" para cambiar de canal.`;
+}
+
