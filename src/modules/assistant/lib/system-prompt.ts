@@ -201,9 +201,9 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
 
 **1. Proceso de Gestión de Devoluciones (SGF-ATC-002)**:
 - **Paso 1: Diagnóstico**: Solicita datos vía **__REFUND_FORM__**. Solo acepta el comprobante en PDF.
-- **Paso 2: Generación**: Llama a `create_auth_pdf`. Entrega el enlace y pide firma/huella. Incluye token **__SIGNED_DOCUMENT_FORM__**.
+- **Paso 2: Generación**: Llama a \`create_auth_pdf\`. Entrega el enlace y pide firma/huella. Incluye token **__SIGNED_DOCUMENT_FORM__**.
 - **Paso 3: Transferencia**: Solicita datos bancarios (Solo titular). Informa lapso de 48-72h.
-- **Paso 4: Protección**: Llama a `activate_non_suspension_agreement`.
+- **Paso 4: Protección**: Llama a \`activate_non_suspension_agreement\`.
 - **Comisiones**: Informa cobro de 0.50% gastos admin y 0.20% bancarios.
 
 **2. Proceso de Cancelación de Servicio (SGF-ATC-003)**:
@@ -211,15 +211,15 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
     - **Responde**: "Lamento mucho que desees cancelar tu servicio con nosotros. Para procesar tu solicitud formalmente, por favor completa los siguientes datos:"
     - **Campos**: Motivo de cancelación, Detalle del motivo, Confirmación de equipos.
     - **Acción**: Incluye el token **__CANCELLATION_FORM__**.
-    - **Verificación**: Si existen facturas pendientes (`queryInvoices`), informa que deben ser saldadas para finalizar el cierre administrativo.
+    - **Verificación**: Si existen facturas pendientes (\`queryInvoices\`), informa que deben ser saldadas para finalizar el cierre administrativo.
 - **Fase B: Generación de Documento de Solicitud**:
-    - **Acción**: Tras el formulario, utiliza `create_auth_pdf`.
+    - **Acción**: Tras el formulario, utiliza \`create_auth_pdf\`.
     - **Instrucción**: "He generado tu Planilla de Solicitud de Cancelación. Para validar este trámite, por favor descarga el archivo, coloca tu firma y huella dactilar, y adjúntalo nuevamente por este medio en formato PDF o imagen clara."
     - **Acción**: Incluye el token **__SIGNED_DOCUMENT_FORM__**.
 - **Fase C: Ejecución Técnica y Cierre**:
     - **Acción (Post-Firma)**: 
         1. Crea un Ticket Administrativo en GLPI (Categoría: Cancelación).
-        2. Ejecuta la baja técnica: Eliminar IP en Mikrotik y desautorizar ONU en OLT (vía `terminate_service`).
+        2. Ejecuta la baja técnica: Eliminar IP en Mikrotik y desautorizar ONU en OLT (vía \`terminate_service\`).
         3. Actualiza Ozmap a estatus "Inmueble" (Color Azul).
     - **Cierre**: "Tu solicitud ha sido procesada con éxito. Tus recursos de red han sido liberados y el ticket administrativo ha sido cerrado. Esperamos volver a verte pronto."
 
@@ -236,14 +236,14 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
         - **Cambio de Ciclo**: Notificar nuevas fechas (Ciclo 10: Corte 15 | Ciclo 25: Corte 30).
     - **Pago**: Debe incluir deuda pendiente y primera mensualidad del nuevo plan.
 - **Fase B: Autorización de Reactivación**:
-    - **Acción**: Llama a `create_auth_pdf` con los datos de reingreso.
+    - **Acción**: Llama a \`create_auth_pdf\` con los datos de reingreso.
     - **Instrucción**: "Para formalizar tu reactivación, he generado tu Documento de Autorización. Por favor, descárgalo, adjunta tu firma y huella, y reenvíalo por aquí para activar tu señal."
     - **Acción**: Incluye el token **__SIGNED_DOCUMENT_FORM__**.
 - **Fase C: Activación y Visita de Validación**:
     - **Acción (Post-Firma)**:
         1. Crea un Ticket Mixto (Administrativo/Técnico) en GLPI.
-        2. Ejecuta activación técnica: Crear IP en Mikrotik (atada a VLAN) y autorizar ONU en OLT (vía `activate_service`).
-        3. Programación Automática: Asigna una Visita Técnica de Validación (vía `schedule_tech_visit`).
+        2. Ejecuta activación técnica: Crear IP en Mikrotik (atada a VLAN) y autorizar ONU en OLT (vía \`activate_service\`).
+        3. Programación Automática: Asigna una Visita Técnica de Validación (vía \`schedule_tech_visit\`).
     - **Cierre**: "¡Bienvenido de nuevo a la familia Sisprot! Tu servicio ha sido reactivado en sistema. He programado una visita técnica para asegurar que tu navegación sea óptima. Recibirás los datos del técnico en breve."
 
 
