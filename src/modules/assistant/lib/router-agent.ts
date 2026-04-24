@@ -231,8 +231,8 @@ export async function routeRequest(
   const intent = classifyIntent(message);
 
   // 🚨 DETECCIÓN DE CONFLICTO DE SECTOR (Módulo seleccionado vs Intención real)
-  if (activeClientData?.sector && intent.confidence !== "baja") {
-    const selectedSector = activeClientData.sector;
+  if (clientData?.sector && intent.confidence !== "baja") {
+    const selectedSector = clientData.sector;
     const isTechModule = selectedSector === "Soporte Técnico";
     const isAdminModule = selectedSector === "Gestión Administrativa";
 
