@@ -162,6 +162,24 @@ export const INTENT_RULES: IntentRule[] = [
       /sgf-atc-004/i,
     ],
   },
+  {
+    category: "INFO_ADMINISTRATIVO",
+    tool: null,
+    query: null,
+    confidence: "alta",
+    patterns: [
+      /cambiar\s*(el\s*)?plan/i,
+      /cambio\s*(de\s*)?plan/i,
+      /mejorar\s*(mi\s*)?plan/i,
+      /subir\s*(mi\s*)?plan/i,
+      /bajar\s*(mi\s*)?plan/i,
+      /aumentar\s*(los\s*)?megas/i,
+      /reducir\s*(los\s*)?megas/i,
+      /upgrade/i,
+      /downgrade/i,
+      /plan\s*m[aá]s\s*(barato|econ[oó]mico|r[aá]pido)/i,
+    ],
+  },
 
   {
     category: "INFO_ADMINISTRATIVO",
