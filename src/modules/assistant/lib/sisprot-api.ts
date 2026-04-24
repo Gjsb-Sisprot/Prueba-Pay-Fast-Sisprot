@@ -199,23 +199,33 @@ export async function rebootOnu(serialNumber: string): Promise<{ success: boolea
   });
 }
 
-/**
- * Calcula el presupuesto para un cambio de plan (Upgrade).
- */
 export async function getPlanChangeBudget(contractId: string, newPlanId: string) {
-  const url = `${SISPROT_API_BASE}/contracts/${contractId}/plan-change-budget/?new_plan_id=${newPlanId}`;
+  const url = `${SISPROT_API_BASE}/contracts/new_plan_budget/`;
   
   try {
+    const payload = {
+      contract: Number(contractId),
+      new_plan: Number(newPlanId)
+    };
+    
+    console.log(`[SISPROT_API] Fetching budget (POST): ${url} with payload:`, payload);
+    
     const response = await fetch(url, {
-      method: "GET",
+      method: "POST",
       headers: {
         "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
+        "Content-Type": "application/json",
         "Accept": "application/json",
       },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      return { success: false, message: `Error ${response.status} al calcular presupuesto` };
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        message: `Error ${response.status} al calcular presupuesto: ${errorData.message || 'Error del servidor'}` 
+      };
     }
 
     const data = await response.json();
