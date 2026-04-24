@@ -123,7 +123,7 @@ export const requestPlanChangeSchema = z.object({
   contractGsoftId: z.number().describe("ID interno de Gsoft del contrato"),
   changeType: z.enum(["UPGRADE", "DOWNGRADE"]).describe("Tipo de cambio de plan"),
   newPlan: z.number().describe("ID del nuevo plan"),
-  payment: z.number().optional().describe("ID del método de pago (solo para Upgrade)"),
+  payment: z.string().optional().describe("Referencia del pago (extraída del comprobante)"),
   notes: z.string().optional().describe("Notas adicionales para la gestión"),
 });
 
