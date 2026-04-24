@@ -89,6 +89,7 @@ function ChatMessageComponent({
       /__REFUND_FORM__/gi,
       /__CANCELLATION_FORM__/gi,
       /__REACTIVATION_FORM__/gi,
+      /__PLAN_CHANGE_FORM__/gi,
       /__SIGNED_DOCUMENT_FORM__/gi,
       /\[TICKET_ID:[0-9]+\]/gi,
       /__CLOSE_CHAT__/gi,
@@ -942,6 +943,91 @@ function ChatMessageComponent({
                   }}
                 >
                   Solicitar Reactivación
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {isAssistant && content.includes("__PLAN_CHANGE_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-blue-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <Maximize2 className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Cambio de Plan</h4>
+                  <p className="text-[10px] text-gray-500">Upgrade o Downgrade de tu servicio</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Tipo de Gestión</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none">
+                    <option>Seleccionar...</option>
+                    <option>🚀 Upgrade (Aumentar Velocidad)</option>
+                    <option>📉 Downgrade (Reducir Plan)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Plan Destino</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-indigo-200 appearance-none">
+                    <option>Seleccionar plan...</option>
+                    <optgroup label="Residenciales">
+                      <option>300 Megas - $27.60</option>
+                      <option>450 Megas - $34.50</option>
+                      <option>600 Megas - $40.25</option>
+                      <option>650 Megas - $46.00</option>
+                      <option>750 Megas - $49.50</option>
+                      <option>800 Megas - $55.00</option>
+                      <option>1 Giga - $74.70</option>
+                    </optgroup>
+                    <optgroup label="PYMES">
+                      <option>150 Megas - $27.60</option>
+                      <option>300 Megas - $39.09</option>
+                      <option>400 Megas - $51.74</option>
+                      <option>650 Megas - $70.18</option>
+                      <option>800 Megas - $110.40</option>
+                      <option>1 Giga - $161.00</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                  <input type="checkbox" id="solvencia" className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <label htmlFor="solvencia" className="text-[10px] text-gray-600 font-medium">Confirmo que el contrato está solvente</label>
+                </div>
+
+                <Button 
+                  className="w-full bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                  onClick={(e) => {
+                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
+                    if (!container) return;
+                    const selects = container.querySelectorAll('select');
+                    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+                    if (selects[0].value.includes('...') || selects[1].value.includes('...') || !checkbox.checked) {
+                      alert("Por favor selecciona el tipo de gestión, el plan nuevo y confirma tu solvencia.");
+                      return;
+                    }
+
+                    const type = selects[0].value.includes('Upgrade') ? 'Upgrade' : 'Downgrade';
+                    const text = `Solicitud de Cambio de Plan:\nTipo: ${type}\nPlan Nuevo: ${selects[1].value}\nSolvencia confirmada: Sí`;
+
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Confirmar Cambio de Plan
                 </Button>
               </div>
             </div>
