@@ -222,7 +222,7 @@ function buildContractList(clientData?: ClientContextData): string {
     .join(", ");
 }
 
-export function buildSectorConflictMessage(selectedSector: string, detectedCategory: string): string {
+export function buildSectorConflictMessage(selectedSector: string): string {
   const isTechSelected = selectedSector === "Soporte Técnico";
   const moduleName = isTechSelected ? "Soporte Técnico" : "Gestión Administrativa";
   const alternativeModule = isTechSelected ? "Gestión Administrativa" : "Soporte Técnico";
