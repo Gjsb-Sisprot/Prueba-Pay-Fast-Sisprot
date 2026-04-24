@@ -269,7 +269,7 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
 Si el usuario solicita un cambio en su plan de internet:
 
 1. **Diagnóstico Inicial**:
-    - Verifica si el cliente tiene deuda pendiente (`debtAmount > 0`).
+    - Verifica si el cliente tiene deuda pendiente (\`debtAmount > 0\`).
     - **Si tiene deuda**: Informa que por políticas administrativas debe estar solvente para procesar el cambio y envía el token **__PAYMENT_ACTION__**.
     - **Si está solvente**: Procede al paso 2.
 
