@@ -109,22 +109,23 @@ export const activateServiceSchema = z.object({
   billingCycle: z.string().optional().describe("Ciclo de facturación elegido (ej. Ciclo 10)"),
 });
 
-
+export const scheduleTechVisitSchema = z.object({
+  contractId: z.string().describe("ID del contrato"),
   visitType: z.string().describe("Tipo de visita (ej: Validación de Reactivación)"),
 });
-+
-+export const getPlanChangeBudgetSchema = z.object({
-+  contractId: z.string().describe("ID del contrato del cliente"),
-+  newPlanId: z.string().describe("ID del nuevo plan solicitado"),
-+});
-+
-+export const requestPlanChangeSchema = z.object({
-+  contractGsoftId: z.number().describe("ID interno de Gsoft del contrato"),
-+  changeType: z.enum(["UPGRADE", "DOWNGRADE"]).describe("Tipo de cambio de plan"),
-+  newPlan: z.number().describe("ID del nuevo plan"),
-+  payment: z.number().optional().describe("ID del método de pago (solo para Upgrade)"),
-+  notes: z.string().optional().describe("Notas adicionales para la gestión"),
-+});
+
+export const getPlanChangeBudgetSchema = z.object({
+  contractId: z.string().describe("ID del contrato del cliente"),
+  newPlanId: z.string().describe("ID del nuevo plan solicitado"),
+});
+
+export const requestPlanChangeSchema = z.object({
+  contractGsoftId: z.number().describe("ID interno de Gsoft del contrato"),
+  changeType: z.enum(["UPGRADE", "DOWNGRADE"]).describe("Tipo de cambio de plan"),
+  newPlan: z.number().describe("ID del nuevo plan"),
+  payment: z.number().optional().describe("ID del método de pago (solo para Upgrade)"),
+  notes: z.string().optional().describe("Notas adicionales para la gestión"),
+});
 
 
 export interface ToolDefinition {
