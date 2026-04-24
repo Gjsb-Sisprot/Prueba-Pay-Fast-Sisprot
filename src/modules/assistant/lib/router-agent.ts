@@ -260,58 +260,59 @@ export async function routeRequest(
 
   
   // 📈 DETECCIÓN DE FORMULARIO DE CAMBIO DE PLAN (FAST PATH)
-  if (message.includes("Deseo calcular el presupuesto para un UPGRADE")) {
-    const planIdMatch = message.match(/ID (\d+)/);
+  const isBudgetRequest = message.match(/Deseo calcular el presupuesto para un UPGRADE/i);
+  const isExecutionRequest = message.match(/Deseo solicitar un DOWNGRADE|__PLAN_CHANGE_CONFIRMED__/i);
+
+  if (isBudgetRequest || isExecutionRequest) {
+    const planIdMatch = message.match(/ID (\d+)/i);
     const planId = planIdMatch ? planIdMatch[1] : null;
 
-    if (planId && clientData?.contract) {
-      console.log(`[ROUTER_FAST_PATH] Solicitando presupuesto de Upgrade para plan: ${planId}`);
-      const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
-      const budgetResult = await executeForced("get_plan_change_budget", { 
-        contractId: String(clientData.contract), 
-        newPlanId: String(planId) 
-      }, routerTools);
-
-      if (budgetResult) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: "get_plan_change_budget", args: { contractId: String(clientData.contract), newPlanId: String(planId) } }],
-          toolResults: [budgetResult],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Budget calculation fast-path" }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
-      }
-    }
-  }
-
-  // --- FAST PATH: Cambio de Plan (Ejecución Upgrade/Downgrade) ---
-  if (message.includes("Deseo solicitar un DOWNGRADE") || message.includes("__PLAN_CHANGE_CONFIRMED__")) {
-    const planIdMatch = message.match(/ID (\d+)/);
-    const planId = planIdMatch ? parseInt(planIdMatch[1]) : null;
-    const type = message.includes("DOWNGRADE") ? "DOWNGRADE" : "UPGRADE";
-
-    if (planId && clientData?.contract) {
+    if (!planId) {
+      console.warn("[ROUTER_FAST_PATH] Petición de cambio de plan detectada pero sin ID.");
+    } else if (!clientData?.contract) {
+      console.warn("[ROUTER_FAST_PATH] Petición de cambio de plan detectada pero sin contrato en clientData.");
+    } else {
       const gsoftId = clientData.contract;
-      console.log(`[ROUTER_FAST_PATH] Solicitando ejecución de ${type} para plan: ${planId}`);
-      
       const routerTools = filterToolsForRouter(tools, { allowEscalation: false });
-      const requestResult = await executeForced("request_plan_change", {
-        contractGsoftId: Number(gsoftId),
-        changeType: type,
-        newPlan: Number(planId),
-        notes: `Solicitado via Chat Susana - ${type}`
-      }, routerTools);
 
-      if (requestResult) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: "request_plan_change", args: { contractGsoftId: Number(gsoftId), changeType: type, newPlan: Number(planId) } }],
-          toolResults: [requestResult],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Plan change execution fast-path" }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
+      if (isBudgetRequest) {
+        console.log(`[ROUTER_FAST_PATH] Ejecutando presupuesto para plan: ${planId}`);
+        const budgetResult = await executeForced("get_plan_change_budget", { 
+          contractId: String(gsoftId), 
+          newPlanId: String(planId) 
+        }, routerTools);
+
+        if (budgetResult) {
+          return {
+            noToolNeeded: false,
+            toolCalls: [{ toolName: "get_plan_change_budget", args: { contractId: String(gsoftId), newPlanId: String(planId) } }],
+            toolResults: [budgetResult],
+            routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Budget calculation fast-path" }),
+            durationMs: elapsed(),
+            intentClassification: intent,
+          };
+        }
+      } else {
+        const type = message.includes("DOWNGRADE") ? "DOWNGRADE" : "UPGRADE";
+        console.log(`[ROUTER_FAST_PATH] Ejecutando ${type} para plan: ${planId}`);
+        
+        const requestResult = await executeForced("request_plan_change", {
+          contractGsoftId: Number(gsoftId),
+          changeType: type,
+          newPlan: Number(planId),
+          notes: `Solicitado via Chat Susana - ${type}`
+        }, routerTools);
+
+        if (requestResult) {
+          return {
+            noToolNeeded: false,
+            toolCalls: [{ toolName: "request_plan_change", args: { contractGsoftId: Number(gsoftId), changeType: type, newPlan: Number(planId) } }],
+            toolResults: [requestResult],
+            routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Plan change execution fast-path" }),
+            durationMs: elapsed(),
+            intentClassification: intent,
+          };
+        }
       }
     }
   }
