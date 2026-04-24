@@ -198,3 +198,64 @@ export async function rebootOnu(serialNumber: string): Promise<{ success: boolea
     }, 1500);
   });
 }
+
+/**
+ * Calcula el presupuesto para un cambio de plan (Upgrade).
+ */
+export async function getPlanChangeBudget(contractId: string, newPlanId: string) {
+  const url = `${SISPROT_API_BASE}/contracts/${contractId}/plan-change-budget/?new_plan_id=${newPlanId}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return { success: false, message: `Error ${response.status} al calcular presupuesto` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Error de red" };
+  }
+}
+
+/**
+ * Solicita formalmente un cambio de plan a la administración.
+ */
+export async function postPlanChangeRequest(params: {
+  contract_gsoft_id: number;
+  change_type: "UPGRADE" | "DOWNGRADE";
+  new_plan: number;
+  payment?: number;
+  notes?: string;
+}) {
+  const url = `${SISPROT_API_BASE}/contracts/plan-change-request/`;
+  
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      return { success: false, message: `Error ${response.status} al solicitar cambio de plan` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Error de red" };
+  }
+}
+
