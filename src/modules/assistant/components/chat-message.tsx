@@ -87,6 +87,9 @@ function ChatMessageComponent({
       /__SELECT_TIME__/gi,
       /__SELECT_ISSUE_TYPE__/gi,
       /__REFUND_FORM__/gi,
+      /__CANCELLATION_FORM__/gi,
+      /__REACTIVATION_FORM__/gi,
+      /__SIGNED_DOCUMENT_FORM__/gi,
       /\[TICKET_ID:[0-9]+\]/gi,
       /__CLOSE_CHAT__/gi,
       /CLOSE_OFFER/gi,
@@ -777,6 +780,168 @@ function ChatMessageComponent({
                   }}
                 >
                   Enviar Documento Firmado
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {isAssistant && content.includes("__CANCELLATION_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-red-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                  <LogOut className="w-4 h-4 text-red-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Solicitud de Cancelación</h4>
+                  <p className="text-[10px] text-gray-500">Completa los datos para procesar la baja</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Motivo de Cancelación</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-red-200 appearance-none">
+                    <option>Seleccionar motivo...</option>
+                    <option>Fallas técnicas</option>
+                    <option>Mudanza</option>
+                    <option>Costos</option>
+                    <option>Cambio de proveedor</option>
+                    <option>Otros</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Detalle del motivo</label>
+                  <textarea placeholder="Explica brevemente..." className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-red-200 min-h-[60px]" />
+                </div>
+                <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                  <input type="checkbox" id="equipos" className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500" />
+                  <label htmlFor="equipos" className="text-[11px] text-gray-600 font-medium">Tengo los equipos en mi poder</label>
+                </div>
+
+                <Button 
+                  className="w-full bg-red-600 text-white hover:bg-red-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                  onClick={(e) => {
+                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
+                    if (!container) return;
+                    const select = container.querySelector('select');
+                    const textarea = container.querySelector('textarea');
+                    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+                    if (!select?.value || select.value.includes('...') || !textarea?.value || !checkbox.checked) {
+                      alert("Por favor completa el motivo, el detalle y confirma la posesión de los equipos.");
+                      return;
+                    }
+
+                    const text = `Solicitud de Cancelación:\nMotivo: ${select.value}\nDetalle: ${textarea.value}\nEquipos en mano: Sí`;
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Confirmar Cancelación
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {isAssistant && content.includes("__REACTIVATION_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-blue-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <MessageSquarePlus className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Reactivación de Servicio</h4>
+                  <p className="text-[10px] text-gray-500">Retoma tu conexión de inmediato</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">¿Equipos conectados y encienden?</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200 appearance-none">
+                    <option>Seleccionar...</option>
+                    <option>Sí, están operativos</option>
+                    <option>No, no los tengo o no encienden</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Plan a contratar</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200 appearance-none">
+                    <option>Seleccionar plan...</option>
+                    <option>Plan Residencial</option>
+                    <option>Plan PYME (Empresas)</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Ciclo de Facturación</label>
+                  <select className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-blue-200 appearance-none">
+                    <option>Seleccionar ciclo...</option>
+                    <option>Ciclo 10 (Corte el 15)</option>
+                    <option>Ciclo 25 (Corte el 30)</option>
+                  </select>
+                </div>
+
+
+                <div className="pt-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1 block mb-1">Comprobante (Deuda + Mes)</label>
+                  {pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file') ? (
+                    <div className="p-2 border border-blue-100 bg-blue-50 rounded-lg flex items-center justify-between">
+                       <span className="text-[10px] font-bold text-blue-700 truncate max-w-[150px]">PDF Listo</span>
+                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => {
+                          const pdf = pendingAttachments.find(a => a.mimeType === 'application/pdf' || a.type === 'file');
+                          if (pdf && onRemoveAttachment) onRemoveAttachment(pdf.id);
+                       }}><X className="w-3 h-3 text-red-400" /></Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full h-10 border-dashed border-gray-200 text-[10px] text-gray-500"
+                      onClick={() => {
+                        const realInput = document.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement;
+                        realInput?.click();
+                      }}
+                    >
+                      Adjuntar Pago en PDF
+                    </Button>
+                  )}
+                </div>
+
+                <Button 
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                  onClick={(e) => {
+                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
+                    if (!container) return;
+                    const selects = container.querySelectorAll('select');
+                    const hasPdf = pendingAttachments.some(a => a.mimeType === 'application/pdf' || a.type === 'file');
+
+                    if (selects[0].value.includes('...') || selects[1].value.includes('...') || selects[2].value.includes('...') || !hasPdf) {
+                      alert("Por favor completa el estado de equipos, el plan, el ciclo y adjunta el comprobante de pago.");
+                      return;
+                    }
+
+                    const text = `Solicitud de Reactivación:\nEquipos: ${selects[0].value}\nPlan: ${selects[1].value}\nCiclo: ${selects[2].value}\nPago adjunto: Sí`;
+
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Solicitar Reactivación
                 </Button>
               </div>
             </div>
