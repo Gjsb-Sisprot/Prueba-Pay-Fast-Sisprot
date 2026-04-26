@@ -19,6 +19,33 @@ export interface SisprotContract {
   email?: string;
 }
 
+export interface SisprotDetailedContract {
+  id: number;
+  client_id: number;
+  name: string;
+  last_name: string;
+  identification: string;
+  mobile: string;
+  email: string;
+  latitude: string;
+  longitude: string;
+  sector_name: string;
+  parish_name: string;
+  address: string;
+  plan_name?: string; // We'll extract this from contract_detail
+  contract_detail: Array<{
+    id: number;
+    plan_name: string;
+    service_detail: Array<{
+      id: number;
+      mac: string;
+      ip: string;
+      interface: string;
+      serial: string;
+    }>;
+  }>;
+}
+
 /**
  * Consulta los contratos de un cliente directamente a la API de Sisprot.
  */
@@ -149,6 +176,34 @@ async function executeFetch(id: string): Promise<{ contracts: SisprotContract[],
     return { contracts, debugUrl: `${debugUrl} (${contracts.length} encontrados)` };
   } catch (error) {
     return { contracts: [], debugUrl: `${debugUrl} (Exception: ${error instanceof Error ? error.message : 'Unknown'})` };
+  }
+}
+
+/**
+ * Consulta los detalles de un contrato específico por su ID.
+ */
+export async function fetchContractById(contractId: string | number): Promise<SisprotDetailedContract | null> {
+  const url = `${SISPROT_API_BASE}/contracts/${contractId}/`;
+  
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-API-KEY": (process.env.SISPROT_API_KEY || SISPROT_API_KEY).trim(),
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[SISPROT_API] Error fetching contract ${contractId}: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data as SisprotDetailedContract;
+  } catch (error) {
+    console.error(`[SISPROT_API] Exception fetching contract ${contractId}:`, error);
+    return null;
   }
 }
 
