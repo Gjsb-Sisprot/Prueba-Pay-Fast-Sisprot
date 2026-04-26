@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getConversationBySessionId, updateConversationStatus, syncConversationMetadata } from "./persistence";
 import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
-import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest } from "./sisprot-api";
+import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
 
 
 // --- GLPI INTEGRATION (Consolidated logic is now imported from glpi.ts) ---
@@ -59,6 +59,8 @@ export const createGlpiTicketSchema = z.object({
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
   urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
+  contractId: z.string().optional().describe("ID del contrato para obtener detalles técnicos"),
+  sessionId: z.string().optional().describe("ID de la sesión de chat para obtener contexto"),
 });
 
 export const auditServiceSchema = z.object({
@@ -263,20 +265,70 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
+    const { name, content, categoryId, urgency, requesterId, contractId, sessionId } = args;
+
+    let finalContractId = contractId;
+    let conversation = null;
+
+    if (!finalContractId && sessionId) {
+      conversation = await getConversationBySessionId(sessionId).catch(() => null);
+      finalContractId = conversation?.contract;
+    }
+
+    const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
+    
+    // Formatear contenido con data de Sisprot si está disponible
+    let ticketContent = content;
+    let ticketName = name;
+
+    if (contractData) {
+      const clientName = `${contractData.name} ${contractData.last_name}`;
+      const sector = contractData.sector_name || "No especificado";
+      const phone = contractData.mobile || "No disponible";
+      const address = contractData.address || "No registrada";
+      const plan = contractData.contract_detail?.[0]?.plan_name || "Plan no detectado";
+      const ip = contractData.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada";
+      const vlan = contractData.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE";
+      const serial = contractData.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
+      const mapsLink = `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}`;
+
+      ticketName = `(IA Susana) ${name} - Contrato ${finalContractId} - ${clientName}`;
+      
+      ticketContent = `
+Observacion:${name}
+Sector: ${sector}
+Cliente: ${clientName}
+N° de contrato: ${finalContractId}
+IP Actual: ${ip}
+Teléfono: ${phone}
+VLAN Actual: ${vlan}
+Serial GPON: ${serial}
+Plan Contratado: ${plan}
+
+Potencia Leida: 0
+Potencia Calculada: 0
+
+Dirección: ${address}
+Ubicación: ${mapsLink}
+
+---
+Contenido Adicional:
+${content}
+`.trim();
+    } else {
+      // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
+      ticketName = `(IA Susana) ${name}`;
+    }
+
     const result = await createGlpiTicketInternal({
-      name: args.name,
-      content: args.content,
-      itilcategories_id: args.categoryId,
-      urgency: args.urgency,
-      _users_id_requester: args.requesterId,
+      name: ticketName,
+      content: ticketContent,
+      itilcategories_id: categoryId,
+      urgency: urgency,
+      _users_id_requester: requesterId,
     });
 
     if (result.success) {
-      // Sincronizar ID de ticket con Supabase de forma asíncrona
-      // Nota: executeCreateGlpiTicket no recibe sessionId directamente en los args estándar, 
-      // pero si está disponible en el contexto global o si lo añadimos al esquema.
-      // Por ahora, priorizamos executeEscalateToSpecialist que sí tiene sessionId.
-      
       return {
         success: true,
         message: `¡Listo! He creado el ticket de soporte en GLPI con el ID #${result.ticketId}. Un especialista revisará tu caso pronto.`,
@@ -301,47 +353,52 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     // 1. Obtener contexto del cliente desde la DB
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     
-    const clientName = conversation?.contact_name || "Cliente Desconocido";
+    const clientNameFromDb = conversation?.contact_name || "Cliente Desconocido";
     const identification = conversation?.identification || "N/A";
     const contractId = conversation?.contract || "N/A";
-    const sector = conversation?.sector || "No especificado";
-    const phone = conversation?.contact_phone || "No disponible";
     
+    // Fetch detailed contract data from API
+    const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
+
     const displaySubReason = subReason || "Escalamiento General";
     const surveyPrefix = isSurvey ? "[Encuesta] " : "";
 
+    // Campos técnicos
+    const clientName = contractData ? `${contractData.name} ${contractData.last_name}` : clientNameFromDb;
+    const sector = contractData?.sector_name || conversation?.sector || "No especificado";
+    const phone = contractData?.mobile || conversation?.contact_phone || "No disponible";
+    const address = contractData?.address || conversation?.address || "No registrada";
+    const plan = contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name || "Plan no detectado";
+    const ip = contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada";
+    const vlan = contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE";
+    const serial = contractData?.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
+    const mapsLink = contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : (conversation?.sector || "No especificada");
+
     // 2. Crear ticket en GLPI con el nuevo formato estructurado detallado
     const category = 17; // Default Soporte Técnico
-    const ticketName = `${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
+    const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
-    // Obtenemos campos técnicos si están disponibles en el contexto o toolResults anteriores
-    // (En una implementación real, esto vendría de la auditoría o API expandida)
-    const ipActual = conversation?.ip_actual || conversation?.metadata?.ip_actual || "10.0.0.x (Consulta pendiente)";
-    const vlan = conversation?.vlan_actual || conversation?.metadata?.vlan || "VLAN_PENDIENTE";
-    const gponSerial = conversation?.onu_serial || "QXTLCB... (No detectado)";
-    const address = conversation?.address || "No registrada";
-    const location = conversation?.sector || "No especificada";
-    const plan = conversation?.plan_name || "Plan no detectado";
-
     const ticketContent = `
-Resumen IA: ${aiSummary || 'El cliente reporta una incidencia en su servicio.'}
-Submotivo: ${displaySubReason}
-Comentario Original del Cliente: ${originalComment || reason}
-
-Observación: ${observation || 'Registro automático de incidencia técnica.'}
-
+Observacion:${displaySubReason} - ${aiSummary || reason}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
-IP Actual: ${ipActual}
+IP Actual: ${ip}
 Teléfono: ${phone}
 VLAN Actual: ${vlan}
-Serial GPON: ${gponSerial}
+Serial GPON: ${serial}
 Plan Contratado: ${plan}
 
+Potencia Leida: 0
+Potencia Calculada: 0
+
 Dirección: ${address}
-Ubicación: ${location}
+Ubicación: ${mapsLink}
+
 ---
+Resumen IA: ${aiSummary || 'El cliente reporta una incidencia en su servicio.'}
+Comentario Original: ${originalComment || reason}
+Observación Adicional: ${observation || 'Registro automático.'}
 ID Sesión: ${sessionId}
 Identificación: ${identification}
 `.trim();
@@ -621,6 +678,8 @@ export const getLocalTools = (): LocalToolSet => {
           categoryId: { type: "number", description: "ID de categoría (opcional)" },
           urgency: { type: "number", description: "Urgencia 1-5 (opcional)" },
           requesterId: { type: "number", description: "ID de solicitante (opcional)" },
+          contractId: { type: "string", description: "ID del contrato (opcional)" },
+          sessionId: { type: "string", description: "ID de la sesión (opcional)" },
         },
         required: ["name", "content"],
       },
