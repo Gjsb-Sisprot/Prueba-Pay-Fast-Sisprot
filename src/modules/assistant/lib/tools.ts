@@ -916,12 +916,12 @@ export const getLocalTools = (): LocalToolSet => {
     },
     get_plan_change_budget: {
       name: "get_plan_change_budget",
-      description: "Calcula el presupuesto para un cambio de plan.",
+      description: "Calcula el presupuesto prorrateado y administrativo para un UPGRADE de plan. Úsala cuando el cliente seleccione un nuevo plan desde el formulario o solicite explícitamente calcular costos de aumento.",
       inputSchema: {
         type: "object",
         properties: {
           contractId: { type: "string" },
-          newPlanId: { type: "string" },
+          newPlanId: { type: "string", description: "ID numérico del nuevo plan (ej: '100', '102', etc.)" },
         },
         required: ["contractId", "newPlanId"],
       },
