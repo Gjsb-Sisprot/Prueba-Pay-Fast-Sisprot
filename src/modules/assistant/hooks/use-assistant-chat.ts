@@ -281,7 +281,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
-    [messages, config, onError, isLoading, sessionId, clientData, media, identification, isFetchingContext, closeChat, speak]
+    [messages, config, onError, isLoading, sessionId, clientData, media, identification, isFetchingContext, closeChat, speak, isAudioEnabled]
   );
 
   const handleSendMessage = useCallback(
