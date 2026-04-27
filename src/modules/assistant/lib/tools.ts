@@ -124,10 +124,10 @@ export const getPlanChangeBudgetSchema = z.object({
 });
 
 export const requestPlanChangeSchema = z.object({
-  contractGsoftId: z.number().describe("ID interno de Gsoft del contrato"),
+  contractGsoftId: z.number().describe("ID interno de Gsoft del contrato (visto como contractId en los datos del cliente)"),
   changeType: z.enum(["UPGRADE", "DOWNGRADE"]).describe("Tipo de cambio de plan"),
-  newPlan: z.number().describe("ID del nuevo plan"),
-  payment: z.string().optional().describe("Referencia del pago (extraída del comprobante)"),
+  newPlan: z.number().describe("ID del nuevo plan (ID numérico)"),
+  payment: z.union([z.string(), z.number(), z.null()]).optional().describe("Referencia del pago o null para cobro automático diferido"),
   notes: z.string().optional().describe("Notas adicionales para la gestión"),
 });
 
@@ -662,8 +662,8 @@ export async function executeRequestPlanChange(args: z.infer<typeof requestPlanC
       contract_gsoft_id: args.contractGsoftId,
       change_type: args.changeType,
       new_plan: args.newPlan,
-      payment: args.payment,
-      notes: args.notes
+      payment: args.payment ?? null,
+      notes: args.notes || `Upgrade automático solicitado vía Susana IA`
     });
 
     if (!result.success) throw new Error(result.message);
