@@ -350,13 +350,12 @@ Resumen IA: ${aiSummary || 'No se proporcionó resumen de la conversación.'}
 
 export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, reason, subReason, aiSummary, originalComment, observation, isSurvey } = args;
+    const { sessionId, reason, subReason, aiSummary, observation, isSurvey } = args;
     
     // 1. Obtener contexto del cliente desde la DB
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     
     const clientNameFromDb = conversation?.contact_name || "Cliente Desconocido";
-    const identification = conversation?.identification || "N/A";
     const contractId = conversation?.contract || "N/A";
     
     // Fetch detailed contract data from API
