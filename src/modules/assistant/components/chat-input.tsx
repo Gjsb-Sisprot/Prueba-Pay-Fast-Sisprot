@@ -3,7 +3,7 @@
 
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
-import { Send, Square, Paperclip, X, Image as ImageIcon, Video } from "lucide-react";
+import { Send, Square, Paperclip, X, Image as ImageIcon, Video, Mic, MicOff } from "lucide-react";
 import {
   useRef,
   useEffect,
@@ -51,6 +51,8 @@ export function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -99,6 +101,48 @@ export function ChatInput({
     },
     [onAddAttachment]
   );
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition || 
+                              (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setAttachError("Tu navegador no soporta reconocimiento de voz.");
+      setTimeout(() => setAttachError(null), 3000);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "es-ES";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onend = () => setIsRecording(false);
+    recognition.onerror = () => setIsRecording(false);
+
+    recognition.onresult = (event: { resultIndex: number; results: { [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } }; length: number }) => {
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        // Append transcribed text to current value
+        const newValue = value ? `${value} ${finalTranscript}` : finalTranscript;
+        onChange({ target: { value: newValue } } as ChangeEvent<HTMLTextAreaElement>);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [isRecording, value, onChange]);
 
   const canAddMedia =
     mediaUsage &&
@@ -187,6 +231,21 @@ export function ChatInput({
             </Button>
           </>
         )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={toggleRecording}
+          disabled={disabled || isLoading}
+          className={cn(
+            "h-9 w-9 p-0 shrink-0 transition-colors",
+            isRecording ? "text-red-500 animate-pulse bg-red-50" : "text-gray-500 hover:text-gray-700"
+          )}
+          title={isRecording ? "Detener grabación" : "Grabar mensaje de voz"}
+        >
+          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </Button>
 
         <textarea
           ref={textareaRef}
