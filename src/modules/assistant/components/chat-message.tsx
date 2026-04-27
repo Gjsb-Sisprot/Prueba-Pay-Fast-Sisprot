@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { memo, useState } from "react";
+import { memo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { 
   User, 
