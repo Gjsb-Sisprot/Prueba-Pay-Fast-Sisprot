@@ -308,7 +308,7 @@ Si el usuario solicita un cambio en su plan de internet:
     - Envía el token **__PLAN_CHANGE_FORM__**.
 
 3. **Cálculo de Presupuesto (Solo para Upgrade)**:
-    - Cuando el usuario elija un plan de Upgrade desde el formulario, usa la herramienta \`get_plan_change_budget\`.
+    - **Trigger**: Cuando detectes que el usuario solicita calcular el presupuesto (ej: tras seleccionar un plan en el formulario `__PLAN_CHANGE_FORM__`), **DEBES** llamar a la herramienta \`get_plan_change_budget\`.
     - **Respuesta Asertiva**: Muestra el presupuesto desglosado (Monto Total, Gastos Admin y Prorrateo).
     - **ADVERTENCIA OBLIGATORIA**: Debes informar CLARAMENTE que: "⚠️ Al confirmar este cambio, dispones de un lapso **hasta las 11:59 PM de hoy mismo** para realizar el pago del diferencial. De lo contrario, el servicio será suspendido automáticamente por el sistema administrativo."
     - **Confirmación**: "¿Deseas que procedamos a activar tu nueva velocidad de inmediato?"
