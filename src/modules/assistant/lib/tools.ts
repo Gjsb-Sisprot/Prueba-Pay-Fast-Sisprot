@@ -56,9 +56,9 @@ export const checkPaymentStatusSchema = z.object({
 export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
-  subReason: z.string().optional().describe("Motivo específico (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento)"),
-  aiSummary: z.string().optional().describe("Resumen de toda la conversación del cliente"),
-  observation: z.string().optional().describe("Punto de vista de la IA sobre el problema"),
+  subReason: z.string().describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento, Gestión Administrativa, Reactivación, Upgrade/Downgrade, Saldo a favor / Excedentes)"),
+  aiSummary: z.string().describe("Resumen ejecutivo OBLIGATORIO de toda la conversación del cliente"),
+  observation: z.string().describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
   urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
@@ -73,10 +73,9 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().optional().describe("Clasificación corta del problema (ej. Intermitencia)"),
-  aiSummary: z.string().optional().describe("Resumen ejecutivo de la conversación realizado por la IA"),
-  originalComment: z.string().optional().describe("El primer comentario o mensaje de queja del cliente"),
-  observation: z.string().optional().describe("Observaciones o detalles técnicos adicionales"),
+  subReason: z.string().describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento, Gestión Administrativa, Reactivación, Upgrade/Downgrade, Saldo a favor / Excedentes)"),
+  aiSummary: z.string().describe("Resumen ejecutivo OBLIGATORIO de toda la conversación del cliente"),
+  observation: z.string().describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
 });
 
@@ -363,7 +362,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     // Fetch detailed contract data from API
     const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
 
-    const displaySubReason = subReason || "Escalamiento General";
+    const displaySubReason = subReason;
     const surveyPrefix = isSurvey ? "[Encuesta] " : "";
 
     // Campos técnicos
