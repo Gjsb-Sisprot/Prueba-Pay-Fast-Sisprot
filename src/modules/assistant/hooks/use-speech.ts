@@ -1,73 +1,59 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { cleanTextForSpeech } from "./use-assistant-chat.utils";
 
 export function useSpeech() {
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const loadVoices = useCallback(() => {
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Lista de nombres comunes de voces femeninas en español
-    const femaleNames = ["helena", "sabina", "paulina", "monica", "hilda", "pilar", "marta", "elena", "laura", "femenina", "female", "luciana", "mónica", "juana"];
-
-    // 1. Intentar encontrar una voz femenina que sea específicamente de Venezuela o Latam
-    let femaleSpanishVoice = voices.find(v => 
-      v.lang.startsWith("es") && 
-      femaleNames.some(name => v.name.toLowerCase().includes(name))
-    );
-
-    // 2. Si no encontramos por nombre, buscar cualquier voz que explícitamente diga "female" o "femenino" en español
-    if (!femaleSpanishVoice) {
-      femaleSpanishVoice = voices.find(v => 
-        v.lang.startsWith("es") && 
-        (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("femenino"))
-      );
+  const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
-
-    // 3. Priorizar acentos (Venezuela, México) si son femeninas
-    const preferredVoice = voices.find(v => 
-      (v.lang === "es-VE" || v.lang.includes("es_VE") || v.lang.includes("es-MX")) && 
-      femaleNames.some(name => v.name.toLowerCase().includes(name))
-    ) || femaleSpanishVoice;
-
-    voiceRef.current = preferredVoice || voices.find(v => v.lang.startsWith("es")) || null;
   }, []);
 
-  useEffect(() => {
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, [loadVoices]);
-
-  const speak = useCallback((text: string) => {
-    if (!window.speechSynthesis) return;
-
-    // Cancelar cualquier discurso previo
-    window.speechSynthesis.cancel();
-
+  const speak = useCallback(async (text: string) => {
+    // 1. Limpiar texto de emojis y marcadores
     const cleanedText = cleanTextForSpeech(text);
     if (!cleanedText) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
-    if (voiceRef.current) {
-      utterance.voice = voiceRef.current;
-    }
-    
-    utterance.lang = "es-VE"; // Español Venezuela o general
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1; // Un poco más agudo para sonar más femenino si la voz es neutra
+    // 2. Detener audio previo si existe
+    stop();
 
-    window.speechSynthesis.speak(utterance);
-  }, []);
+    try {
+      // 3. Obtener audio desde nuestro proxy de ElevenLabs
+      const response = await fetch("/api/assistant/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: cleanedText }),
+      });
 
-  const stop = useCallback(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+      if (!response.ok) {
+        throw new Error("No se pudo obtener el audio de ElevenLabs");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      // Reproducir audio
+      await audio.play();
+      
+      // Limpiar URL del objeto después de que termine de sonar
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (audioRef.current === audio) {
+          audioRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error("[SPEECH_HOOK_ERROR]", error);
     }
-  }, []);
+  }, [stop]);
 
   return { speak, stop };
 }
