@@ -41,15 +41,15 @@ export function cleanTextForSpeech(text: string): string {
   if (!text) return "";
   
   return text
-    // Eliminar emojis usando propiedades Unicode modernas (más robusto)
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    // Eliminar símbolos de puntuación decorativos y otros símbolos misceláneos
-    .replace(/[\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B55}\u{2122}\u{2139}]/gu, '')
-    // Eliminar marcadores técnicos y markdown
+    // Eliminar emojis y símbolos pictográficos usando una técnica de exclusión
+    // Mantiene letras, números, puntuación básica y espacios. Elimina todo lo demás (símbolos, emojis)
+    .replace(/[^\w\s.,!?;:áéíóúÁÉÍÓÚñÑüÜ#$€%()\-+]/gu, '')
+    // Eliminar marcadores técnicos de Susana que pueden haber quedado
     .replace(/__\w+__/g, '')
     .replace(/\*\*/g, '')
     .replace(/#/g, '')
     .replace(/\[TICKET_ID:\d+\]/gi, '')
+    // Reemplazar URLs por algo natural
     .replace(/https?:\/\/\S+/gi, 'el enlace proporcionado')
     .replace(/\n/g, ' ')
     .replace(/\s+/g, ' ')
