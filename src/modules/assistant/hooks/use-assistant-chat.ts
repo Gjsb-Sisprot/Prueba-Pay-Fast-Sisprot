@@ -62,6 +62,13 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   const [error, setError] = useState<Error | undefined>(undefined);
   const [isOpen, setIsOpen] = useState(false);
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("assistant_audio_enabled");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -79,6 +86,10 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     setMessages,
     closingByUserRef,
   });
+
+  useEffect(() => {
+    localStorage.setItem("assistant_audio_enabled", String(isAudioEnabled));
+  }, [isAudioEnabled]);
 
   useEffect(() => {
     if (!identification) {
@@ -216,7 +227,9 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
             const { done, value } = await reader.read();
             if (done) {
               console.log("[DEBUG] Llamando a speak con:", assistantContent.substring(0, 50) + "...");
-              speak(assistantContent);
+              if (isAudioEnabled) {
+                speak(assistantContent);
+              }
               break;
             }
 
@@ -568,6 +581,8 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     backToChat,
     isHistoryLoaded,
 
+    isAudioEnabled,
+    toggleAudio: () => setIsAudioEnabled(prev => !prev),
     clientData,
     isFetchingContext,
     handleSelectDate,
