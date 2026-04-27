@@ -6,7 +6,16 @@ import { listConversations } from "@/modules/assistant/lib/persistence";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const identification = searchParams.get("identification");
+    let identification = searchParams.get("identification");
+    
+    // Normalizar identificación para que coincida con el formato de la BD (sin 'V' al inicio)
+    if (identification) {
+      identification = identification.trim().toUpperCase();
+      if (identification.startsWith('V')) {
+        identification = identification.slice(1);
+      }
+    }
+
     const status = searchParams.get("status") || undefined;
     const limit = searchParams.get("limit") ? Number(searchParams.get("limit")) : 50;
 
