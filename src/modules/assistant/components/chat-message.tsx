@@ -19,7 +19,6 @@ import {
   Landmark,
   Wallet,
   UploadCloud,
-  UploadCloud,
   Smartphone,
   Volume2,
   VolumeX
