@@ -9,7 +9,9 @@ import {
   Wifi,
   MessageSquare,
   Lock,
-  Plus
+  Plus,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
@@ -105,6 +107,8 @@ export function ChatBubble() {
     handleSelectContract,
     clientData,
     occupiedSlots,
+    isAudioEnabled,
+    toggleAudio,
   } = useAssistantChat({
     identification,
     clientName,
@@ -222,7 +226,15 @@ export function ChatBubble() {
             <div className="flex items-center gap-1">
               {currentView === "chat" && (
                 <>
-                  { }
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleAudio}
+                    className="h-8 w-8 p-0 text-white hover:bg-white/20 hover:text-white"
+                    title={isAudioEnabled ? "Desactivar voz" : "Activar voz"}
+                  >
+                    {isAudioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
