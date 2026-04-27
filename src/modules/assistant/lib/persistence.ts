@@ -245,17 +245,15 @@ export async function saveInteraction(params: SaveInteractionParams): Promise<vo
 
     console.log(`[PERSISTENCE_SUCCESS] Mensaje (${role}) guardado en DB para convo ${conversationId}`);
     
-    // Si la interacción trae datos de cliente, sincronizamos los metadatos de forma asíncrona
-    if (params.identification || params.contract || params.sector || params.contactName || params.contactEmail || params.contactPhone) {
-      syncConversationMetadata(sessionId, {
-        identification: params.identification,
-        contract: params.contract,
-        sector: params.sector,
-        name: params.contactName,
-        email: params.contactEmail,
-        phone: params.contactPhone
-      }).catch(() => {});
-    }
+    // Sincronizamos los metadatos y actualizamos el timestamp de la conversación
+    syncConversationMetadata(sessionId, {
+      identification: params.identification,
+      contract: params.contract,
+      sector: params.sector,
+      name: params.contactName,
+      email: params.contactEmail,
+      phone: params.contactPhone
+    }).catch(() => {});
 
   } catch (error) {
     console.error(`[SAVE_INTERACTION_ERROR] Para sessionId ${sessionId}:`, error);
