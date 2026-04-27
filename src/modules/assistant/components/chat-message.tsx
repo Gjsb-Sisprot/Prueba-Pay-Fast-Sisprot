@@ -17,9 +17,7 @@ import {
   Paperclip,
   FileText,
   Landmark,
-  Wallet,
   UploadCloud,
-  Smartphone,
   Volume2,
   VolumeX
 } from "lucide-react";
@@ -1133,7 +1131,7 @@ function ChatMessageComponent({
               {(() => {
                 const isPyme = (clientData?.planName || "").toLowerCase().match(/pyme|comercial|empresa/i) || 
                                (clientData?.clientType || "").toLowerCase().match(/pyme|comercial|empresa/i) ||
-                               (clientData as Record<string, any>)?.client_type === 2;
+                               (clientData as Record<string, unknown>)?.client_type === 2;
                 const currentPlanText = clientData?.planName || "Plan No Detectado";
                 
                 return (
