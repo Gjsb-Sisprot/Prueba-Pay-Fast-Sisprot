@@ -21,6 +21,7 @@ import {
 
 import { useConversationStatus } from "./use-conversation-status";
 import { useMediaAttachments } from "./use-media-attachments";
+import { useSpeech } from "./use-speech";
 import {
   generateSessionId,
   generateMessageId,
@@ -44,6 +45,7 @@ interface UseAssistantChatOptions {
 type ChatView = "chat" | "conversations";
 
 export function useAssistantChat(options: UseAssistantChatOptions = {}) {
+  const { speak } = useSpeech();
   const { config, onError, identification } = options;
 
   const [sessionId, setSessionId] = useState(() => generateSessionId());
@@ -212,7 +214,10 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
         if (reader) {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              speak(assistantContent);
+              break;
+            }
 
             assistantContent += decoder.decode(value, { stream: true });
             const patch = buildAssistantStreamPatch(assistantContent, {
