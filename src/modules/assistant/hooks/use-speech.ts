@@ -8,18 +8,29 @@ export function useSpeech() {
 
   const loadVoices = useCallback(() => {
     const voices = window.speechSynthesis.getVoices();
-    // Buscar una voz femenina con acento venezolano o latinoamericano neutro
-    const preferredVoice = voices.find(v => 
-      (v.lang === "es-VE" || v.lang.includes("es_VE")) && 
-      (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("femenino"))
-    ) || voices.find(v => 
-      (v.lang === "es-VE" || v.lang.includes("es_VE"))
-    ) || voices.find(v => 
+    
+    // Lista de nombres comunes de voces femeninas en español
+    const femaleNames = ["helena", "sabina", "paulina", "monica", "hilda", "pilar", "marta", "elena", "laura", "femenina", "female", "luciana", "mónica", "juana"];
+
+    // 1. Intentar encontrar una voz femenina que sea específicamente de Venezuela o Latam
+    let femaleSpanishVoice = voices.find(v => 
       v.lang.startsWith("es") && 
-      (v.name.toLowerCase().includes("mexico") || v.name.toLowerCase().includes("sabina") || v.name.toLowerCase().includes("paulina"))
-    ) || voices.find(v => 
-      v.lang.startsWith("es") && v.name.toLowerCase().includes("google")
+      femaleNames.some(name => v.name.toLowerCase().includes(name))
     );
+
+    // 2. Si no encontramos por nombre, buscar cualquier voz que explícitamente diga "female" o "femenino" en español
+    if (!femaleSpanishVoice) {
+      femaleSpanishVoice = voices.find(v => 
+        v.lang.startsWith("es") && 
+        (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("femenino"))
+      );
+    }
+
+    // 3. Priorizar acentos (Venezuela, México) si son femeninas
+    const preferredVoice = voices.find(v => 
+      (v.lang === "es-VE" || v.lang.includes("es_VE") || v.lang.includes("es-MX")) && 
+      femaleNames.some(name => v.name.toLowerCase().includes(name))
+    ) || femaleSpanishVoice;
 
     voiceRef.current = preferredVoice || voices.find(v => v.lang.startsWith("es")) || null;
   }, []);
