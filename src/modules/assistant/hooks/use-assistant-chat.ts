@@ -215,6 +215,7 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           while (true) {
             const { done, value } = await reader.read();
             if (done) {
+              console.log("[DEBUG] Llamando a speak con:", assistantContent.substring(0, 50) + "...");
               speak(assistantContent);
               break;
             }
