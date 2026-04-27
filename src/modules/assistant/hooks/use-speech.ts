@@ -57,7 +57,8 @@ export function useSpeech() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Error en API de ElevenLabs`);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errData.error || 'Error desconocido'}`);
       }
 
       const audioBlob = await response.blob();
