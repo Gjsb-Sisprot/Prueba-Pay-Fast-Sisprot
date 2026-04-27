@@ -24,7 +24,17 @@ interface SpeechRecognition extends EventTarget {
   onstart: () => void;
   onend: () => void;
   onerror: () => void;
-  onresult: (event: { resultIndex: number; results: { [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } }; length: number }) => void;
+  onresult: (event: { 
+    resultIndex: number; 
+    results: { 
+      [key: number]: { 
+        isFinal: boolean; 
+        [key: number]: { transcript: string }; 
+        length: number 
+      }; 
+      length: number 
+    } 
+  }) => void;
 }
 
 interface SpeechRecognitionStatic {
@@ -142,7 +152,7 @@ export function ChatInput({
     recognition.onend = () => setIsRecording(false);
     recognition.onerror = () => setIsRecording(false);
 
-    recognition.onresult = (event: { resultIndex: number; results: { [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } }; length: number }) => {
+    recognition.onresult = (event) => {
       let finalTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
