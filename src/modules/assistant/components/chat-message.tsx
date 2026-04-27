@@ -1229,6 +1229,87 @@ function ChatMessageComponent({
               })()}
             </div>
           )}
+
+          {isAssistant && content.includes("__ZELLE_BINANCE_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-green-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center border border-green-100">
+                  <CreditCard className="w-4 h-4 text-green-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Conciliación de Pago</h4>
+                  <p className="text-[10px] text-gray-500">Zelle o Binance Pay</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Método de Pago</label>
+                  <select 
+                    id="zb-method"
+                    className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-green-200 appearance-none font-medium"
+                  >
+                    <option value="Zelle">Zelle 🟣</option>
+                    <option value="Binance">Binance Pay 🟡</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Correo del Emisor</label>
+                  <input id="zb-email" type="email" placeholder="ejemplo@correo.com" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-green-200" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Monto (USD)</label>
+                    <input id="zb-amount" type="text" placeholder="0.00" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-green-200" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Fecha</label>
+                    <input id="zb-date" type="text" placeholder="DD/MM/AAAA" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-green-200" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Referencia / ID</label>
+                  <input id="zb-ref" type="text" placeholder="Número de confirmación" className="text-xs p-2.5 rounded-lg border border-gray-100 bg-gray-50 focus:outline-none focus:border-green-200" />
+                </div>
+
+                <Button 
+                  className="w-full bg-black text-white hover:bg-gray-800 text-xs font-bold py-3 rounded-xl mt-2 shadow-lg active:scale-[0.98] transition-all"
+                  onClick={(e) => {
+                    const container = (e.currentTarget as HTMLElement).closest('.mt-3');
+                    if (!container) return;
+                    const method = (container.querySelector('#zb-method') as HTMLSelectElement).value;
+                    const email = (container.querySelector('#zb-email') as HTMLInputElement).value;
+                    const amount = (container.querySelector('#zb-amount') as HTMLInputElement).value;
+                    const date = (container.querySelector('#zb-date') as HTMLInputElement).value;
+                    const ref = (container.querySelector('#zb-ref') as HTMLInputElement).value;
+
+                    if (!email || !amount || !date || !ref) {
+                      alert("Por favor completa todos los campos para procesar la conciliación.");
+                      return;
+                    }
+
+                    const text = `Deseo conciliar mi pago de ${method}.\n\nDatos de la transacción:\n- Correo: ${email}\n- Monto: ${amount} USD\n- Referencia: ${ref}\n- Fecha: ${date}`;
+
+                    const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+                    if (chatTextarea) {
+                      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+                      nativeInputValueSetter?.call(chatTextarea, text);
+                      chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                      setTimeout(() => {
+                        const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        sendButton?.click();
+                      }, 100);
+                    }
+                  }}
+                >
+                  Verificar Pago en Tiempo Real
+                </Button>
+              </div>
+            </div>
+          )}
           
           {showCloseOffer && (
             <div className="flex gap-2 mt-2">
