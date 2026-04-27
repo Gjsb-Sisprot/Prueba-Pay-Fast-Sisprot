@@ -647,7 +647,7 @@ export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanCha
                `• **Monto Total:** ${total}$ 💸\n` +
                `• **Gastos Administrativos:** ${adminFee}$\n` +
                `• **Diferencial Prorrateado:** ${prorated}$\n\n` +
-               `⚠️ **ALERTA IMPORTANTE**: Al confirmar este cambio, dispones de un lapso **no mayor a 2 días** para cancelar el monto del prorrateo. De lo contrario, el servicio será suspendido automáticamente.\n\n` +
+               `⚠️ **ALERTA IMPORTANTE**: Al confirmar este cambio, dispones de un lapso **hasta las 11:59 PM de hoy mismo** para cancelar el monto del prorrateo. De lo contrario, el servicio será suspendido automáticamente por el sistema administrativo.\n\n` +
                `¿Deseas que procedamos con este cambio de forma inmediata?`,
       data: result.data
     };
