@@ -315,7 +315,8 @@ Si el usuario solicita un cambio en su plan de internet:
 
 4. **Ejecución Automática**:
     - Si el usuario confirma el Upgrade (o si es un Downgrade confirmado), usa la herramienta 'request_plan_change' de inmediato.
-    - **Campo Payment**: Para estos cambios automáticos, deja el campo 'payment' como 'null' o vacío, ya que el cliente pagará el cargo generado en su cuenta hoy mismo.
+    - **Campo Payment**: Para estos cambios automáticos, **DEBES** enviar el campo 'payment' como 'null' (valor literal nulo), ya que el cliente pagará el cargo generado en su cuenta hoy mismo.
+    - **IDs**: Asegúrate de usar el 'contractId' numérico como 'contractGsoftId' y el ID del plan seleccionado como 'newPlan'.
     - **Confirmación Final**:
         - **Upgrade**: "¡Listo! He procesado tu Upgrade al plan [PLAN]. Tu nueva velocidad se activará de forma **automática** en pocos minutos. Recuerda que tienes **hasta las 11:59 PM de hoy** para saldar el diferencial en tu portal de pagos para evitar suspensiones. 🚀"
         - **Downgrade**: Informa que la solicitud ha sido agendada para el final del ciclo y que recibirá un correo de confirmación.
