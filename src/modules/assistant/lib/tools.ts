@@ -474,7 +474,7 @@ export async function executeAuditService(args: z.infer<typeof auditServiceSchem
       throw new Error(`Error en el webhook de auditoría: ${response.statusText}`);
     }
 
-    const data = await response.json() as Record<string, any>;
+    const data = (await response.json()) as Record<string, unknown>;
     
     // Si el webhook devuelve detalles técnicos, los formateamos
     let auditSummary = "";
@@ -528,7 +528,7 @@ export async function executeQueryInvoices(args: z.infer<typeof queryInvoicesSch
     
     if (!result.success) throw new Error(result.message);
 
-    const invoiceList = (result.invoices as Record<string, any>[]).map(inv => {
+    const invoiceList = (result.invoices as Array<Record<string, unknown>>).map(inv => {
       const statusIcon = inv.status === 'paid' ? '✅' : '⏳';
       return `${statusIcon} **Referencia ${inv.reference || inv.id}**: ${inv.amount} ${inv.currency || 'USD'} (${inv.status_name || inv.status})`;
     }).join('\n');
@@ -639,7 +639,7 @@ export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanCha
     const result = await getPlanChangeBudget(args.contractId, args.newPlanId);
     if (!result.success) throw new Error(result.message);
 
-    const budget = result.data as Record<string, any>;
+    const budget = result.data as Record<string, unknown>;
     const total = budget.total_usd || budget.total;
     const adminFee = budget.admin_fee || 0;
     const prorated = budget.prorated_amount || 0;
