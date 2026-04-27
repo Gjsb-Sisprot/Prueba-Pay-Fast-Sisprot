@@ -15,6 +15,22 @@ import {
 } from "react";
 import type { MediaAttachment, MediaLimits, MediaUsage } from "@/modules/assistant/lib/types";
 
+interface SpeechRecognition extends EventTarget {
+  start(): void;
+  stop(): void;
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: () => void;
+  onend: () => void;
+  onerror: () => void;
+  onresult: (event: { resultIndex: number; results: { [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } }; length: number }) => void;
+}
+
+interface SpeechRecognitionStatic {
+  new (): SpeechRecognition;
+}
+
 interface ChatInputProps {
   value: string;
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
@@ -52,7 +68,7 @@ export function ChatInput({
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -109,8 +125,8 @@ export function ChatInput({
       return;
     }
 
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition || 
-                              (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: SpeechRecognitionStatic; webkitSpeechRecognition?: SpeechRecognitionStatic }).SpeechRecognition || 
+                              (window as unknown as { SpeechRecognition?: SpeechRecognitionStatic; webkitSpeechRecognition?: SpeechRecognitionStatic }).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setAttachError("Tu navegador no soporta reconocimiento de voz.");
       setTimeout(() => setAttachError(null), 3000);
