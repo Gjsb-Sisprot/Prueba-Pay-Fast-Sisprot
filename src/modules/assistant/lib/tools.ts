@@ -294,11 +294,11 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       const serial = contractData.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
       const mapsLink = `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}`;
 
-      const displaySubReason = subReason || name;
+      const displaySubReason = subReason || "Escalamiento General";
       ticketName = `(IA Susana) [${displaySubReason}] - Contrato ${finalContractId} - ${clientName}`;
       
       ticketContent = `
-Observacion:${displaySubReason} - ${observation || content}
+Observacion: ${displaySubReason} - ${observation || content || "Sin observación adicional"}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${finalContractId}
@@ -361,7 +361,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     // Fetch detailed contract data from API
     const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
 
-    const displaySubReason = subReason;
+    const displaySubReason = subReason || "Escalamiento General";
     const surveyPrefix = isSurvey ? "[Encuesta] " : "";
 
     // Campos técnicos
@@ -380,7 +380,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
     const ticketContent = `
-Observacion:${displaySubReason} - ${observation || reason}
+Observacion: ${displaySubReason} - ${observation || reason || "Sin observación adicional"}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
@@ -709,7 +709,7 @@ export const getLocalTools = (): LocalToolSet => {
           contractId: { type: "string", description: "ID del contrato (opcional)" },
           sessionId: { type: "string", description: "ID de la sesión (opcional)" },
         },
-        required: ["name", "content"],
+        required: ["name", "content", "subReason", "aiSummary", "observation"],
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeCreateGlpiTicket(args as z.infer<typeof createGlpiTicketSchema>);
@@ -730,7 +730,7 @@ export const getLocalTools = (): LocalToolSet => {
           observation: { type: "string" },
           isSurvey: { type: "boolean" },
         },
-        required: ["sessionId", "reason"],
+        required: ["sessionId", "reason", "subReason", "aiSummary", "observation"],
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeEscalateToSpecialist(args as z.infer<typeof escalateToSpecialistSchema>);
