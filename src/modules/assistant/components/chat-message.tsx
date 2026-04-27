@@ -1131,7 +1131,7 @@ function ChatMessageComponent({
               {(() => {
                 const isPyme = (clientData?.planName || "").toLowerCase().match(/pyme|comercial|empresa/i) || 
                                (clientData?.clientType || "").toLowerCase().match(/pyme|comercial|empresa/i) ||
-                               (clientData as Record<string, unknown>)?.client_type === 2;
+                               (clientData as unknown as Record<string, unknown>)?.client_type === 2;
                 const currentPlanText = clientData?.planName || "Plan No Detectado";
                 
                 return (
