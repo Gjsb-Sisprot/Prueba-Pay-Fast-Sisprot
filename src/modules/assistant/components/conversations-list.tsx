@@ -117,8 +117,16 @@ function ConversationItem({
           "text-sm font-medium truncate",
           isActive ? "text-black" : "text-gray-700"
         )}>
+          {conversation.contract && (
+            <span className="text-blue-600 font-bold mr-1">#{conversation.contract}</span>
+          )}
           {title}
         </p>
+        {conversation.sector && (
+          <p className="text-[10px] text-gray-400 truncate -mt-0.5 mb-1">
+            {conversation.sector}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[10px] text-gray-400">
             {timeStr}
@@ -133,7 +141,12 @@ function ConversationItem({
           )}>
             {getStatusLabel(conversation.status)}
           </span>
-          {conversation.messageCount && (
+          {conversation.glpiTicketId && (
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+              Ticket #{conversation.glpiTicketId}
+            </span>
+          )}
+          {conversation.messageCount !== undefined && (
             <span className="text-[10px] text-gray-400">
               {conversation.messageCount} msgs
             </span>
