@@ -474,7 +474,7 @@ export async function executeAuditService(args: z.infer<typeof auditServiceSchem
       throw new Error(`Error en el webhook de auditoría: ${response.statusText}`);
     }
 
-    const data = await response.json() as any;
+    const data = await response.json() as Record<string, any>;
     
     // Si el webhook devuelve detalles técnicos, los formateamos
     let auditSummary = "";
@@ -528,7 +528,7 @@ export async function executeQueryInvoices(args: z.infer<typeof queryInvoicesSch
     
     if (!result.success) throw new Error(result.message);
 
-    const invoiceList = (result.invoices as any[]).map(inv => {
+    const invoiceList = (result.invoices as Record<string, any>[]).map(inv => {
       const statusIcon = inv.status === 'paid' ? '✅' : '⏳';
       return `${statusIcon} **Referencia ${inv.reference || inv.id}**: ${inv.amount} ${inv.currency || 'USD'} (${inv.status_name || inv.status})`;
     }).join('\n');
@@ -572,7 +572,7 @@ export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledg
     return {
       success: true,
       message: "📚 **He encontrado información relevante en nuestra base de conocimientos:**\n\n" + 
-               (Array.isArray(data.results) ? data.results.slice(0, 2).map((r: any) => `💡 ${r.content || r.text}`).join('\n\n') : "Aquí tienes los detalles encontrados..."),
+               (Array.isArray(data.results) ? data.results.slice(0, 2).map((r: { content?: string; text?: string }) => `💡 ${r.content || r.text}`).join('\n\n') : "Aquí tienes los detalles encontrados..."),
       data: { results: data.results || data }
     };
   } catch {
@@ -639,7 +639,7 @@ export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanCha
     const result = await getPlanChangeBudget(args.contractId, args.newPlanId);
     if (!result.success) throw new Error(result.message);
 
-    const budget = result.data as any;
+    const budget = result.data as Record<string, any>;
     const total = budget.total_usd || budget.total;
     const adminFee = budget.admin_fee || 0;
     const prorated = budget.prorated_amount || 0;
