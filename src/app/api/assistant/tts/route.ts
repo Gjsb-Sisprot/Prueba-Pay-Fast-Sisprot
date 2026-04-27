@@ -1,55 +1,83 @@
-import { NextRequest, NextResponse } from "next/server";
+"use client";
 
-export async function POST(req: NextRequest) {
-  try {
-    const { text } = await req.json();
-    if (!text) {
-      return NextResponse.json({ error: "No text provided" }, { status: 400 });
+import { useCallback, useRef, useEffect } from "react";
+import { cleanTextForSpeech } from "./use-assistant-chat.utils";
+
+export function useSpeech() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+
+  // Cargar voces para el fallback (navegador)
+  const loadVoices = useCallback(() => {
+    const voices = window.speechSynthesis.getVoices();
+    const femaleNames = ["helena", "sabina", "paulina", "monica", "hilda", "pilar", "marta", "elena", "laura", "femenina", "female", "luciana", "mónica", "juana"];
+    voiceRef.current = voices.find(v => v.lang.startsWith("es") && femaleNames.some(name => v.name.toLowerCase().includes(name))) || voices.find(v => v.lang.startsWith("es")) || null;
+  }, []);
+
+  useEffect(() => {
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+  }, [loadVoices]);
 
-    const VOICE_ID = "fqf2iY1NwgXWQDrrPZjv";
-    const API_KEY = "sk_d240f9c9558339921a17ebfa9b902eb209f1cd634e2e710e";
+  const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
 
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
-      {
+  const speakFallback = useCallback((text: string) => {
+    console.log("[SPEECH] Usando fallback del navegador...");
+    const utterance = new SpeechSynthesisUtterance(text);
+    if (voiceRef.current) utterance.voice = voiceRef.current;
+    utterance.lang = "es-VE";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.2;
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const speak = useCallback(async (text: string) => {
+    const cleanedText = cleanTextForSpeech(text);
+    if (!cleanedText) return;
+
+    stop();
+
+    try {
+      console.log("[SPEECH] Intentando ElevenLabs para:", cleanedText.substring(0, 30) + "...");
+      const response = await fetch("/api/assistant/tts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "xi-api-key": API_KEY,
-        },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.8,
-            style: 0.0,
-            use_speaker_boost: true
-          },
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: cleanedText }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Error en API de ElevenLabs`);
       }
-    );
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("[ELEVENLABS_API_ERROR]", errorData);
-      return NextResponse.json(
-        { error: `Error de ElevenLabs: ${response.statusText}` },
-        { status: response.status }
-      );
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("[SPEECH_HOOK_ERROR]", error);
+      // Si ElevenLabs falla por cualquier motivo (API, red, etc.), usamos el navegador
+      speakFallback(cleanedText);
     }
+  }, [stop, speakFallback]);
 
-    const audioBuffer = await response.arrayBuffer();
-    
-    return new NextResponse(audioBuffer, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "no-cache",
-      },
-    });
-  } catch (error: unknown) {
-    console.error("[TTS_ROUTE_ERROR]", error);
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
-  }
+  return { speak, stop };
 }
