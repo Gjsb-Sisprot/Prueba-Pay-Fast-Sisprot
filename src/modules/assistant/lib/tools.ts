@@ -56,6 +56,9 @@ export const checkPaymentStatusSchema = z.object({
 export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
+  subReason: z.string().optional().describe("Motivo específico (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento)"),
+  aiSummary: z.string().optional().describe("Resumen de toda la conversación del cliente"),
+  observation: z.string().optional().describe("Punto de vista de la IA sobre el problema"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
   urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
@@ -265,7 +268,7 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
-    const { name, content, categoryId, urgency, requesterId, contractId, sessionId } = args;
+    const { name, content, subReason, aiSummary, observation, categoryId, urgency, requesterId, contractId, sessionId } = args;
 
     let finalContractId = contractId;
     let conversation = null;
@@ -292,10 +295,11 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       const serial = contractData.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
       const mapsLink = `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}`;
 
-      ticketName = `(IA Susana) ${name} - Contrato ${finalContractId} - ${clientName}`;
+      const displaySubReason = subReason || name;
+      ticketName = `(IA Susana) [${displaySubReason}] - Contrato ${finalContractId} - ${clientName}`;
       
       ticketContent = `
-Observacion:${name}
+Observacion:${displaySubReason} - ${observation || content}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${finalContractId}
@@ -312,8 +316,7 @@ Dirección: ${address}
 Ubicación: ${mapsLink}
 
 ---
-Contenido Adicional:
-${content}
+Resumen IA: ${aiSummary || 'No se proporcionó resumen de la conversación.'}
 `.trim();
     } else {
       // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
@@ -379,7 +382,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
     const ticketContent = `
-Observacion:${displaySubReason} - ${aiSummary || reason}
+Observacion:${displaySubReason} - ${observation || reason}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
@@ -397,10 +400,6 @@ Ubicación: ${mapsLink}
 
 ---
 Resumen IA: ${aiSummary || 'El cliente reporta una incidencia en su servicio.'}
-Comentario Original: ${originalComment || reason}
-Observación Adicional: ${observation || 'Registro automático.'}
-ID Sesión: ${sessionId}
-Identificación: ${identification}
 `.trim();
 
     const ticketResult = await createGlpiTicketInternal({
@@ -703,7 +702,10 @@ export const getLocalTools = (): LocalToolSet => {
         properties: {
           name: { type: "string", description: "Título del ticket" },
           content: { type: "string", description: "Contenido detallado" },
-          categoryId: { type: "number", description: "ID de categoría (opcional)" },
+          subReason: { type: "string", description: "Motivo específico (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento)" },
+          aiSummary: { type: "string", description: "Resumen de toda la conversación del cliente" },
+          observation: { type: "string", description: "Punto de vista de la IA sobre el problema" },
+          categoryId: { type: "number", description: "ID de la categoría Itil (opcional)" },
           urgency: { type: "number", description: "Urgencia 1-5 (opcional)" },
           requesterId: { type: "number", description: "ID de solicitante (opcional)" },
           contractId: { type: "string", description: "ID del contrato (opcional)" },
