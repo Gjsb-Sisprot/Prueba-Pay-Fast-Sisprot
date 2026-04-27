@@ -15,7 +15,14 @@ import {
   X,
   Building2,
   Paperclip,
-  FileText
+  FileText,
+  Landmark,
+  Wallet,
+  UploadCloud,
+  UploadCloud,
+  Smartphone,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import Image from "next/image";
 
@@ -75,6 +82,8 @@ function ChatMessageComponent({
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [offerDismissed, setOfferDismissed] = useState(false);
   const [paymentOfferDismissed, setPaymentOfferDismissed] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const cleanContent = (text: string) => {
     // Si el texto parece ser un objeto JSON de sistema, lo limpiamos, 
@@ -108,6 +117,24 @@ function ChatMessageComponent({
       .replace(/\{\s*"glpiTicketId"[\s\S]*?\}\}/g, "")
       .replace(/\{?"content":\s*\[\s*\{"type":"text","text":"[\s\S]*?\}\s*\]\s*\}?/g, "")
       .trim();
+  };
+
+  const toggleSpeech = (text: string) => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const cleanedText = cleanContent(text);
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
+    utterance.lang = "es-ES";
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    utteranceRef.current = utterance;
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   // Segmentar el contenido por doble salto de línea para crear múltiples burbujas (solo para el asistente/bot)
@@ -254,9 +281,22 @@ function ChatMessageComponent({
                           ? "rounded-tl-md rounded-bl-sm"
                           : "rounded-l-md"
                     ),
-                    isAssistant && segments.length === 1 && "rounded-tl-sm"
+                    isAssistant && segments.length === 1 && "rounded-tl-sm",
+                    "relative group/bubble"
                   )}
                 >
+                  {isAssistant && (
+                    <button
+                      onClick={() => toggleSpeech(segment)}
+                      className={cn(
+                        "absolute top-1 right-1 p-1 rounded-full bg-white/50 opacity-0 group-hover/bubble:opacity-100 transition-opacity",
+                        isSpeaking && "opacity-100 text-blue-600 bg-white"
+                      )}
+                      title={isSpeaking ? "Detener" : "Escuchar mensaje"}
+                    >
+                      {isSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                    </button>
+                  )}
                   {isAssistant ? (
                     <div className="prose prose-sm prose-gray max-w-none break-words [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:break-all [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_h1]:my-2 [&_h2]:my-1.5 [&_h3]:my-1">
                       <ReactMarkdown
@@ -1025,6 +1065,60 @@ function ChatMessageComponent({
             </div>
           )}
           
+          {isAssistant && content.includes("__PLAN_PAYMENT_FORM__") && !isLoading && (
+            <div className="mt-3 bg-white border border-amber-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+                  <Landmark className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Datos de Pago</h4>
+                  <p className="text-[10px] text-gray-500">Transfiera el monto para procesar el cambio</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-gray-500 font-medium">Banco:</span>
+                  <span className="text-gray-900 font-bold">Banco Provincial</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-gray-500 font-medium">Pago Móvil:</span>
+                  <span className="text-gray-900 font-bold">0412-0000000 / 0108</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-gray-500 font-medium">RIF/Cédula:</span>
+                  <span className="text-gray-900 font-bold">J-40000000-0</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] pt-1 border-t border-gray-200">
+                  <span className="text-gray-500 font-medium">Zelle:</span>
+                  <span className="text-gray-900 font-bold">pagos@sisprotgf.com</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[10px] text-gray-500 text-center font-medium">¿Ya realizaste el pago?</p>
+                <Button 
+                  className="w-full bg-amber-500 text-white hover:bg-amber-600 text-xs font-bold py-3 rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  onClick={() => {
+                    const paperclipButton = document.querySelector('button[title="Adjuntar imagen o video"]') as HTMLButtonElement;
+                    if (paperclipButton) {
+                      paperclipButton.click();
+                    } else {
+                      alert("Por favor usa el icono de adjuntar (clip) para subir tu comprobante.");
+                    }
+                  }}
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  Subir Comprobante
+                </Button>
+                <p className="text-[9px] text-gray-400 text-center italic leading-tight mt-2">
+                  Una vez confirmemos el pago, tu plan se actualizará en unos minutos.
+                </p>
+              </div>
+            </div>
+          )}
+
           {isAssistant && content.includes("__PLAN_CHANGE_FORM__") && !isLoading && (
             <div className="mt-3 bg-white border border-blue-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
               <div className="flex items-center gap-2 mb-3">
@@ -1038,7 +1132,9 @@ function ChatMessageComponent({
               </div>
 
               {(() => {
-                const isPyme = (clientData?.planName || "").toLowerCase().match(/pyme|comercial|empresa/i);
+                const isPyme = (clientData?.planName || "").toLowerCase().match(/pyme|comercial|empresa/i) || 
+                               (clientData?.clientType || "").toLowerCase().match(/pyme|comercial|empresa/i) ||
+                               (clientData as Record<string, any>)?.client_type === 2;
                 const currentPlanText = clientData?.planName || "Plan No Detectado";
                 
                 return (
