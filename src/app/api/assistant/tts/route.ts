@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
     }
 
     const VOICE_ID = "fqf2iY1NwgXWQDrrPZjv";
-    const API_KEY = "sk_d240f9c9558339921a17ebfa9b902eb209f1cd634e2e710e";
+    const API_KEY = "sk_fa11f1d4bca71efd43801954a28aefb67be867e8c2ce36e6";
 
-    // Intentar con turbo_v2 que es más rápido y compatible
+    // Usar multilingual_v2 para máxima calidad ahora que tenemos plan de pago
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
       {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_turbo_v2",
+          model_id: "eleven_multilingual_v2",
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.8,
