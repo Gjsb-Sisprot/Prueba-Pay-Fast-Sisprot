@@ -97,10 +97,15 @@ function ChatMessageComponent({
       /__PLAN_CHANGE_FORM__/gi,
       /__PLAN_BUDGET_INFO__/gi,
       /__SIGNED_DOCUMENT_FORM__/gi,
-      /\[TICKET_ID:[0-9]+\]/gi,
+      /__PLAN_PAYMENT_FORM__/gi,
+      /__ZELLE_BINANCE_FORM__/gi,
       /__CLOSE_CHAT__/gi,
       /CLOSE_OFFER/gi,
-      /CLOSE_CHAT/gi
+      /CLOSE_CHAT/gi,
+      // Catch tokens without underscores just in case
+      /PLAN_PAYMENT_FORM/gi,
+      /ZELLE_BINANCE_FORM/gi,
+      /PLAN_CHANGE_FORM/gi
     ];
 
     let cleaned = text;
@@ -985,82 +990,6 @@ function ChatMessageComponent({
             </div>
           )}
           
-          {isAssistant && content.includes("__PLAN_BUDGET_INFO__") && !isLoading && (
-            <div className="mt-3 bg-white border border-green-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center border border-green-100">
-                  <CreditCard className="w-4 h-4 text-green-500" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 leading-tight">Presupuesto de Upgrade</h4>
-                  <p className="text-[10px] text-gray-500">Desglose de cargos para tu nuevo plan</p>
-                </div>
-              </div>
-
-              {(() => {
-                // Intentamos extraer datos del budget si vienen en formato JSON o simplemente usamos placeholders
-                // Susana debería haber puesto el JSON justo después o antes del token
-                const jsonMatch = content.match(/\{[\s\S]*"total_amount"[\s\S]*\}/);
-                const budget = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-
-                if (!budget) return <p className="text-[10px] text-red-500">Error al cargar presupuesto</p>;
-
-                return (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        <p className="text-[8px] text-gray-400 font-bold uppercase">Plan Destino</p>
-                        <p className="text-[11px] font-bold text-gray-700 truncate">{budget.new_plan_name}</p>
-                      </div>
-                      <div className="bg-green-50/50 p-2 rounded-lg border border-green-100">
-                        <p className="text-[8px] text-green-600 font-bold uppercase">Total a Pagar</p>
-                        <p className="text-[11px] font-extrabold text-green-700">{budget.total_amount?.usd || "0.00"}$</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5 border-t border-dashed border-gray-100 pt-2">
-                       <div className="flex justify-between text-[10px]">
-                         <span className="text-gray-500">Cargo Administrativo:</span>
-                         <span className="font-medium text-gray-700">{budget.admin_fee?.usd}$</span>
-                       </div>
-                       <div className="flex justify-between text-[10px]">
-                         <span className="text-gray-500">Diferencial Prorrateado:</span>
-                         <span className="font-medium text-gray-700">{budget.upgrade_charge?.usd}$</span>
-                       </div>
-                    </div>
-
-                    <div className="bg-amber-50 p-2 rounded-lg border border-amber-100 flex items-start gap-2">
-                      <Info className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-[9px] text-amber-700 leading-tight">
-                        Al confirmar, se generará una factura adicional por este monto para procesar el cambio de inmediato.
-                      </p>
-                    </div>
-
-                    <Button 
-                      className="w-full bg-green-600 text-white hover:bg-green-700 text-xs font-bold py-3 rounded-xl mt-1 shadow-lg active:scale-[0.98] transition-all"
-                      onClick={() => {
-                        const planId = budget.new_plan_id || "5"; // Placeholder id if missing
-                        const text = `__PLAN_CHANGE_CONFIRMED__ ID ${planId}`;
-
-                        const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
-                        if (chatTextarea) {
-                          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-                          nativeInputValueSetter?.call(chatTextarea, text);
-                          chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                          setTimeout(() => {
-                            const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
-                            sendButton?.click();
-                          }, 100);
-                        }
-                      }}
-                    >
-                      Confirmar y Procesar Upgrade
-                    </Button>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
           
           {isAssistant && content.includes("__PLAN_PAYMENT_FORM__") && !isLoading && (
             <div className="mt-3 bg-white border border-amber-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
