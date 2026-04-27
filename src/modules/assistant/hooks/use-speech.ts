@@ -8,19 +8,20 @@ export function useSpeech() {
 
   const loadVoices = useCallback(() => {
     const voices = window.speechSynthesis.getVoices();
-    // Buscar una voz femenina en español
-    // Priorizamos nombres comunes de voces femeninas o que contengan "Google" (suelen ser mejores)
-    const spanishFemaleVoice = voices.find(v => 
+    // Buscar una voz femenina con acento venezolano o latinoamericano neutro
+    const preferredVoice = voices.find(v => 
+      (v.lang === "es-VE" || v.lang.includes("es_VE")) && 
+      (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("femenino"))
+    ) || voices.find(v => 
+      (v.lang === "es-VE" || v.lang.includes("es_VE"))
+    ) || voices.find(v => 
       v.lang.startsWith("es") && 
-      (v.name.toLowerCase().includes("female") || 
-       v.name.toLowerCase().includes("femenino") || 
-       v.name.toLowerCase().includes("google") || 
-       v.name.toLowerCase().includes("monica") || 
-       v.name.toLowerCase().includes("helena") ||
-       v.name.toLowerCase().includes("paulina"))
+      (v.name.toLowerCase().includes("mexico") || v.name.toLowerCase().includes("sabina") || v.name.toLowerCase().includes("paulina"))
+    ) || voices.find(v => 
+      v.lang.startsWith("es") && v.name.toLowerCase().includes("google")
     );
 
-    voiceRef.current = spanishFemaleVoice || voices.find(v => v.lang.startsWith("es")) || null;
+    voiceRef.current = preferredVoice || voices.find(v => v.lang.startsWith("es")) || null;
   }, []);
 
   useEffect(() => {
