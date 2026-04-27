@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         "Cache-Control": "no-cache",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[TTS_ROUTE_ERROR]", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
