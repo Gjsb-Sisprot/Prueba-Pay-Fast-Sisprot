@@ -274,41 +274,56 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
   try {
     const { subReason, aiSummary, observation, contractId, sessionId } = args;
 
+    let finalContractId = contractId;
+    let conversation = null;
+
+    if (!finalContractId && sessionId) {
+      conversation = await getConversationBySessionId(sessionId).catch(() => null);
+      finalContractId = conversation?.contract;
+    }
+
+    // 1. Obtener datos para el payload de n8n
+    const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
     
-    // Formato básico y seguro
-    const ticketName = `(IA Susana) [${subReason}] - Contrato ${contractId || 'N/A'}`;
-    const ticketContent = `
-Motivo: ${subReason}
-Observacion: ${observation}
+    const payload = {
+      "Contrato": finalContractId || "N/A",
+      "name": contractData?.name || "Cliente",
+      "last name": contractData?.last_name || "Desconocido",
+      "sector": contractData?.sector_name || "No especificado",
+      "Observacion": `${subReason} - ${observation}`,
+      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
+      "Teléfono": contractData?.mobile || "No disponible",
+      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
+      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || "Plan no detectado",
+      "Dirección": contractData?.address || "No registrada",
+      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : "No disponible",
+      "_users_id_requester": 19,
+      "subReason": subReason,
+      "aiSummary": aiSummary,
+      "transcript": transcript
+    };
 
---- RESUMEN IA ---
-${aiSummary}
-
---- TRANSCRIPCIÓN DEL CHAT ---
-${transcript}
-`.trim();
-
-    const result = await createGlpiTicketInternal({
-      name: ticketName,
-      content: ticketContent,
-      itilcategories_id: 22,
-      urgency: 5,
+    // 2. Enviar a n8n
+    const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    if (result.success) {
+    if (n8nResponse.ok) {
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud. El número de ticket es el **#${result.ticketId}**.`,
-        data: { ticketId: result.ticketId },
+        message: `¡Listo! He registrado tu solicitud. Un especialista administrativo procesará tu caso a la brevedad bajo los protocolos oficiales.`,
+        data: { status: "sent_to_n8n" },
       };
     } else {
-      throw new Error(result.error || result.message);
+      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
     }
   } catch (error) {
     return {
       success: false,
-      message: `Error al crear el ticket: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+      message: `Error al procesar la solicitud vía n8n: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
 }
@@ -318,52 +333,53 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
   try {
     const { sessionId, subReason, aiSummary, observation, reason } = args;
     
-    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     const contractId = conversation?.contract || "N/A";
+    const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
+    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
 
-    const ticketName = `(IA Susana) [${subReason}] - Contrato ${contractId}`;
-    const ticketContent = `
-Motivo: ${subReason}
-Observacion: ${observation || reason}
+    const payload = {
+      "Contrato": contractId,
+      "name": contractData?.name || conversation?.contact_name || "Cliente",
+      "last name": contractData?.last_name || "Desconocido",
+      "sector": contractData?.sector_name || conversation?.sector || "No especificado",
+      "Observacion": `${subReason} - ${observation || reason}`,
+      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
+      "Teléfono": contractData?.mobile || conversation?.contact_phone || "No disponible",
+      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
+      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name || "Plan no detectado",
+      "Dirección": contractData?.address || conversation?.address || "No registrada",
+      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : (conversation?.sector || "No disponible"),
+      "_users_id_requester": 19,
+      "subReason": subReason,
+      "aiSummary": aiSummary,
+      "transcript": transcript
+    };
 
---- RESUMEN IA ---
-${aiSummary}
-
---- TRANSCRIPCIÓN DEL CHAT ---
-${transcript}
-`.trim();
-
-    const ticketResult = await createGlpiTicketInternal({
-      name: ticketName,
-      content: ticketContent,
-      urgency: 3,
-      itilcategories_id: 17,
-      type: 1
+    // Enviar a n8n
+    const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    if (ticketResult.success) {
+    if (n8nResponse.ok) {
       await Promise.all([
         updateConversationStatus(sessionId, "waiting_specialist"),
-        syncConversationMetadata(sessionId, { glpiTicketId: ticketResult.ticketId })
       ]).catch(() => {});
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket es el **#${ticketResult.ticketId}**. 🎫`,
-        data: { 
-          glpiTicketId: ticketResult.ticketId,
-          ticketId: ticketResult.ticketId,
-          status: "waiting_specialist"
-        },
+        message: `¡Listo! He registrado tu solicitud exitosamente. Un técnico especializado revisará tu reporte y se contactará contigo si es necesario. 🎫`,
+        data: { status: "escalated_via_n8n" },
       };
     } else {
-      throw new Error(ticketResult.error || ticketResult.message);
+      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
     }
   } catch (error) {
     return {
       success: false,
-      message: `Error al escalar el caso: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+      message: `Error al escalar el caso vía n8n: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
 }
