@@ -272,7 +272,7 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
-    const { name, content, subReason, aiSummary, observation, categoryId, urgency, requesterId, contractId, sessionId } = args;
+    const { subReason, aiSummary, observation, categoryId, urgency, requesterId, contractId, sessionId } = args;
 
     let finalContractId = contractId;
     let conversation = null;
@@ -285,64 +285,72 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
     
-    // Formatear contenido con data de Sisprot si está disponible
-    let ticketContent = content;
-    let ticketName = name;
+    const clientName = contractData ? `${contractData.name} ${contractData.last_name}` : "Cliente Desconocido";
+    const sector = contractData?.sector_name;
+    const phone = contractData?.mobile;
+    const address = contractData?.address;
+    const plan = contractData?.contract_detail?.[0]?.plan_name;
+    const ip = contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip;
+    const vlan = contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface;
+    const serial = contractData?.contract_detail?.[0]?.service_detail?.[0]?.serial;
+    const mapsLink = contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : null;
 
-    if (contractData) {
-      const clientName = `${contractData.name} ${contractData.last_name}`;
-      const sector = contractData.sector_name || "No especificado";
-      const phone = contractData.mobile || "No disponible";
-      const address = contractData.address || "No registrada";
-      const plan = contractData.contract_detail?.[0]?.plan_name || "Plan no detectado";
-      const ip = contractData.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada";
-      const vlan = contractData.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE";
-      const serial = contractData.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
-      const mapsLink = `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}`;
+    // 1. Título Dinámico
+    const ticketName = `(visita )${subReason} - Contrato ${finalContractId || 'N/A'} - ${clientName}${sector ? ` - Sector: ${sector}` : ''}`;
 
-      const displaySubReason = subReason;
-      ticketName = `(IA Susana) [${displaySubReason}] - Contrato ${finalContractId} - ${clientName}`;
-      
-      ticketContent = `
-Observacion: ${displaySubReason} - ${observation}
-Sector: ${sector}
-Cliente: ${clientName}
-N° de contrato: ${finalContractId}
-IP Actual: ${ip}
-Teléfono: ${phone}
-VLAN Actual: ${vlan}
-Serial GPON: ${serial}
-Plan Contratado: ${plan}
+    // 2. Clasificación de campos según el tema
+    const isTechnical = ["Sin_Internet", "ONU_En_Rojo", "Intermitencia", "Lentitud_Velocidad_Plan", "Sisprot_TV", "Router_Falla"].includes(subReason);
+    
+    // 3. Constructor de cuerpo dinámico (Solo campos con valor)
+    let bodyRows = [`Observacion:${subReason} - ${observation}`];
+    
+    if (sector) bodyRows.push(`Sector: ${sector}`);
+    if (clientName) bodyRows.push(`Cliente: ${clientName}`);
+    if (finalContractId) bodyRows.push(`N° de contrato: ${finalContractId}`);
+    
+    // Campos técnicos condicionales
+    if (isTechnical || ip) bodyRows.push(`IP Actual: ${ip || 'No detectada'}`);
+    if (phone) bodyRows.push(`Teléfono: ${phone}`);
+    if (isTechnical || vlan) bodyRows.push(`VLAN Actual: ${vlan || 'VLAN_PENDIENTE'}`);
+    if (isTechnical || serial) bodyRows.push(`Serial GPON: ${serial || 'No detectado'}`);
+    if (plan) bodyRows.push(`Plan Contratado: ${plan}`);
 
-Potencia Leida: 0
-Potencia Calculada: 0
+    // Bloque de potencias (Solo para técnicos)
+    if (isTechnical) {
+      bodyRows.push("");
+      bodyRows.push("Potencia Leida: 0");
+      bodyRows.push("Potencia Calculada: 0");
+    }
 
-Dirección: ${address}
-Ubicación: ${mapsLink}
+    if (address) {
+      bodyRows.push("");
+      bodyRows.push(`Dirección: ${address}`);
+    }
+    
+    if (mapsLink) bodyRows.push(`Ubicación: ${mapsLink}`);
+
+    const ticketContent = `
+${bodyRows.join('\n')}
 
 ---
 Resumen IA: ${aiSummary}
 
---- TRANSCRIPCIÓN DEL CHAT ---
+--- TRANSCRIPCIÓN COMPLETA DEL CHAT ---
 ${transcript}
 `.trim();
-    } else {
-      // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
-      ticketName = `(IA Susana) ${name}`;
-    }
 
     const result = await createGlpiTicketInternal({
       name: ticketName,
       content: ticketContent,
-      itilcategories_id: categoryId,
-      urgency: urgency,
-      _users_id_requester: requesterId,
+      itilcategories_id: categoryId || 22,
+      urgency: urgency || 5,
+      _users_id_requester: requesterId || 19,
     });
 
     if (result.success) {
       return {
         success: true,
-        message: `¡Listo! He creado el ticket de soporte en GLPI con el ID #${result.ticketId}. Un especialista revisará tu caso pronto.`,
+        message: `¡Listo! He registrado tu solicitud. El número de ticket en GLPI es el **#${result.ticketId}**.`,
         data: { ticketId: result.ticketId },
       };
     } else {
@@ -351,7 +359,7 @@ ${transcript}
   } catch (error) {
     return {
       success: false,
-      message: `Tuve un problema al intentar crear el ticket en GLPI: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+      message: `Error al crear el ticket: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
 }
@@ -361,55 +369,61 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
   try {
     const { sessionId, reason, subReason, aiSummary, observation, isSurvey } = args;
     
-    // 1. Obtener contexto del cliente desde la DB
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
-    
     const clientNameFromDb = conversation?.contact_name || "Cliente Desconocido";
     const contractId = conversation?.contract || "N/A";
     
-    // Fetch detailed contract data from API
     const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
 
-    const displaySubReason = subReason;
-    const surveyPrefix = isSurvey ? "[Encuesta] " : "";
-
-    // Campos técnicos
     const clientName = contractData ? `${contractData.name} ${contractData.last_name}` : clientNameFromDb;
-    const sector = contractData?.sector_name || conversation?.sector || "No especificado";
-    const phone = contractData?.mobile || conversation?.contact_phone || "No disponible";
-    const address = contractData?.address || conversation?.address || "No registrada";
-    const plan = contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name || "Plan no detectado";
-    const ip = contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada";
-    const vlan = contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE";
-    const serial = contractData?.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
-    const mapsLink = contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : (conversation?.sector || "No especificada");
+    const sector = contractData?.sector_name || conversation?.sector;
+    const phone = contractData?.mobile || conversation?.contact_phone;
+    const address = contractData?.address || conversation?.address;
+    const plan = contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name;
+    const ip = contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip;
+    const vlan = contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface;
+    const serial = contractData?.contract_detail?.[0]?.service_detail?.[0]?.serial;
+    const mapsLink = contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : null;
 
-    // 2. Crear ticket en GLPI con el nuevo formato estructurado detallado
-    const category = 17; // Default Soporte Técnico
-    const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
+    // 1. Título Dinámico
+    const surveyPrefix = isSurvey ? "[ENCUESTA] " : "";
+    const ticketName = `(visita )${surveyPrefix}${subReason} - Contrato ${contractId} - ${clientName}${sector ? ` - Sector: ${sector}` : ''}`;
+
+    // 2. Clasificación
+    const isTechnical = true; // Por defecto en escalamiento técnico
+
+    // 3. Constructor
+    let bodyRows = [`Observacion:${subReason} - ${observation || reason}`];
     
+    if (sector) bodyRows.push(`Sector: ${sector}`);
+    if (clientName) bodyRows.push(`Cliente: ${clientName}`);
+    if (contractId !== "N/A") bodyRows.push(`N° de contrato: ${contractId}`);
+    
+    if (ip || isTechnical) bodyRows.push(`IP Actual: ${ip || 'No detectada'}`);
+    if (phone) bodyRows.push(`Teléfono: ${phone}`);
+    if (vlan || isTechnical) bodyRows.push(`VLAN Actual: ${vlan || 'VLAN_PENDIENTE'}`);
+    if (serial || isTechnical) bodyRows.push(`Serial GPON: ${serial || 'No detectado'}`);
+    if (plan) bodyRows.push(`Plan Contratado: ${plan}`);
+
+    bodyRows.push("");
+    bodyRows.push("Potencia Leida: 0");
+    bodyRows.push("Potencia Calculada: 0");
+
+    if (address) {
+      bodyRows.push("");
+      bodyRows.push(`Dirección: ${address}`);
+    }
+    
+    if (mapsLink) bodyRows.push(`Ubicación: ${mapsLink}`);
+
     const ticketContent = `
-Observacion: ${subReason} - ${observation || reason}
-Sector: ${sector}
-Cliente: ${clientName}
-N° de contrato: ${contractId}
-IP Actual: ${ip}
-Teléfono: ${phone}
-VLAN Actual: ${vlan}
-Serial GPON: ${serial}
-Plan Contratado: ${plan}
-
-Potencia Leida: 0
-Potencia Calculada: 0
-
-Dirección: ${address}
-Ubicación: ${mapsLink}
+${bodyRows.join('\n')}
 
 ---
 Resumen IA: ${aiSummary}
 
---- TRANSCRIPCIÓN DEL CHAT ---
+--- TRANSCRIPCIÓN COMPLETA DEL CHAT ---
 ${transcript}
 `.trim();
 
@@ -417,12 +431,11 @@ ${transcript}
       name: ticketName,
       content: ticketContent,
       urgency: 3,
-      itilcategories_id: category,
+      itilcategories_id: 17, // Soporte Técnico
       type: 1
     });
 
     if (ticketResult.success) {
-      // 3. Cambiar estado y guardar ticket ID en la base de datos
       await Promise.all([
         updateConversationStatus(sessionId, "waiting_specialist"),
         syncConversationMetadata(sessionId, { glpiTicketId: ticketResult.ticketId })
@@ -432,9 +445,7 @@ ${transcript}
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket en GLPI es el **#${ticketResult.ticketId}**. 🎫
-        
-Según nuestro SLA, en un lapso no mayor a 24 Horas un Técnico solventará la falla reportada. Quedo a tu disposición si necesitas algo más mientras se procesa tu requerimiento. 📝⚡`,
+        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket en GLPI es el **#${ticketResult.ticketId}**. 🎫`,
         data: { 
           glpiTicketId: ticketResult.ticketId,
           ticketId: ticketResult.ticketId,
@@ -447,7 +458,7 @@ Según nuestro SLA, en un lapso no mayor a 24 Horas un Técnico solventará la f
   } catch (error) {
     return {
       success: false,
-      message: `Tuve un problema al intentar escalar tu caso: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+      message: `Error al escalar el caso: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
 }
