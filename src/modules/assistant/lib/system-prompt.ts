@@ -249,7 +249,7 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
         - **Por Mudanza**: Ofrece la **Reubicación Gratuita** del equipo en su nuevo domicilio.
     - **Frase de Cierre**: "¿Qué te parece si te otorgamos [beneficio] para que nos des una oportunidad de demostrarte que somos tu mejor opción? 🚀"
 - **Fase C: Acción Final de Baja (Último Recurso)**:
-    - **SI EL CLIENTE INSISTE**: Si tras ofrecer los beneficios de la Fase B, el cliente insiste firmemente en retirarse, **DEBES** ejecutar la herramienta `create_glpi_ticket` en este mismo instante.
+    - **SI EL CLIENTE INSISTE**: Si tras ofrecer los beneficios de la Fase B, el cliente insiste firmemente en retirarse, **DEBES** ejecutar la herramienta \`create_glpi_ticket\` en este mismo instante.
     - **Obligatoriedad del Ticket**: NO confirmes la recepción de la solicitud sin haber ejecutado la herramienta.
     - **Campos del Ticket**:
         - `subReason`: "Cancelacion_de_Servicio"
