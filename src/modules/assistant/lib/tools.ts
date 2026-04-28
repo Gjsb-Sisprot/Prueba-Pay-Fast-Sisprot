@@ -17,6 +17,20 @@ import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudg
 const OPERATORS_ADMIN = [20, 10, 19, 22]; // Georgina, Khaloa, Martha, Yhossellyn
 const OPERATORS_TECH = [27, 13, 25, 8, 28, 11, 26]; // Arnaldo, Carlos, Dario, Jonathan, Jean, Kelvin, Yeral
 
+const OPERATOR_NAMES: Record<number, string> = {
+  20: "Georgina Baladi",
+  10: "Khaloa Serrano",
+  19: "Martha Pinto",
+  22: "Yhossellyn Perez",
+  27: "ARNALDO ROJAS",
+  13: "CARLOS OVALLES",
+  25: "DARIO PEDROZA",
+  8: "JONATHAN GARCIA",
+  28: "JEAN MORALES",
+  11: "KELVIN SANCHEZ",
+  26: "YERAL GOMEZ"
+};
+
 // --- MAPEO OFICIAL DE SUBMOTIVOS A ITIL Y URGENCIA ---
 const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: 'admin' | 'tech' }> = {
   // Administrativos
@@ -139,6 +153,33 @@ function getItilInfo(subReason: string) {
 function getRandomOperator(area: 'admin' | 'tech'): number {
   const list = area === 'admin' ? OPERATORS_ADMIN : OPERATORS_TECH;
   return list[Math.floor(Math.random() * list.length)];
+}
+
+async function sendTicketConfirmation(data: { ticketId: string; contract: string; reason: string; operatorId: number }) {
+  try {
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const operatorName = OPERATOR_NAMES[data.operatorId] || "Operador asignado";
+
+    const payload = {
+      "id_tickect": data.ticketId,
+      "contrato": data.contract,
+      "fecha": date,
+      "hora": time,
+      "motivo": data.reason,
+      "id_tecnico": data.operatorId,
+      "nombre_tecnico": operatorName
+    };
+
+    await fetch('https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.error("Error al enviar confirmación de visita:", error);
+  }
 }
 
 
@@ -455,6 +496,15 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
         ticketId = resultData.id;
       }
 
+      if (ticketId !== "PENDIENTE") {
+        await sendTicketConfirmation({
+          ticketId,
+          contract: finalContractId || "N/A",
+          reason: subReason,
+          operatorId: assignedOperatorId
+        });
+      }
+
       return {
         success: true,
         message: `¡Listo! He registrado tu solicitud. El número de ticket oficial generado es el **#${ticketId}**. Un especialista administrativo procesará tu caso a la brevedad.`,
@@ -525,6 +575,15 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
       await Promise.all([
         updateConversationStatus(sessionId, "waiting_specialist"),
       ]).catch(() => {});
+
+      if (ticketId !== "PENDIENTE") {
+        await sendTicketConfirmation({
+          ticketId,
+          contract: contractId,
+          reason: subReason,
+          operatorId: assignedOperatorId
+        });
+      }
 
       return {
         success: true,
