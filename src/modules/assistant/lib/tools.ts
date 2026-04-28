@@ -302,7 +302,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     const isTechnical = ["Sin_Internet", "ONU_En_Rojo", "Intermitencia", "Lentitud_Velocidad_Plan", "Sisprot_TV", "Router_Falla"].includes(subReason);
     
     // 3. Constructor de cuerpo dinámico (Solo campos con valor)
-    let bodyRows = [`Observacion:${subReason} - ${observation}`];
+    const bodyRows = [`Observacion:${subReason} - ${observation}`];
     
     if (sector) bodyRows.push(`Sector: ${sector}`);
     if (clientName) bodyRows.push(`Cliente: ${clientName}`);
@@ -394,7 +394,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const isTechnical = true; // Por defecto en escalamiento técnico
 
     // 3. Constructor
-    let bodyRows = [`Observacion:${subReason} - ${observation || reason}`];
+    const bodyRows = [`Observacion:${subReason} - ${observation || reason}`];
     
     if (sector) bodyRows.push(`Sector: ${sector}`);
     if (clientName) bodyRows.push(`Cliente: ${clientName}`);
