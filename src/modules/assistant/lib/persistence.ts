@@ -627,3 +627,34 @@ async function uploadAttachmentsToStorage(
   
   return processed;
 }
+
+/**
+ * Obtiene el historial completo de la conversación formateado como texto plano.
+ * Se usa para generar resúmenes automáticos en los tickets de GLPI.
+ */
+export async function getConversationTranscript(sessionId: string): Promise<string> {
+  try {
+    const conversation = await getConversationBySessionId(sessionId);
+    if (!conversation) return "No se encontró el historial de la conversación.";
+
+    const { data: logs, error } = await supabase
+      .from("chat_logs")
+      .select("role, content, created_at")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    if (!logs || logs.length === 0) return "El historial de la conversación está vacío.";
+
+    return logs
+      .map(log => {
+        const speaker = log.role === "user" ? "Cliente" : "Susana (IA)";
+        return `[${new Date(log.created_at).toLocaleTimeString()}] ${speaker}: ${log.content}`;
+      })
+      .join("\n");
+  } catch (error) {
+    console.error("[GET_TRANSCRIPT_ERROR]", error);
+    return "Error al recuperar el historial de la conversación.";
+  }
+}
