@@ -312,10 +312,13 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     });
 
     if (n8nResponse.ok) {
+      const resultData = await n8nResponse.json();
+      const ticketId = Array.isArray(resultData) && resultData[0]?.id ? resultData[0].id : "PENDIENTE";
+
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud. Un especialista administrativo procesará tu caso a la brevedad bajo los protocolos oficiales.`,
-        data: { status: "sent_to_n8n" },
+        message: `¡Listo! He registrado tu solicitud. El número de ticket oficial generado es el **#${ticketId}**. Un especialista administrativo procesará tu caso a la brevedad.`,
+        data: { status: "sent_to_n8n", ticketId: ticketId },
       };
     } else {
       throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
@@ -364,14 +367,17 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     });
 
     if (n8nResponse.ok) {
+      const resultData = await n8nResponse.json();
+      const ticketId = Array.isArray(resultData) && resultData[0]?.id ? resultData[0].id : "PENDIENTE";
+
       await Promise.all([
         updateConversationStatus(sessionId, "waiting_specialist"),
       ]).catch(() => {});
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud exitosamente. Un técnico especializado revisará tu reporte y se contactará contigo si es necesario. 🎫`,
-        data: { status: "escalated_via_n8n" },
+        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket oficial es el **#${ticketId}**. Un técnico especializado revisará tu reporte pronto. 🎫`,
+        data: { status: "escalated_via_n8n", ticketId: ticketId },
       };
     } else {
       throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
