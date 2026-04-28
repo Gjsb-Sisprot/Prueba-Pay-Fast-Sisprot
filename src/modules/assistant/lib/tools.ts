@@ -724,7 +724,7 @@ export const getLocalTools = (): LocalToolSet => {
                 type: "text", 
                 text: JSON.stringify({ 
                   success: false, 
-                  message: `Error de validación: ${error.errors.map(e => e.message).join(", ")}. Por favor, redacta un resumen y observación más detallados y vuelve a intentarlo.` 
+                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}. Por favor, redacta un resumen y observación más detallados y vuelve a intentarlo.` 
                 }) 
               }] 
             };
@@ -760,7 +760,7 @@ export const getLocalTools = (): LocalToolSet => {
                 type: "text", 
                 text: JSON.stringify({ 
                   success: false, 
-                  message: `Error de validación: ${error.errors.map(e => e.message).join(", ")}. Debes proporcionar un resumen real de la conversación y una observación técnica válida.` 
+                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}. Debes proporcionar un resumen real de la conversación y una observación técnica válida.` 
                 }) 
               }] 
             };
