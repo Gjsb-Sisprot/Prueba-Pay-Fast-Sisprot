@@ -701,9 +701,9 @@ export const getLocalTools = (): LocalToolSet => {
         properties: {
           name: { type: "string", description: "Título del ticket" },
           content: { type: "string", description: "Contenido detallado" },
-          subReason: { type: "string", description: "Motivo específico (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento)" },
-          aiSummary: { type: "string", description: "Resumen de toda la conversación del cliente" },
-          observation: { type: "string", description: "Punto de vista de la IA sobre el problema" },
+          subReason: { type: "string", description: "Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)" },
+          aiSummary: { type: "string", description: "Resumen detallado de la conversación (mínimo 25 caracteres)" },
+          observation: { type: "string", description: "Análisis específico del caso (mínimo 10 caracteres)" },
           categoryId: { type: "number", description: "ID de la categoría Itil (opcional)" },
           urgency: { type: "number", description: "Urgencia 1-5 (opcional)" },
           requesterId: { type: "number", description: "ID de solicitante (opcional)" },
@@ -713,8 +713,24 @@ export const getLocalTools = (): LocalToolSet => {
         required: ["name", "content", "subReason", "aiSummary", "observation"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeCreateGlpiTicket(args as z.infer<typeof createGlpiTicketSchema>);
-        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+        try {
+          const validatedArgs = createGlpiTicketSchema.parse(args);
+          const res = await executeCreateGlpiTicket(validatedArgs);
+          return { content: [{ type: "text", text: JSON.stringify(res) }] };
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            return { 
+              content: [{ 
+                type: "text", 
+                text: JSON.stringify({ 
+                  success: false, 
+                  message: `Error de validación: ${error.errors.map(e => e.message).join(", ")}. Por favor, redacta un resumen y observación más detallados y vuelve a intentarlo.` 
+                }) 
+              }] 
+            };
+          }
+          throw error;
+        }
       }
     },
     escalate_to_specialist: {
@@ -725,17 +741,32 @@ export const getLocalTools = (): LocalToolSet => {
         properties: {
           sessionId: { type: "string" },
           reason: { type: "string" },
-          subReason: { type: "string" },
-          aiSummary: { type: "string" },
-          originalComment: { type: "string" },
-          observation: { type: "string" },
+          subReason: { type: "string", description: "Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)" },
+          aiSummary: { type: "string", description: "Resumen detallado de la conversación (mínimo 25 caracteres)" },
+          observation: { type: "string", description: "Análisis específico del caso (mínimo 10 caracteres)" },
           isSurvey: { type: "boolean" },
         },
         required: ["sessionId", "reason", "subReason", "aiSummary", "observation"],
       },
       execute: async (args: Record<string, unknown>) => {
-        const res = await executeEscalateToSpecialist(args as z.infer<typeof escalateToSpecialistSchema>);
-        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+        try {
+          const validatedArgs = escalateToSpecialistSchema.parse(args);
+          const res = await executeEscalateToSpecialist(validatedArgs);
+          return { content: [{ type: "text", text: JSON.stringify(res) }] };
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            return { 
+              content: [{ 
+                type: "text", 
+                text: JSON.stringify({ 
+                  success: false, 
+                  message: `Error de validación: ${error.errors.map(e => e.message).join(", ")}. Debes proporcionar un resumen real de la conversación y una observación técnica válida.` 
+                }) 
+              }] 
+            };
+          }
+          throw error;
+        }
       }
     },
     close_conversation: {
