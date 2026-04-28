@@ -56,9 +56,9 @@ export const checkPaymentStatusSchema = z.object({
 export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
-  subReason: z.string().describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento, Gestión Administrativa, Reactivación, Upgrade/Downgrade, Saldo a favor / Excedentes)"),
-  aiSummary: z.string().describe("Resumen ejecutivo OBLIGATORIO de toda la conversación del cliente"),
-  observation: z.string().describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
+  aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
+  observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
   urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
@@ -73,9 +73,9 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Intermitencia/Internet Lento, Gestión Administrativa, Reactivación, Upgrade/Downgrade, Saldo a favor / Excedentes)"),
-  aiSummary: z.string().describe("Resumen ejecutivo OBLIGATORIO de toda la conversación del cliente"),
-  observation: z.string().describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
+  aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
+  observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
 });
 
@@ -294,11 +294,11 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       const serial = contractData.contract_detail?.[0]?.service_detail?.[0]?.serial || "No detectado";
       const mapsLink = `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}`;
 
-      const displaySubReason = subReason || "Escalamiento General";
+      const displaySubReason = subReason;
       ticketName = `(IA Susana) [${displaySubReason}] - Contrato ${finalContractId} - ${clientName}`;
       
       ticketContent = `
-Observacion: ${displaySubReason} - ${observation || content || "Sin observación adicional"}
+Observacion: ${displaySubReason} - ${observation}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${finalContractId}
@@ -315,7 +315,7 @@ Dirección: ${address}
 Ubicación: ${mapsLink}
 
 ---
-Resumen IA: ${aiSummary || 'ERROR: No se proporcionó resumen específico de la conversación.'}
+Resumen IA: ${aiSummary}
 `.trim();
     } else {
       // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
@@ -361,7 +361,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     // Fetch detailed contract data from API
     const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
 
-    const displaySubReason = subReason || "Escalamiento General";
+    const displaySubReason = subReason;
     const surveyPrefix = isSurvey ? "[Encuesta] " : "";
 
     // Campos técnicos
@@ -380,7 +380,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
     const ticketContent = `
-Observacion: ${displaySubReason} - ${observation || reason || "ADVERTENCIA: No se incluyó observación específica."}
+Observacion: ${subReason} - ${observation || reason}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
@@ -397,7 +397,7 @@ Dirección: ${address}
 Ubicación: ${mapsLink}
 
 ---
-Resumen IA: ${aiSummary || 'ERROR: No se proporcionó resumen detallado por parte del asistente.'}
+Resumen IA: ${aiSummary}
 `.trim();
 
     const ticketResult = await createGlpiTicketInternal({
