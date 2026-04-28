@@ -322,6 +322,9 @@ Ubicación: ${mapsLink}
 
 ---
 Resumen IA: ${aiSummary}
+
+--- TRANSCRIPCIÓN DEL CHAT ---
+${transcript}
 `.trim();
     } else {
       // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
@@ -405,6 +408,9 @@ Ubicación: ${mapsLink}
 
 ---
 Resumen IA: ${aiSummary}
+
+--- TRANSCRIPCIÓN DEL CHAT ---
+${transcript}
 `.trim();
 
     const ticketResult = await createGlpiTicketInternal({
