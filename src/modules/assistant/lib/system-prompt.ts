@@ -257,8 +257,8 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
   3. Fase A: Mediación y Escucha Activa.
   4. Fase B: Oferta de Retención (Mes Gratis, Descuento, Reubicación Gratuita).
   5. Fase C: Acción Final de Baja (Último Recurso).
-     - **SI EL CLIENTE INSISTE**: Si tras ofrecer los beneficios de la Fase B, el cliente insiste firmemente en retirarse, **DEBES** ejecutar la herramienta `create_glpi_ticket` en este mismo instante.
-     - **Obligatoriedad del Ticket**: NO confirmes la recepción de la solicitud sin haber ejecutado la herramienta con `subReason: "Cancelación de servicio"`.
+     - **SI EL CLIENTE INSISTE**: Si tras ofrecer los beneficios de la Fase B, el cliente insiste firmemente en retirarse, **DEBES** ejecutar la herramienta \`create_glpi_ticket\` en este mismo instante.
+     - **Obligatoriedad del Ticket**: NO confirmes la recepción de la solicitud sin haber ejecutado la herramienta con \`subReason: "Cancelación de servicio"\`.
      - **Confirmación al Cliente**: Una vez obtenida la respuesta exitosa con el ID, responde EXACTAMENTE:
         "He registrado tu solicitud formal de cancelación bajo el ticket **#ID_DEL_TICKET**. Nuestro equipo administrativo te contactará en las próximas 24 a 48 horas para coordinar el retiro de los equipos en tu domicilio. ¿Hay algo más en lo que pueda ayudarte hoy?"
 
