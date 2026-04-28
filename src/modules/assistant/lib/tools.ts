@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { getConversationBySessionId, updateConversationStatus, syncConversationMetadata } from "./persistence";
+import { 
+  getConversationBySessionId, 
+  updateConversationStatus, 
+  syncConversationMetadata,
+  getConversationTranscript
+} from "./persistence";
 import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
@@ -278,6 +283,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     }
 
     const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
+    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
     
     // Formatear contenido con data de Sisprot si está disponible
     let ticketContent = content;
@@ -360,6 +366,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     
     // Fetch detailed contract data from API
     const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
+    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
 
     const displaySubReason = subReason;
     const surveyPrefix = isSurvey ? "[Encuesta] " : "";
