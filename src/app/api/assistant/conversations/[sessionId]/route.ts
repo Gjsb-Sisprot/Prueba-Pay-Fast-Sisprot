@@ -40,10 +40,11 @@ export async function POST(
       }
 
       case "confirm_visit": {
+        const { category } = body;
         if (!date || !time) {
           return NextResponse.json({ error: "Fecha y hora requeridas" }, { status: 400 });
         }
-        result = await createSupportVisit(sessionId, date, time, reason);
+        result = await createSupportVisit(sessionId, date, time, reason, category);
         break;
       }
       case "close": {
