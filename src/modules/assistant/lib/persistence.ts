@@ -484,7 +484,8 @@ export async function createSupportVisit(
   sessionId: string,
   date: string,
   time: string,
-  reason: string
+  reason: string,
+  category: 'support' | 'administration' = 'support'
 ) {
   try {
     const conversation = await getConversationBySessionId(sessionId);
@@ -511,6 +512,7 @@ export async function createSupportVisit(
         visit_date: visitDate.toISOString(),
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
+        category: category,
         created_at: new Date().toISOString()
       }])
       .select()
