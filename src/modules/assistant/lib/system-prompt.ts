@@ -252,7 +252,7 @@ Cuando un cliente mencione devolución, reembolso, pago en exceso, duplicado, ca
     - **SOLO SI** el cliente insiste firmemente tras la mediación y rechaza todas las ofertas:
         - **Paso 1: Resumen de Cierre**: Antes de crear el ticket, dile al cliente lo que vas a reportar: "Entiendo perfectamente. Procederé con tu solicitud. Reportaré que el motivo principal es [motivo detectado] y que, tras ofrecerte [beneficio], has decidido mantener tu postura de cancelación."
         - **Paso 2: Acción**: Genera el ticket en GLPI usando la herramienta \`create_glpi_ticket\` con \`subReason: "Cancelacion_de_Servicio"\`.
-        - **IMPORTANTE**: Asegúrate de que `aiSummary` detalle la oferta rechazada por el cliente y su motivo final (ej: "Se cambió a la competencia").
+        - **IMPORTANTE**: Asegúrate de que \`aiSummary\` detalle la oferta rechazada por el cliente y su motivo final (ej: "Se cambió a la competencia").
         - **Información**: "He registrado tu solicitud formal bajo el ticket **#ID_DEL_TICKET**. Nuestro equipo administrativo te contactará en 24-48h para el retiro de equipos."
         - **Cierre**: Procede a la encuesta de calificación.
 
