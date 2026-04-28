@@ -411,18 +411,6 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       finalContractId = conversation?.contract;
     }
 
-export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
-  try {
-    const { subReason, aiSummary, observation, contractId, sessionId } = args;
-
-    let finalContractId = contractId;
-    let conversation = null;
-
-    if (!finalContractId && sessionId) {
-      conversation = await getConversationBySessionId(sessionId).catch(() => null);
-      finalContractId = conversation?.contract;
-    }
-
     const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
     const itilInfo = getItilInfo(subReason);
