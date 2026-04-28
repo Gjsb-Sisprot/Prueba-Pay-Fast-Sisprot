@@ -315,7 +315,7 @@ Dirección: ${address}
 Ubicación: ${mapsLink}
 
 ---
-Resumen IA: ${aiSummary || 'No se proporcionó resumen de la conversación.'}
+Resumen IA: ${aiSummary || 'ERROR: No se proporcionó resumen específico de la conversación.'}
 `.trim();
     } else {
       // Si no hay datos de contrato, al menos agregamos el prefijo (IA Susana)
@@ -380,7 +380,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     const ticketName = `(IA Susana) ${surveyPrefix}[${displaySubReason}] - Contrato ${contractId} - ${clientName}`;
     
     const ticketContent = `
-Observacion: ${displaySubReason} - ${observation || reason || "Sin observación adicional"}
+Observacion: ${displaySubReason} - ${observation || reason || "ADVERTENCIA: No se incluyó observación específica."}
 Sector: ${sector}
 Cliente: ${clientName}
 N° de contrato: ${contractId}
@@ -397,7 +397,7 @@ Dirección: ${address}
 Ubicación: ${mapsLink}
 
 ---
-Resumen IA: ${aiSummary || 'El cliente reporta una incidencia en su servicio.'}
+Resumen IA: ${aiSummary || 'ERROR: No se proporcionó resumen detallado por parte del asistente.'}
 `.trim();
 
     const ticketResult = await createGlpiTicketInternal({
