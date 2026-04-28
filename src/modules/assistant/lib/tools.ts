@@ -446,7 +446,14 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
     if (n8nResponse.ok) {
       const resultData = await n8nResponse.json();
-      const ticketId = Array.isArray(resultData) && resultData[0]?.id ? resultData[0].id : "PENDIENTE";
+      
+      // Robustez: n8n puede responder como objeto directo o como array
+      let ticketId = "PENDIENTE";
+      if (Array.isArray(resultData) && resultData[0]?.id) {
+        ticketId = resultData[0].id;
+      } else if (resultData && typeof resultData === 'object' && resultData.id) {
+        ticketId = resultData.id;
+      }
 
       return {
         success: true,
@@ -506,7 +513,14 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
 
     if (n8nResponse.ok) {
       const resultData = await n8nResponse.json();
-      const ticketId = Array.isArray(resultData) && resultData[0]?.id ? resultData[0].id : "PENDIENTE";
+      
+      // Robustez: n8n puede responder como objeto directo o como array
+      let ticketId = "PENDIENTE";
+      if (Array.isArray(resultData) && resultData[0]?.id) {
+        ticketId = resultData[0].id;
+      } else if (resultData && typeof resultData === 'object' && resultData.id) {
+        ticketId = resultData.id;
+      }
 
       await Promise.all([
         updateConversationStatus(sessionId, "waiting_specialist"),
