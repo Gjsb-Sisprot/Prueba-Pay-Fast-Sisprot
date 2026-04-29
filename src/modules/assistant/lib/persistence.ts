@@ -512,6 +512,12 @@ export async function createSupportVisit(
         visit_date: visitDate.toISOString(),
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
+        glpi_ticket_id: conversation.glpi_ticket_id || null,
+        metadata: {
+          source: "susana_ai",
+          conversation_id: conversation.id,
+          original_time: time
+        },
         category: category,
         created_at: new Date().toISOString()
       }])
