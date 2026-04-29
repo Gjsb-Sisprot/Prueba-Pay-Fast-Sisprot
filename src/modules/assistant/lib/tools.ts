@@ -147,7 +147,11 @@ const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: '
 };
 
 function getItilInfo(subReason: string) {
-  return SUBREASON_MAPPING[subReason] || { itil: 22, urgency: 3, area: 'tech' };
+  // Búsqueda insensible a mayúsculas/minúsculas para mayor robustez
+  const entry = Object.entries(SUBREASON_MAPPING).find(
+    ([key]) => key.toLowerCase() === subReason.toLowerCase()
+  );
+  return entry ? entry[1] : { itil: 22, urgency: 3, area: 'tech' };
 }
 
 function getRandomOperator(area: 'admin' | 'tech'): number {
@@ -486,7 +490,13 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     });
 
     if (n8nResponse.ok) {
-      const resultData = await n8nResponse.json();
+      const responseText = await n8nResponse.text();
+      let resultData: any = null;
+      try {
+        if (responseText) resultData = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Error parsing n8n response:", e);
+      }
       
       // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
@@ -498,7 +508,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
       if (ticketId !== "PENDIENTE") {
         await sendTicketConfirmation({
-          ticketId,
+          ticketId: String(ticketId),
           contract: finalContractId || "N/A",
           reason: subReason,
           operatorId: assignedOperatorId
@@ -562,7 +572,13 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     });
 
     if (n8nResponse.ok) {
-      const resultData = await n8nResponse.json();
+      const responseText = await n8nResponse.text();
+      let resultData: any = null;
+      try {
+        if (responseText) resultData = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Error parsing n8n response:", e);
+      }
       
       // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
@@ -578,7 +594,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
 
       if (ticketId !== "PENDIENTE") {
         await sendTicketConfirmation({
-          ticketId,
+          ticketId: String(ticketId),
           contract: contractId,
           reason: subReason,
           operatorId: assignedOperatorId
