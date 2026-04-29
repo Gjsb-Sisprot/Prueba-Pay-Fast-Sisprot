@@ -493,7 +493,7 @@ export async function createSupportVisit(
     // 🚀 BLINDAJE: Si la conversación no existe, la creamos de emergencia para tener un UUID válido
     if (!conversation) {
       console.log(`[PERSISTENCE] Creando conversación de emergencia para sesión ${sessionId}`);
-      const newId = await createConversation(sessionId);
+      const newId = await getConversationUuid(sessionId);
       if (newId) {
         conversation = await getConversationBySessionId(sessionId);
       }
