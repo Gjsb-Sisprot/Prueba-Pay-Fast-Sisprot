@@ -631,7 +631,8 @@ export async function routeRequest(
       intent.category === "INFO_ADMINISTRATIVO";
 
     // Detectar si el mensaje contiene una fecha/hora (señal de que ya pasó por el calendario)
-    const hasDateTime = /(lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2}\/\d{1,2}|mañana|tarde|en la mañana|en la tarde)/i.test(message);
+    // Detectar si el mensaje contiene una fecha/hora o señales de agendamiento (AM/PM, HH:MM)
+    const hasDateTime = /(lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2}\/\d{1,2}|mañana|tarde|en la mañana|en la tarde|\d{1,2}:\d{1,2}\s*(AM|PM)?|hora|agendar|cita)/i.test(message);
 
     // Solo escalamos de inmediato si es administrativo O si ya tenemos fecha/hora de visita.
     // Si es técnico y NO tiene fecha/hora, NO llamamos a la herramienta aquí; dejamos que el Solver muestre el calendario.
