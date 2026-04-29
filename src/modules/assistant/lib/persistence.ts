@@ -22,7 +22,7 @@ interface ConversationUpdate {
   summary?: string;
   specialist_name?: string;
   escalation_reason?: string;
-  glpi_ticket_id?: number | string;
+  glpi_ticket_id?: number;
   visit_date?: string | Date;
   visit_time?: string;
 }
@@ -486,7 +486,7 @@ export async function createSupportVisit(
   time: string,
   reason: string,
   category: 'support' | 'administration' = 'support',
-  glpiTicketId?: string
+  glpiTicketId?: number
 ) {
   try {
     const conversation = await getConversationBySessionId(sessionId);
