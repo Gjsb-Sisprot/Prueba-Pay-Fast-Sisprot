@@ -2,7 +2,9 @@ import { z } from "zod";
 import { 
   getConversationBySessionId, 
   updateConversationStatus, 
-  getConversationTranscript
+  getConversationTranscript,
+  createSupportVisit,
+  syncConversationMetadata
 } from "./persistence";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
@@ -233,7 +235,7 @@ export const checkPaymentStatusSchema = z.object({
 export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Cancelación de servicio)"),
   aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
   observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
@@ -241,6 +243,8 @@ export const createGlpiTicketSchema = z.object({
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
   contractId: z.string().optional().describe("ID del contrato para obtener detalles técnicos"),
   sessionId: z.string().optional().describe("ID de la sesión de chat para obtener contexto"),
+  visitDate: z.string().optional().describe("Fecha de la visita técnica acordada (YYYY-MM-DD)"),
+  visitTime: z.string().optional().describe("Hora de la visita técnica acordada (HH:MM AM/PM)"),
 });
 
 export const auditServiceSchema = z.object({
@@ -250,10 +254,12 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Cancelación de servicio)"),
   aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
   observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
+  visitDate: z.string().optional().describe("Fecha de la visita técnica acordada (YYYY-MM-DD)"),
+  visitTime: z.string().optional().describe("Hora de la visita técnica acordada (HH:MM AM/PM)"),
 });
 
 export const closeConversationSchema = z.object({
@@ -293,6 +299,10 @@ export const activateServiceSchema = z.object({
 export const scheduleTechVisitSchema = z.object({
   contractId: z.string().describe("ID del contrato"),
   visitType: z.string().describe("Tipo de visita (ej: Validación de Reactivación)"),
+  sessionId: z.string().describe("ID de la sesión de chat"),
+  visitDate: z.string().describe("Fecha de la visita (YYYY-MM-DD)"),
+  visitTime: z.string().describe("Hora de la visita (HH:MM AM/PM)"),
+  reason: z.string().describe("Motivo detallado de la visita"),
 });
 
 export const getPlanChangeBudgetSchema = z.object({
@@ -444,7 +454,7 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
-    const { subReason, aiSummary, observation, contractId, sessionId } = args;
+    const { subReason, aiSummary, observation, contractId, sessionId, visitDate, visitTime } = args;
 
     let finalContractId = contractId;
     let conversation = null;
@@ -477,7 +487,9 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       "itilcategories_id": itilInfo.itil,
       "urgency": itilInfo.urgency,
       "aiSummary": aiSummary,
-      "transcript": transcript
+      "transcript": transcript,
+      "visitDate": visitDate || null,
+      "visitTime": visitTime || null
     };
 
     // 2. Enviar a n8n
@@ -502,6 +514,23 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
         ticketId = String((resultData[0] as Record<string, unknown>).id);
       } else if (resultData && typeof resultData === 'object' && !Array.isArray(resultData) && 'id' in resultData) {
         ticketId = String((resultData as Record<string, unknown>).id);
+      }
+      
+      // PERSISTENCIA EN SUPABASE SI HAY VISITA
+      if (sessionId && visitDate && visitTime) {
+        // Sincronizar ticketId en la conversación primero para que la visita lo tenga
+        if (ticketId !== "PENDIENTE") {
+          await syncConversationMetadata(sessionId, { glpiTicketId: ticketId }).catch(() => {});
+        }
+
+        await createSupportVisit(
+          sessionId,
+          visitDate,
+          visitTime,
+          observation || aiSummary,
+          itilInfo.area === 'admin' ? 'administration' : 'support',
+          ticketId !== "PENDIENTE" ? ticketId : undefined
+        ).catch(err => console.error("Error guardando visita en Supabase:", err));
       }
 
       if (ticketId !== "PENDIENTE") {
@@ -532,7 +561,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
 export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, subReason, aiSummary, observation, reason } = args;
+    const { sessionId, subReason, aiSummary, observation, reason, visitDate, visitTime } = args;
     
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     const contractId = conversation?.contract || "N/A";
@@ -559,7 +588,9 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
       "itilcategories_id": itilInfo.itil,
       "urgency": itilInfo.urgency,
       "aiSummary": aiSummary,
-      "transcript": transcript
+      "transcript": transcript,
+      "visitDate": visitDate || null,
+      "visitTime": visitTime || null
     };
 
     // Enviar a n8n
@@ -584,6 +615,23 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
         ticketId = String((resultData[0] as Record<string, unknown>).id);
       } else if (resultData && typeof resultData === 'object' && !Array.isArray(resultData) && 'id' in resultData) {
         ticketId = String((resultData as Record<string, unknown>).id);
+      }
+      
+      // PERSISTENCIA EN SUPABASE SI HAY VISITA
+      if (sessionId && visitDate && visitTime) {
+        // Sincronizar ticketId en la conversación primero para que la visita lo tenga
+        if (ticketId !== "PENDIENTE") {
+          await syncConversationMetadata(sessionId, { glpiTicketId: ticketId }).catch(() => {});
+        }
+
+        await createSupportVisit(
+          sessionId,
+          visitDate,
+          visitTime,
+          observation || aiSummary,
+          itilInfo.area === 'admin' ? 'administration' : 'support',
+          ticketId !== "PENDIENTE" ? ticketId : undefined
+        ).catch(err => console.error("Error guardando visita en Supabase:", err));
       }
 
       await Promise.all([
@@ -800,11 +848,28 @@ export async function executeActivateService(args: z.infer<typeof activateServic
 
 
 export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTechVisitSchema>): Promise<ToolResponse> {
-  return {
-    success: true,
-    message: `Visita técnica de '${args.visitType}' programada exitosamente para el contrato #${args.contractId}.`,
-    data: { visitId: `VISIT-${Date.now()}` }
-  };
+  try {
+    const res = await createSupportVisit(
+      args.sessionId,
+      args.visitDate,
+      args.visitTime,
+      args.reason || args.visitType,
+      'support'
+    );
+
+    if (!res.success) throw new Error(res.error);
+
+    return {
+      success: true,
+      message: `Visita técnica de '${args.visitType}' programada exitosamente para el ${args.visitDate} a las ${args.visitTime}.`,
+      data: res.data as Record<string, unknown>
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error al programar visita: ${error instanceof Error ? error.message : "Error desconocido"}`
+    };
+  }
 }
 
 export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
