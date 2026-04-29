@@ -849,25 +849,91 @@ export async function executeActivateService(args: z.infer<typeof activateServic
 
 export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTechVisitSchema>): Promise<ToolResponse> {
   try {
+    const { sessionId, visitDate, visitTime, visitType, reason, contractId } = args;
+
+    // 1. Obtener información básica para el ticket de GLPI
+    const itilInfo = getItilInfo(visitType || reason || "Soporte Técnico");
+    const assignedOperatorId = getRandomOperator(itilInfo.area);
+    
+    let conversation = null;
+    try {
+      conversation = await getConversationBySessionId(sessionId);
+    } catch (e) {
+      console.error("Error fetching conversation:", e);
+    }
+
+    const finalContractId = contractId || conversation?.contract;
+    const transcript = await getConversationTranscript(sessionId).catch(() => "No se pudo recuperar el historial.");
+
+    // 2. Crear ticket en GLPI vía n8n primero
+    const n8nPayload = {
+      "Contrato": finalContractId || "N/A",
+      "name": conversation?.contact_name || conversation?.name || "Cliente",
+      "last name": "",
+      "sector": conversation?.sector || "General",
+      "Observacion": reason || visitType || "Visita técnica programada",
+      "IP Actual": "N/A",
+      "Teléfono": conversation?.contact_phone || "N/A",
+      "VLAN Actual": "N/A",
+      "Plan Contratado": "N/A",
+      "Dirección": "N/A",
+      "Ubicacion": "N/A",
+      "_users_id_requester": 29, 
+      "_users_id_assign": assignedOperatorId,
+      "subReason": visitType || reason || "Soporte Técnico",
+      "itilcategories_id": itilInfo.itil,
+      "urgency": itilInfo.urgency,
+      "aiSummary": `Visita técnica programada para el ${visitDate} a las ${visitTime}.`,
+      "transcript": transcript,
+      "visitDate": visitDate,
+      "visitTime": visitTime
+    };
+
+    let ticketId = "PENDIENTE";
+    try {
+      const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(n8nPayload)
+      });
+
+      if (n8nResponse.ok) {
+        const resultData: any = await n8nResponse.json().catch(() => ({}));
+        if (resultData && typeof resultData === 'object') {
+           const id = resultData.id || (Array.isArray(resultData) && resultData[0]?.id);
+           if (id) ticketId = String(id);
+        }
+      }
+    } catch (err) {
+      console.error("Error creating GLPI ticket for visit:", err);
+    }
+
+    // 3. Crear la visita en Supabase vinculando el ticket
     const res = await createSupportVisit(
-      args.sessionId,
-      args.visitDate,
-      args.visitTime,
-      args.reason || args.visitType,
-      'support'
+      sessionId,
+      visitDate,
+      visitTime,
+      reason || visitType,
+      itilInfo.area === 'admin' ? 'administration' : 'support',
+      ticketId !== "PENDIENTE" ? ticketId : undefined
     );
 
     if (!res.success) throw new Error(res.error);
 
+    // 4. Sincronizar metadatos si tenemos ticket
+    if (ticketId !== "PENDIENTE") {
+      await syncConversationMetadata(sessionId, { glpiTicketId: ticketId }).catch(() => {});
+    }
+
     return {
       success: true,
-      message: `Visita técnica de '${args.visitType}' programada exitosamente para el ${args.visitDate} a las ${args.visitTime}.`,
-      data: res.data as Record<string, unknown>
+      message: `¡Listo! He agendado tu visita técnica de '${visitType}' para el **${visitDate}** a las **${visitTime}**. El número de ticket de seguimiento es el **#${ticketId}**.`,
+      data: { ...res.data as Record<string, unknown>, ticketId }
     };
   } catch (error) {
     return {
       success: false,
-      message: `Error al programar visita: ${error instanceof Error ? error.message : "Error desconocido"}`
+      message: `Error al programar visita y ticket: ${error instanceof Error ? error.message : "Error desconocido"}`
     };
   }
 }
