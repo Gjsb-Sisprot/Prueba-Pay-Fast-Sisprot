@@ -513,9 +513,9 @@ export async function createSupportVisit(
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
         glpi_ticket_id: conversation.glpi_ticket_id || null,
+        conversation_id: conversation.id,
         metadata: {
           source: "susana_ai",
-          conversation_id: conversation.id,
           original_time: time
         },
         category: category,
@@ -538,11 +538,11 @@ export async function createSupportVisit(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id_tickect: conversation.glpi_ticket_id || conversation.id,
+          id_tickect: conversation.id, // Siempre enviar el UUID de la conversación
           contrato: conversation.contract || "N/A",
           fecha: date,
           hora: time,
-          motivo: reason || "Agendado vía Chat Susana"
+          motivo: reason || "Agendado por el usuario a través de Susana AI"
         })
       });
     } catch (err) {
