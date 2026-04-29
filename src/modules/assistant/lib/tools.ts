@@ -232,8 +232,8 @@ export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
   subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
-  aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
-  observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
+  aiSummary: z.string().min(15).describe("Resumen ejecutivo de la conversación"),
+  observation: z.string().min(5).describe("Punto de vista de la IA sobre el problema"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
   urgency: z.number().min(1).max(5).optional().describe("Urgencia del ticket (1-5, default: 5)"),
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
@@ -248,9 +248,9 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
-  aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
-  observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo)"),
+  aiSummary: z.string().min(15).describe("Resumen ejecutivo de la conversación"),
+  observation: z.string().min(5).describe("Punto de vista de la IA sobre el problema técnico"),
   isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
 });
 
@@ -503,6 +503,31 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
           reason: subReason,
           operatorId: assignedOperatorId
         });
+
+        // Vincular el ticket a la visita más reciente de esta sesión si existe
+        if (sessionId) {
+          try {
+            const { supabase } = await import("./persistence");
+            const { data: recentVisit } = await supabase
+              .from("support_visits")
+              .select("id")
+              .eq("client_identification", contractData?.identification || conversation?.identification || "")
+              .is("glpi_ticket_id", null)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+
+            if (recentVisit) {
+              await supabase
+                .from("support_visits")
+                .update({ glpi_ticket_id: ticketId })
+                .eq("id", recentVisit.id);
+              console.log(`[TOOLS] Ticket ${ticketId} vinculado a visita ${recentVisit.id}`);
+            }
+          } catch (err) {
+            console.error("[TOOLS] Error vinculando ticket a visita:", err);
+          }
+        }
       }
 
       return {
@@ -583,6 +608,31 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
           reason: subReason,
           operatorId: assignedOperatorId
         });
+
+        // Vincular el ticket a la visita más reciente de esta sesión si existe
+        if (sessionId) {
+          try {
+            const { supabase } = await import("./persistence");
+            const { data: recentVisit } = await supabase
+              .from("support_visits")
+              .select("id")
+              .eq("client_identification", contractData?.identification || conversation?.identification || "")
+              .is("glpi_ticket_id", null)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+
+            if (recentVisit) {
+              await supabase
+                .from("support_visits")
+                .update({ glpi_ticket_id: ticketId })
+                .eq("id", recentVisit.id);
+              console.log(`[TOOLS] Ticket ${ticketId} vinculado a visita ${recentVisit.id}`);
+            }
+          } catch (err) {
+            console.error("[TOOLS] Error vinculando ticket a visita:", err);
+          }
+        }
       }
 
       return {
