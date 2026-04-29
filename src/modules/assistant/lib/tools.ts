@@ -2,7 +2,8 @@ import { z } from "zod";
 import { 
   getConversationBySessionId, 
   updateConversationStatus, 
-  getConversationTranscript
+  getConversationTranscript,
+  createSupportVisit
 } from "./persistence";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
@@ -238,19 +239,16 @@ export const createGlpiTicketSchema = z.object({
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
   contractId: z.string().optional().describe("ID del contrato para obtener detalles técnicos"),
   sessionId: z.string().optional().describe("ID de la sesión de chat para obtener contexto"),
+  visitDate: z.string().optional().describe("Fecha de la visita (si aplica, formato YYYY-MM-DD)"),
+  visitTime: z.string().optional().describe("Hora de la visita (si aplica, ej: '10:00 AM')"),
 });
 
-export const auditServiceSchema = z.object({
-  contractId: z.string().describe("ID del contrato del cliente para realizar la auditoría interna"),
-});
-
-export const escalateToSpecialistSchema = z.object({
+export const scheduleSupportSchema = z.object({
+  contractId: z.string().describe("ID del contrato"),
+  visitType: z.string().describe("Tipo de visita (ej: Soporte Técnico, Validación de Reactivación)"),
+  date: z.string().describe("Fecha de la visita (formato YYYY-MM-DD)"),
+  time: z.string().describe("Hora de la visita (ej: '10:00 AM')"),
   sessionId: z.string().describe("ID de la sesión de chat"),
-  reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo)"),
-  aiSummary: z.string().min(15).describe("Resumen ejecutivo de la conversación"),
-  observation: z.string().min(5).describe("Punto de vista de la IA sobre el problema técnico"),
-  isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
 });
 
 export const closeConversationSchema = z.object({
@@ -287,9 +285,8 @@ export const activateServiceSchema = z.object({
   billingCycle: z.string().optional().describe("Ciclo de facturación elegido (ej. Ciclo 10)"),
 });
 
-export const scheduleTechVisitSchema = z.object({
-  contractId: z.string().describe("ID del contrato"),
-  visitType: z.string().describe("Tipo de visita (ej: Validación de Reactivación)"),
+export const auditServiceSchema = z.object({
+  contractId: z.string().describe("ID del contrato del cliente para realizar la auditoría interna"),
 });
 
 export const getPlanChangeBudgetSchema = z.object({
@@ -352,8 +349,13 @@ export const toolDefinitions: ToolDefinition[] = [
     name: "create_glpi_ticket",
     description:
       "Crea un ticket de soporte en GLPI para seguimiento técnico o administrativo. " +
-      "Utilízalo cuando el problema no se pueda resolver automáticamente o requiera un registro oficial para seguimiento.",
+      "Utilízalo siempre para finalizar una gestión que requiera registro oficial.",
     schema: createGlpiTicketSchema,
+  },
+  {
+    name: "schedule_support",
+    description: "Registra y agenda una visita técnica en el sistema interno de Sisprot.",
+    schema: scheduleSupportSchema,
   },
   {
     name: "audit_service",
@@ -387,11 +389,7 @@ export const toolDefinitions: ToolDefinition[] = [
     description: "Ejecuta la activación técnica del servicio (Mikrotik y OLT).",
     schema: activateServiceSchema,
   },
-  {
-    name: "schedule_tech_visit",
-    description: "Programa una visita técnica de validación u otro tipo.",
-    schema: scheduleTechVisitSchema,
-  },
+
   {
     name: "get_plan_change_budget",
     description: "Calcula el presupuesto prorrateado y cargos administrativos para un cambio de plan (Upgrade).",
@@ -441,218 +439,123 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
-    const { subReason, aiSummary, observation, contractId, sessionId } = args;
+    const { subReason, aiSummary, observation, contractId, sessionId, visitDate, visitTime } = args;
 
-    const [conversation, transcript] = await Promise.all([
-      (sessionId ? getConversationBySessionId(sessionId) : Promise.resolve(null)).catch(() => null),
-      (sessionId ? getConversationTranscript(sessionId) : Promise.resolve("No disponible")).catch(() => "Transcripción no disponible")
-    ]);
+    // Obtener la transcripción para contexto histórico
+    const transcript = sessionId 
+      ? await getConversationTranscript(sessionId).catch(() => "Transcripción no disponible")
+      : "No disponible";
 
-    const finalContractId = contractId || conversation?.contract;
-
-    const contractData = finalContractId ? await fetchContractById(finalContractId).catch(() => null) : null;
     const itilInfo = getItilInfo(subReason);
     const assignedOperatorId = getRandomOperator(itilInfo.area);
     
+    // Payload simplificado: n8n se encargará de consultar el resto de los datos del contrato
     const payload = {
-      "Contrato": finalContractId || "N/A",
-      "name": contractData?.name || "Cliente",
-      "last name": contractData?.last_name || "Desconocido",
-      "sector": contractData?.sector_name || "No especificado",
+      "Contrato": contractId || "N/A",
       "Observacion": `${subReason} - ${observation}`,
-      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
-      "Teléfono": contractData?.mobile || "No disponible",
-      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
-      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || "Plan no detectado",
-      "Dirección": contractData?.address || "No registrada",
-      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : "No disponible",
-      "_users_id_requester": 29,
-      "_users_id_assign": assignedOperatorId,
       "subReason": subReason,
       "itilcategories_id": itilInfo.itil,
       "urgency": itilInfo.urgency,
       "aiSummary": aiSummary,
-      "transcript": transcript
+      "transcript": transcript,
+      "visit_date": visitDate || "N/A",
+      "visit_time": visitTime || "N/A",
+      "_users_id_assign": assignedOperatorId
     };
 
-    // 2. Enviar a n8n
+    console.log(`[GLPI_TICKET] Enviando ticket a n8n para contrato ${contractId}...`);
+
     const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
-    if (n8nResponse.ok) {
-      const resultData = await n8nResponse.json();
-      
-      // Robustez: n8n puede responder como objeto directo o como array
-      let ticketId = "PENDIENTE";
-      if (Array.isArray(resultData) && resultData[0]?.id) {
-        ticketId = resultData[0].id;
-      } else if (resultData && typeof resultData === 'object' && resultData.id) {
-        ticketId = resultData.id;
-      }
+    if (!n8nResponse.ok) {
+      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
+    }
 
-      if (ticketId !== "PENDIENTE") {
-        await sendTicketConfirmation({
-          ticketId,
-          contract: finalContractId || "N/A",
-          reason: subReason,
-          operatorId: assignedOperatorId
-        });
+    const resultData = await n8nResponse.json();
+    
+    // Robustez: extraer el ticketId de la respuesta de n8n
+    let ticketId = "PENDIENTE";
+    if (Array.isArray(resultData) && resultData[0]?.id) {
+      ticketId = resultData[0].id;
+    } else if (resultData && typeof resultData === 'object' && resultData.id) {
+      ticketId = resultData.id;
+    }
 
-        if (sessionId) {
-          try {
-            const conversation = await getConversationBySessionId(sessionId).catch(() => null);
-            const searchId = conversation?.id || sessionId;
-            const { data: recentVisit } = await supabase
-              .from("support_visits")
-              .select("id")
-              .eq("conversation_id", searchId)
-              .is("glpi_ticket_id", null)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+    if (ticketId !== "PENDIENTE" && sessionId) {
+      try {
+        // Vincular el ticket a la visita más reciente si existe
+        const conversation = await getConversationBySessionId(sessionId).catch(() => null);
+        const searchId = conversation?.id || sessionId;
+        const { data: recentVisit } = await supabase
+          .from("support_visits")
+          .select("id")
+          .eq("conversation_id", searchId)
+          .is("glpi_ticket_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-            if (recentVisit) {
-              await supabase
-                .from("support_visits")
-                .update({ glpi_ticket_id: ticketId.toString() })
-                .eq("id", recentVisit.id);
-            }
-          } catch (err) {
-            console.error("[TOOLS] Error vinculando ticket a visita:", err);
-          }
+        if (recentVisit) {
+          await supabase
+            .from("support_visits")
+            .update({ glpi_ticket_id: ticketId.toString() })
+            .eq("id", recentVisit.id);
         }
+      } catch (err) {
+        console.error("[TOOLS] Error vinculando ticket a visita:", err);
       }
+    }
 
+    return {
+      success: true,
+      message: `¡Listo! He registrado tu solicitud oficialmente. Tu número de ticket de seguimiento es el **#${ticketId}**. Con este número podrás consultar el estado de tu caso en cualquier momento.`,
+      data: { ticketId: ticketId, operatorId: assignedOperatorId },
+    };
+  } catch (error) {
+    console.error("[GLPI_TICKET_ERROR]", error);
+    return {
+      success: false,
+      message: `Error al procesar el ticket en GLPI: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+    };
+  }
+}
+
+export async function executeScheduleSupport(args: z.infer<typeof scheduleSupportSchema>): Promise<ToolResponse> {
+  try {
+    const { sessionId, date, time, visitType, contractId } = args;
+    
+    const result = await createSupportVisit(sessionId, date, time, visitType);
+    
+    if (result.success) {
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud oficialmente. Tu número de ticket de seguimiento es el **#${ticketId}**. Con este número podrás consultar el estado de tu caso en cualquier momento. Un especialista administrativo lo procesará a la brevedad.`,
-        data: { status: "sent_to_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
+        message: `La visita técnica de tipo '${visitType}' ha sido agendada para el día ${date} a las ${time}.`,
+        data: { visitId: result.visitId }
       };
     } else {
-      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
+      throw new Error(result.error || "No se pudo agendar la visita");
     }
   } catch (error) {
     return {
       success: false,
-      message: `Error al procesar la solicitud vía n8n: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+      message: `Error al agendar la visita: ${error instanceof Error ? error.message : "Error desconocido"}.`
     };
   }
 }
 
 
-export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
-  try {
-    const { sessionId, subReason, aiSummary, observation, reason } = args;
-    
-    // 1. Obtener todos los datos necesarios en paralelo para máxima velocidad
-    const [conversation, transcript] = await Promise.all([
-      getConversationBySessionId(sessionId).catch(() => null),
-      getConversationTranscript(sessionId).catch(() => "Transcripción no disponible")
-    ]);
-
-    const contractId = conversation?.contract || "N/A";
-    
-    // Obtener detalles del contrato si existe
-    const contractData = contractId !== "N/A" 
-      ? await fetchContractById(contractId).catch(() => null) 
-      : null;
-
-    const itilInfo = getItilInfo(subReason);
-    const assignedOperatorId = getRandomOperator(itilInfo.area);
-
-    const payload = {
-      "Contrato": contractId,
-      "name": contractData?.name || conversation?.contact_name || "Cliente",
-      "last name": contractData?.last_name || "Desconocido",
-      "sector": contractData?.sector_name || conversation?.sector || "No especificado",
-      "Observacion": `${subReason} - ${observation || reason}`,
-      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
-      "Teléfono": contractData?.mobile || conversation?.contact_phone || "No disponible",
-      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
-      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name || "Plan no detectado",
-      "Dirección": contractData?.address || conversation?.address || "No registrada",
-      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : (conversation?.sector || "No disponible"),
-      "_users_id_requester": 29,
-      "_users_id_assign": assignedOperatorId,
-      "subReason": subReason,
-      "itilcategories_id": itilInfo.itil,
-      "urgency": itilInfo.urgency,
-      "aiSummary": aiSummary,
-      "transcript": transcript
-    };
-
-    // Enviar a n8n con Diagnóstico Profundo
-    try {
-      console.log(`[N8N_SEND] Enviando ticket para contrato ${contractId}`);
-      
-      const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!n8nResponse.ok) {
-        const errorText = await n8nResponse.text().catch(() => "Sin detalle");
-        console.error(`[N8N_ERROR] Status: ${n8nResponse.status}. Body: ${errorText}`);
-        throw new Error(`n8n devolvió Error ${n8nResponse.status}: ${errorText.substring(0, 100)}`);
-      }
-
-      const textData = await n8nResponse.text();
-      let ticketId = "PENDIENTE";
-      
-      if (textData) {
-        try {
-          const resultData = JSON.parse(textData);
-          // Extractor de ID ultra-robusto
-          if (Array.isArray(resultData)) {
-            ticketId = resultData[0]?.id || resultData[0]?.ticket_id || "PENDIENTE";
-          } else if (resultData && typeof resultData === 'object') {
-            ticketId = resultData.id || resultData.ticket_id || "PENDIENTE";
-          }
-        } catch (e) {
-          console.warn("[N8N_PARSE_WARN] Respuesta no es JSON válido:", textData);
-        }
-      }
-
-      if (ticketId === "PENDIENTE") {
-        throw new Error("n8n respondió OK pero no devolvió un ID de ticket válido.");
-      }
-
-      // Vinculación asíncrona (no bloqueante)
-      const searchId = conversation?.id || sessionId;
-      supabase.from("support_visits")
-        .update({ glpi_ticket_id: ticketId.toString() })
-        .eq("conversation_id", searchId)
-        .is("glpi_ticket_id", null)
-        .then(({ error }) => {
-          if (error) console.error("[ASYNC_LINK_ERR]", error.message);
-        });
-
-      return {
-        success: true,
-        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Con este número podrás hacerle seguimiento a tu caso.`,
-        data: { ticketId },
-      };
-
-    } catch (n8nErr) {
-      const errorMessage = n8nErr instanceof Error ? n8nErr.message : "Error desconocido en n8n";
-      console.error("[N8N_FATAL]", errorMessage);
-      
-      return {
-        success: false, // Ahora sí devolvemos error para que se vea qué pasó
-        message: `Lo siento, no pudimos generar el ticket en n8n. Detalle: ${errorMessage}. La visita técnica fue anotada en el calendario, pero falta el ticket oficial.`,
-        data: { error: errorMessage },
-      };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: `Error al escalar el caso vía n8n: ${error instanceof Error ? error.message : "Error desconocido"}.`,
-    };
-  }
+// La función executeEscalateToSpecialist ha sido deprecada a favor de create_glpi_ticket.
+// Se mantiene temporalmente para compatibilidad interna si fuera necesario.
+export async function executeEscalateToSpecialist(args: any): Promise<ToolResponse> {
+  return executeCreateGlpiTicket({
+    ...args,
+    name: `Escalamiento: ${args.subReason}`,
+    content: args.reason || args.content
+  });
 }
 
 export async function executeCloseConversation(args: z.infer<typeof closeConversationSchema>): Promise<ToolResponse> {
@@ -839,13 +742,7 @@ export async function executeActivateService(args: z.infer<typeof activateServic
 }
 
 
-export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTechVisitSchema>): Promise<ToolResponse> {
-  return {
-    success: true,
-    message: `Visita técnica de '${args.visitType}' programada exitosamente para el contrato #${args.contractId}.`,
-    data: { visitId: `VISIT-${Date.now()}` }
-  };
-}
+
 
 export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
   try {
@@ -940,7 +837,7 @@ export const getLocalTools = (): LocalToolSet => {
                 type: "text", 
                 text: JSON.stringify({ 
                   success: false, 
-                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}. Por favor, redacta un resumen y observación más detallados y vuelve a intentarlo.` 
+                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}` 
                 }) 
               }] 
             };
@@ -949,25 +846,24 @@ export const getLocalTools = (): LocalToolSet => {
         }
       }
     },
-    escalate_to_specialist: {
-      name: "escalate_to_specialist",
-      description: "Escala la conversación a un especialista humano.",
+    schedule_support: {
+      name: "schedule_support",
+      description: "Registra una visita técnica en el sistema interno.",
       inputSchema: {
         type: "object",
         properties: {
+          contractId: { type: "string" },
+          visitType: { type: "string" },
+          date: { type: "string" },
+          time: { type: "string" },
           sessionId: { type: "string" },
-          reason: { type: "string" },
-          subReason: { type: "string", description: "Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)" },
-          aiSummary: { type: "string", description: "Resumen detallado de la conversación (mínimo 25 caracteres)" },
-          observation: { type: "string", description: "Análisis específico del caso (mínimo 10 caracteres)" },
-          isSurvey: { type: "boolean" },
         },
-        required: ["sessionId", "reason", "subReason", "aiSummary", "observation"],
+        required: ["contractId", "visitType", "date", "time", "sessionId"],
       },
       execute: async (args: Record<string, unknown>) => {
         try {
-          const validatedArgs = escalateToSpecialistSchema.parse(args);
-          const res = await executeEscalateToSpecialist(validatedArgs);
+          const validatedArgs = scheduleSupportSchema.parse(args);
+          const res = await executeScheduleSupport(validatedArgs);
           return { content: [{ type: "text", text: JSON.stringify(res) }] };
         } catch (error) {
           if (error instanceof z.ZodError) {
@@ -976,7 +872,7 @@ export const getLocalTools = (): LocalToolSet => {
                 type: "text", 
                 text: JSON.stringify({ 
                   success: false, 
-                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}. Debes proporcionar un resumen real de la conversación y una observación técnica válida.` 
+                  message: `Error de validación: ${error.issues.map(e => e.message).join(", ")}` 
                 }) 
               }] 
             };
@@ -1145,22 +1041,7 @@ export const getLocalTools = (): LocalToolSet => {
       }
     },
 
-    schedule_tech_visit: {
-      name: "schedule_tech_visit",
-      description: "Programa una visita técnica.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          contractId: { type: "string" },
-          visitType: { type: "string" },
-        },
-        required: ["contractId", "visitType"],
-      },
-      execute: async (args: Record<string, unknown>) => {
-        const res = await executeScheduleTechVisit(args as z.infer<typeof scheduleTechVisitSchema>);
-        return { content: [{ type: "text", text: JSON.stringify(res) }] };
-      }
-    },
+
     get_plan_change_budget: {
       name: "get_plan_change_budget",
       description: "Calcula el presupuesto prorrateado y administrativo para un UPGRADE de plan. Úsala cuando el cliente seleccione un nuevo plan desde el formulario o solicite explícitamente calcular costos de aumento.",
