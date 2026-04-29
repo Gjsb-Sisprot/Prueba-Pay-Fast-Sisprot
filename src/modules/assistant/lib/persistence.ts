@@ -283,7 +283,7 @@ export async function syncConversationMetadata(
     if (data.name) updates.contact_name = data.name;
     if (data.email) updates.contact_email = data.email;
     if (data.phone) updates.contact_phone = data.phone;
-    if (data.glpiTicketId) updates.glpi_ticket_id = data.glpiTicketId;
+    if (data.glpiTicketId) updates.glpi_ticket_id = typeof data.glpiTicketId === 'string' ? parseInt(data.glpiTicketId) : data.glpiTicketId;
     if (data.summary) updates.summary = data.summary;
     if (data.reason) updates.escalation_reason = data.reason;
     if (data.specialistName) updates.specialist_name = data.specialistName;
@@ -485,8 +485,7 @@ export async function createSupportVisit(
   date: string,
   time: string,
   reason: string,
-  category: 'support' | 'administration' = 'support',
-  glpiTicketId?: number
+  category: 'support' | 'administration' = 'support'
 ) {
   try {
     const conversation = await getConversationBySessionId(sessionId);
@@ -502,15 +501,6 @@ export async function createSupportVisit(
     if (ampm === "AM" && hours === 12) hours = 0;
 
     const visitDate = new Date(date);
-    
-    // Si la fecha no es válida (ej: "jueves 30"), intentamos rescatarla o usamos hoy
-    if (isNaN(visitDate.getTime())) {
-      console.warn(`[DATE_WARNING] Formato de fecha inválido recibido: "${date}". Usando fecha actual como base.`);
-      // Intentamos una fecha base de hoy, pero mantenemos el 'time' solicitado
-      const now = new Date();
-      visitDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-    }
-    
     visitDate.setHours(hours, minutes, 0, 0);
 
     const { data, error } = await supabase
@@ -523,8 +513,6 @@ export async function createSupportVisit(
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
         category: category,
-        conversation_id: conversation.id,
-        glpi_ticket_id: glpiTicketId || conversation.glpi_ticket_id,
         created_at: new Date().toISOString()
       }])
       .select()
