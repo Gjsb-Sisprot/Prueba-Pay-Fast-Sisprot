@@ -58,7 +58,7 @@ export function filterToolsForRouter(tools: LocalToolSet, options: RouterToolFil
   const filtered: LocalToolSet = {};
   for (const [name, tool] of Object.entries(tools)) {
     if (EXCLUDED_ROUTER_TOOLS.has(name)) continue;
-    if (name === "escalate_to_specialist" && !allowEscalation) continue;
+    if (name === "escalate_to_specialist") continue;
     if (name === "close_conversation" && !allowClose) continue;
     filtered[name] = tool;
   }
@@ -71,7 +71,7 @@ export const FAST_PATH_ELIGIBLE_TOOLS = new Set([
   "create_auth_pdf",
   "terminate_service",
   "activate_service",
-  "schedule_tech_visit",
+  "schedule_support",
   "get_plan_change_budget",
   "request_plan_change",
 ]);
@@ -118,7 +118,13 @@ export async function executeForcedEscalation(
   try {
     const toolCallId = `forced-escalate-${Date.now()}`;
     const result = await tool.execute(
-      { sessionId, reason },
+      { 
+        sessionId, 
+        reason,
+        subReason: "Falla en Ultima Milla", // Valor por defecto para validación
+        aiSummary: "Escalamiento forzado por confirmación de cita técnica en el chat.",
+        observation: "El usuario confirmó la fecha/hora en el calendario y se procedió al registro automático."
+      },
       { messages: [], toolCallId }
     );
     return { toolName, toolCallId, result };
