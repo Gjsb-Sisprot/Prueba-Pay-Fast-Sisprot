@@ -2,10 +2,8 @@ import { z } from "zod";
 import { 
   getConversationBySessionId, 
   updateConversationStatus, 
-  syncConversationMetadata,
   getConversationTranscript
 } from "./persistence";
-import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
 import { supabase } from "./supabase";
@@ -450,7 +448,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       (sessionId ? getConversationTranscript(sessionId) : Promise.resolve("No disponible")).catch(() => "Transcripción no disponible")
     ]);
 
-    let finalContractId = contractId || conversation?.contract;
+    const finalContractId = contractId || conversation?.contract;
 
     const contractData = finalContractId ? await fetchContractById(finalContractId).catch(() => null) : null;
     const itilInfo = getItilInfo(subReason);
