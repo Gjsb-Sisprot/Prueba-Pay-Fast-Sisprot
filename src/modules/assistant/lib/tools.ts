@@ -507,7 +507,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
         // Vincular el ticket a la visita más reciente de esta sesión si existe
         if (sessionId) {
           try {
-            const { supabase } = await import("./persistence");
+            const { supabase } = await import("./supabase");
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
@@ -612,7 +612,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
         // Vincular el ticket a la visita más reciente de esta sesión si existe
         if (sessionId) {
           try {
-            const { supabase } = await import("./persistence");
+            const { supabase } = await import("./supabase");
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
