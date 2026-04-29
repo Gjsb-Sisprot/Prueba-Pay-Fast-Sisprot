@@ -502,6 +502,15 @@ export async function createSupportVisit(
     if (ampm === "AM" && hours === 12) hours = 0;
 
     const visitDate = new Date(date);
+    
+    // Si la fecha no es válida (ej: "jueves 30"), intentamos rescatarla o usamos hoy
+    if (isNaN(visitDate.getTime())) {
+      console.warn(`[DATE_WARNING] Formato de fecha inválido recibido: "${date}". Usando fecha actual como base.`);
+      // Intentamos una fecha base de hoy, pero mantenemos el 'time' solicitado
+      const now = new Date();
+      visitDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+    
     visitDate.setHours(hours, minutes, 0, 0);
 
     const { data, error } = await supabase
