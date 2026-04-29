@@ -445,16 +445,14 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
   try {
     const { subReason, aiSummary, observation, contractId, sessionId } = args;
 
-    let finalContractId = contractId;
-    let conversation = null;
+    const [conversation, transcript] = await Promise.all([
+      (sessionId ? getConversationBySessionId(sessionId) : Promise.resolve(null)).catch(() => null),
+      (sessionId ? getConversationTranscript(sessionId) : Promise.resolve("No disponible")).catch(() => "Transcripción no disponible")
+    ]);
 
-    if (!finalContractId && sessionId) {
-      conversation = await getConversationBySessionId(sessionId).catch(() => null);
-      finalContractId = conversation?.contract;
-    }
+    let finalContractId = contractId || conversation?.contract;
 
-    const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
-    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
+    const contractData = finalContractId ? await fetchContractById(finalContractId).catch(() => null) : null;
     const itilInfo = getItilInfo(subReason);
     const assignedOperatorId = getRandomOperator(itilInfo.area);
     
@@ -551,10 +549,19 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
   try {
     const { sessionId, subReason, aiSummary, observation, reason } = args;
     
-    const conversation = await getConversationBySessionId(sessionId).catch(() => null);
+    // 1. Obtener todos los datos necesarios en paralelo para máxima velocidad
+    const [conversation, transcript] = await Promise.all([
+      getConversationBySessionId(sessionId).catch(() => null),
+      getConversationTranscript(sessionId).catch(() => "Transcripción no disponible")
+    ]);
+
     const contractId = conversation?.contract || "N/A";
-    const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
-    const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
+    
+    // Obtener detalles del contrato si existe
+    const contractData = contractId !== "N/A" 
+      ? await fetchContractById(contractId).catch(() => null) 
+      : null;
+
     const itilInfo = getItilInfo(subReason);
     const assignedOperatorId = getRandomOperator(itilInfo.area);
 
@@ -588,56 +595,31 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
 
     if (n8nResponse.ok) {
       const resultData = await n8nResponse.json();
-      
-      // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
-      if (Array.isArray(resultData) && resultData[0]?.id) {
-        ticketId = resultData[0].id;
-      } else if (resultData && typeof resultData === 'object' && resultData.id) {
-        ticketId = resultData.id;
+
+      // Extractor de ID ultra-robusto
+      if (Array.isArray(resultData)) {
+        ticketId = resultData[0]?.id || resultData[0]?.ticket_id || "PENDIENTE";
+      } else if (resultData && typeof resultData === 'object') {
+        ticketId = resultData.id || resultData.ticket_id || "PENDIENTE";
       }
 
-      await Promise.all([
-        updateConversationStatus(sessionId, "waiting_specialist"),
-      ]).catch(() => {});
-
       if (ticketId !== "PENDIENTE") {
-        await sendTicketConfirmation({
-          ticketId,
-          contract: contractId,
-          reason: subReason,
-          operatorId: assignedOperatorId
-        });
-
-        if (sessionId) {
-          try {
-            const conversation = await getConversationBySessionId(sessionId).catch(() => null);
-            const searchId = conversation?.id || sessionId;
-            const { data: recentVisit } = await supabase
-              .from("support_visits")
-              .select("id")
-              .eq("conversation_id", searchId)
-              .is("glpi_ticket_id", null)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (recentVisit) {
-              await supabase
-                .from("support_visits")
-                .update({ glpi_ticket_id: ticketId.toString() })
-                .eq("id", recentVisit.id);
-            }
-          } catch (err) {
-            console.error("[TOOLS] Error vinculando ticket a visita:", err);
-          }
-        }
+        // Vinculación asíncrona (no bloqueante)
+        const searchId = conversation?.id || sessionId;
+        supabase.from("support_visits")
+          .update({ glpi_ticket_id: ticketId.toString() })
+          .eq("conversation_id", searchId)
+          .is("glpi_ticket_id", null)
+          .then(({ error }) => {
+            if (error) console.error("[ASYNC_LINK_ERR]", error);
+          });
       }
 
       return {
         success: true,
-        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Puedes usar este número para hacerle seguimiento a tu caso. Según nuestro SLA, un técnico solventará la falla en un lapso no mayor a 24 horas.`,
-        data: { status: "escalated_via_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
+        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Con este número podrás hacerle seguimiento a tu caso. Un técnico te visitará en el horario acordado.`,
+        data: { ticketId },
       };
     } else {
       throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
