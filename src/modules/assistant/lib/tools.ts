@@ -8,6 +8,7 @@ import {
 import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
+import { supabase } from "./supabase";
 
 
 // --- GLPI INTEGRATION (Consolidated logic is now imported from glpi.ts) ---
@@ -504,25 +505,24 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
           operatorId: assignedOperatorId
         });
 
-        // Vincular el ticket a la visita más reciente de esta sesión si existe
         if (sessionId) {
           try {
-            const { supabase } = await import("./supabase");
+            const conversation = await getConversationBySessionId(sessionId).catch(() => null);
+            const searchId = conversation?.id || sessionId;
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
-              .eq("conversation_id", conversation?.id || sessionId)
+              .eq("conversation_id", searchId)
               .is("glpi_ticket_id", null)
               .order("created_at", { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
 
             if (recentVisit) {
               await supabase
                 .from("support_visits")
-                .update({ glpi_ticket_id: ticketId })
+                .update({ glpi_ticket_id: ticketId.toString() })
                 .eq("id", recentVisit.id);
-              console.log(`[TOOLS] Ticket ${ticketId} vinculado a visita ${recentVisit.id}`);
             }
           } catch (err) {
             console.error("[TOOLS] Error vinculando ticket a visita:", err);
@@ -609,25 +609,24 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
           operatorId: assignedOperatorId
         });
 
-        // Vincular el ticket a la visita más reciente de esta sesión si existe
         if (sessionId) {
           try {
-            const { supabase } = await import("./supabase");
+            const conversation = await getConversationBySessionId(sessionId).catch(() => null);
+            const searchId = conversation?.id || sessionId;
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
-              .eq("conversation_id", conversation?.id || sessionId)
+              .eq("conversation_id", searchId)
               .is("glpi_ticket_id", null)
               .order("created_at", { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
 
             if (recentVisit) {
               await supabase
                 .from("support_visits")
-                .update({ glpi_ticket_id: ticketId })
+                .update({ glpi_ticket_id: ticketId.toString() })
                 .eq("id", recentVisit.id);
-              console.log(`[TOOLS] Ticket ${ticketId} vinculado a visita ${recentVisit.id}`);
             }
           } catch (err) {
             console.error("[TOOLS] Error vinculando ticket a visita:", err);
