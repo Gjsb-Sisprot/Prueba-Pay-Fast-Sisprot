@@ -92,7 +92,7 @@ export interface ClientContextData {
       canceled?: number;
     } | null;
   }>;
-  glpiTicketId?: number;
+  glpiTicketId?: number | string;
   summary?: string;
   reason?: string;
   specialistName?: string;
