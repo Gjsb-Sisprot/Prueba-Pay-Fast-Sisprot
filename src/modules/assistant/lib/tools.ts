@@ -603,15 +603,37 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
       }
 
       if (ticketId !== "PENDIENTE") {
-        // Vinculación asíncrona (no bloqueante)
-        const searchId = conversation?.id || sessionId;
-        supabase.from("support_visits")
-          .update({ glpi_ticket_id: ticketId.toString() })
-          .eq("conversation_id", searchId)
-          .is("glpi_ticket_id", null)
-          .then(({ error }) => {
-            if (error) console.error("[ASYNC_LINK_ERR]", error);
-          });
+        // Vinculación asíncrona (no bloqueante) pero con ID verificado
+        const resolveAndLink = async () => {
+          try {
+            let searchId = conversation?.id;
+            if (!searchId) {
+              const { data: conv } = await supabase
+                .from("conversations")
+                .select("id")
+                .eq("session_id", sessionId)
+                .maybeSingle();
+              searchId = conv?.id;
+            }
+
+            if (searchId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchId)) {
+              console.log(`[LINKING] Vinculando ticket #${ticketId} a UUID ${searchId}`);
+              const { error } = await supabase
+                .from("support_visits")
+                .update({ glpi_ticket_id: ticketId.toString() })
+                .eq("conversation_id", searchId)
+                .is("glpi_ticket_id", null);
+              
+              if (error) console.error("[ASYNC_LINK_ERR]", error.message);
+            } else {
+              console.warn(`[LINKING_SKIP] ID de conversación inválido o no encontrado: ${searchId}`);
+            }
+          } catch (err) {
+            console.error("[LINKING_CRITICAL_ERR]", err);
+          }
+        };
+        
+        resolveAndLink(); // Se ejecuta en segundo plano
       }
 
       return {
