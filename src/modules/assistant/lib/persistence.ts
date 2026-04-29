@@ -488,11 +488,22 @@ export async function createSupportVisit(
   category: 'support' | 'administration' = 'support'
 ) {
   try {
-    const conversation = await getConversationBySessionId(sessionId);
-    if (!conversation) throw new Error("Conversación no encontrada");
+    let conversation = await getConversationBySessionId(sessionId);
+    
+    // 🚀 BLINDAJE: Si la conversación no existe, la creamos de emergencia para tener un UUID válido
+    if (!conversation) {
+      console.log(`[PERSISTENCE] Creando conversación de emergencia para sesión ${sessionId}`);
+      const newId = await createConversation(sessionId);
+      if (newId) {
+        conversation = await getConversationBySessionId(sessionId);
+      }
+    }
+
+    if (!conversation?.id) {
+      throw new Error(`No se pudo obtener un UUID válido para la sesión ${sessionId}`);
+    }
 
     // Construir fecha completa
-    // time format: "08:00 AM"
     const [t, ampm] = time.split(" ");
     const [hoursRaw, minutes] = t.split(":").map(Number);
     let hours = hoursRaw;
@@ -513,7 +524,7 @@ export async function createSupportVisit(
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
         glpi_ticket_id: conversation.glpi_ticket_id || null,
-        conversation_id: conversation.id,
+        conversation_id: conversation.id, // UUID garantizado
         metadata: {
           source: "susana_ai",
           original_time: time
