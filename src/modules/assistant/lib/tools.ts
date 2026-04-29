@@ -584,65 +584,68 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
       "transcript": transcript
     };
 
-    // Enviar a n8n
-    const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    // Enviar a n8n con Diagnóstico Profundo
+    try {
+      console.log(`[N8N_SEND] Enviando ticket para contrato ${contractId}`);
+      
+      const n8nResponse = await fetch('https://n8n.sisprottaurus.com/webhook/envio_ticket_GLPI', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    if (n8nResponse.ok) {
-      const resultData = await n8nResponse.json();
+      if (!n8nResponse.ok) {
+        const errorText = await n8nResponse.text().catch(() => "Sin detalle");
+        console.error(`[N8N_ERROR] Status: ${n8nResponse.status}. Body: ${errorText}`);
+        throw new Error(`n8n devolvió Error ${n8nResponse.status}: ${errorText.substring(0, 100)}`);
+      }
+
+      const textData = await n8nResponse.text();
       let ticketId = "PENDIENTE";
-
-      // Extractor de ID ultra-robusto
-      if (Array.isArray(resultData)) {
-        ticketId = resultData[0]?.id || resultData[0]?.ticket_id || "PENDIENTE";
-      } else if (resultData && typeof resultData === 'object') {
-        ticketId = resultData.id || resultData.ticket_id || "PENDIENTE";
-      }
-
-      if (ticketId !== "PENDIENTE") {
-        // Vinculación asíncrona (no bloqueante) pero con ID verificado
-        const resolveAndLink = async () => {
-          try {
-            let searchId = conversation?.id;
-            if (!searchId) {
-              const { data: conv } = await supabase
-                .from("conversations")
-                .select("id")
-                .eq("session_id", sessionId)
-                .maybeSingle();
-              searchId = conv?.id;
-            }
-
-            if (searchId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchId)) {
-              console.log(`[LINKING] Vinculando ticket #${ticketId} a UUID ${searchId}`);
-              const { error } = await supabase
-                .from("support_visits")
-                .update({ glpi_ticket_id: ticketId.toString() })
-                .eq("conversation_id", searchId)
-                .is("glpi_ticket_id", null);
-              
-              if (error) console.error("[ASYNC_LINK_ERR]", error.message);
-            } else {
-              console.warn(`[LINKING_SKIP] ID de conversación inválido o no encontrado: ${searchId}`);
-            }
-          } catch (err) {
-            console.error("[LINKING_CRITICAL_ERR]", err);
+      
+      if (textData) {
+        try {
+          const resultData = JSON.parse(textData);
+          // Extractor de ID ultra-robusto
+          if (Array.isArray(resultData)) {
+            ticketId = resultData[0]?.id || resultData[0]?.ticket_id || "PENDIENTE";
+          } else if (resultData && typeof resultData === 'object') {
+            ticketId = resultData.id || resultData.ticket_id || "PENDIENTE";
           }
-        };
-        
-        resolveAndLink(); // Se ejecuta en segundo plano
+        } catch (e) {
+          console.warn("[N8N_PARSE_WARN] Respuesta no es JSON válido:", textData);
+        }
       }
+
+      if (ticketId === "PENDIENTE") {
+        throw new Error("n8n respondió OK pero no devolvió un ID de ticket válido.");
+      }
+
+      // Vinculación asíncrona (no bloqueante)
+      const searchId = conversation?.id || sessionId;
+      supabase.from("support_visits")
+        .update({ glpi_ticket_id: ticketId.toString() })
+        .eq("conversation_id", searchId)
+        .is("glpi_ticket_id", null)
+        .then(({ error }) => {
+          if (error) console.error("[ASYNC_LINK_ERR]", error.message);
+        });
 
       return {
         success: true,
-        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Con este número podrás hacerle seguimiento a tu caso. Un técnico te visitará en el horario acordado.`,
+        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Con este número podrás hacerle seguimiento a tu caso.`,
         data: { ticketId },
       };
-    } else {
-      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
+
+    } catch (n8nErr) {
+      const errorMessage = n8nErr instanceof Error ? n8nErr.message : "Error desconocido en n8n";
+      console.error("[N8N_FATAL]", errorMessage);
+      
+      return {
+        success: false, // Ahora sí devolvemos error para que se vea qué pasó
+        message: `Lo siento, no pudimos generar el ticket en n8n. Detalle: ${errorMessage}. La visita técnica fue anotada en el calendario, pero falta el ticket oficial.`,
+        data: { error: errorMessage },
+      };
     }
   } catch (error) {
     return {
