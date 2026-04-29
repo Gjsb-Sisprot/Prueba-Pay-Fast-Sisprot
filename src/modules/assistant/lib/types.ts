@@ -92,7 +92,7 @@ export interface ClientContextData {
       canceled?: number;
     } | null;
   }>;
-  glpiTicketId?: number | string;
+  glpiTicketId?: number;
   summary?: string;
   reason?: string;
   specialistName?: string;
@@ -123,7 +123,7 @@ export interface Conversation {
   contactPhone?: string;
   summary?: string;
   status: ConversationStatus;
-  glpiTicketId?: number | string | null;
+  glpiTicketId?: number | null;
   specialistName?: string | null;
   createdAt: string;
   updatedAt: string;
