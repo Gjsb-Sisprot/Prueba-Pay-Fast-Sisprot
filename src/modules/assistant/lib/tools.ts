@@ -144,7 +144,7 @@ const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: '
   "Instalación de SisprotTV": { itil: 128, urgency: 5, area: 'tech' },
 };
 
-function getItilInfo(subReason: string) {
+function getItilInfo(subReason: string): { itil: number; urgency: number; area: 'admin' | 'tech' } {
   // Búsqueda insensible a mayúsculas/minúsculas para mayor robustez
   const entry = Object.entries(SUBREASON_MAPPING).find(
     ([key]) => key.toLowerCase() === subReason.toLowerCase()
