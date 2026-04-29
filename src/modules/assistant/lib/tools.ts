@@ -511,7 +511,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
-              .eq("client_identification", contractData?.identification || conversation?.identification || "")
+              .eq("conversation_id", conversation?.id || sessionId)
               .is("glpi_ticket_id", null)
               .order("created_at", { ascending: false })
               .limit(1)
@@ -532,7 +532,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud. El número de ticket oficial generado es el **#${ticketId}**. Un especialista administrativo procesará tu caso a la brevedad.`,
+        message: `¡Listo! He registrado tu solicitud oficialmente. Tu número de ticket de seguimiento es el **#${ticketId}**. Con este número podrás consultar el estado de tu caso en cualquier momento. Un especialista administrativo lo procesará a la brevedad.`,
         data: { status: "sent_to_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
       };
     } else {
@@ -616,7 +616,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
             const { data: recentVisit } = await supabase
               .from("support_visits")
               .select("id")
-              .eq("client_identification", contractData?.identification || conversation?.identification || "")
+              .eq("conversation_id", conversation?.id || sessionId)
               .is("glpi_ticket_id", null)
               .order("created_at", { ascending: false })
               .limit(1)
@@ -637,7 +637,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
 
       return {
         success: true,
-        message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket oficial es el **#${ticketId}**. Un técnico especializado revisará tu reporte pronto. 🎫`,
+        message: `¡Todo listo! He agendado tu visita técnica y generado el ticket oficial **#${ticketId}**. Puedes usar este número para hacerle seguimiento a tu caso. Según nuestro SLA, un técnico solventará la falla en un lapso no mayor a 24 horas.`,
         data: { status: "escalated_via_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
       };
     } else {
