@@ -473,16 +473,31 @@ export async function routeRequest(
 
     if (isReactivation) {
       console.log(`[ROUTER_DECISION] Documento firmado para reactivación. Ejecutando Fase C.`);
-      const ticket = await executeForced("create_glpi_ticket", { name: "Reactivación de Servicio", content: `Solicitud formal de reactivación procesada para el contrato #${clientData?.contract}`, categoryId: 22 }, tools);
+      const ticket = await executeForced("create_glpi_ticket", { 
+        name: "Reactivación de Servicio", 
+        content: `Solicitud formal de reactivación procesada para el contrato #${clientData?.contract}`, 
+        subReason: "Reactivación de servicio",
+        aiSummary: "Fase C de Reactivación: Documento firmado recibido.",
+        observation: "Se procede a la reactivación técnica y agendamiento de visita de validación."
+      }, tools);
       const activate = await executeForced("activate_service", { contractId: clientData?.contract || "unknown", planName: clientData?.planName || "Plan Residencial" }, tools);
-      const visit = await executeForced("schedule_tech_visit", { contractId: clientData?.contract || "unknown", visitType: "Validación de Reactivación" }, tools);
+      
+      // Para la visita de validación en Fase C, usamos la fecha actual como referencia si no hay una previa
+      const visitDate = clientData?.visitDate ? new Date(clientData.visitDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const visit = await executeForced("schedule_support", { 
+        contractId: clientData?.contract || "unknown", 
+        visitType: "Validación de Reactivación",
+        date: visitDate,
+        time: "08:00 AM", // Hora tentativa para validación administrativa
+        sessionId: sessionId || "N/A"
+      }, tools);
       
       return {
         noToolNeeded: false,
         toolCalls: [
           { toolName: "create_glpi_ticket", args: { name: "Reactivación", content: "..." } },
           { toolName: "activate_service", args: { contractId: clientData?.contract, planName: "..." } },
-          { toolName: "schedule_tech_visit", args: { contractId: clientData?.contract, visitType: "..." } }
+          { toolName: "schedule_support", args: { contractId: clientData?.contract, visitType: "..." } }
         ],
         toolResults: [ticket!, activate!, visit!],
         routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Fase C Reactivación: Ticket + Activación + Visita" }),
@@ -638,22 +653,67 @@ export async function routeRequest(
     // Si es técnico y NO tiene fecha/hora, NO llamamos a la herramienta aquí; dejamos que el Solver muestre el calendario.
     if (isAdministrative || hasDateTime) {
       const escalationReason = buildEscalationReason(intent, contextualEscalation.reason);
-      const forcedEscalation = isAdministrative
-        ? await executeForced("create_glpi_ticket", { name: "Reactivación/Admin", content: escalationReason }, routerTools)
-        : await executeForcedEscalation(routerTools, sessionId!, escalationReason);
+      
+      if (isAdministrative) {
+        const forcedTicket = await executeForced("create_glpi_ticket", { 
+          name: "Gestión Administrativa Directa", 
+          content: escalationReason,
+          subReason: intent.category === "REACTIVACION_SERVICIO" ? "Reactivacion_de_Servicio" : "Consultas_de_Facturacion",
+          aiSummary: "Escalamiento administrativo automático detectado por el Router.",
+          observation: "El usuario solicitó una gestión administrativa que requiere ticket inmediato."
+        }, routerTools);
 
-      if (forcedEscalation) {
-        return {
-          noToolNeeded: false,
-          toolCalls: [{ toolName: forcedEscalation.toolName, args: isAdministrative ? { name: "Reporte", content: escalationReason } : { sessionId, reason: escalationReason } }],
-          toolResults: [forcedEscalation],
-          routePolicy: buildRoutePolicy("tool_call", "deterministic", {
-            solverModel: "pro",
-            reason: isAdministrative ? "Escalamiento administrativo directo" : "Escalamiento técnico con cita confirmada",
-          }),
-          durationMs: elapsed(),
-          intentClassification: intent,
-        };
+        if (forcedTicket) {
+          return {
+            noToolNeeded: false,
+            toolCalls: [{ toolName: "create_glpi_ticket", args: { name: "Gestión Administrativa", content: "..." } }],
+            toolResults: [forcedTicket],
+            routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Escalamiento administrativo directo" }),
+            durationMs: elapsed(),
+            intentClassification: intent,
+          };
+        }
+      } else {
+        // FLUJO TÉCNICO CON CITA: 1. Schedule Support -> 2. Create Ticket
+        const timeMatch = message.match(/(\d{1,2}:\d{1,2}\s*(AM|PM))/i);
+        const selectedTime = timeMatch ? timeMatch[1] : "08:00 AM";
+        const selectedDate = clientData?.visitDate ? new Date(clientData.visitDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+        console.log(`[ROUTER_DECISION] Ejecutando secuencia de agendamiento para ${selectedDate} ${selectedTime}`);
+
+        const forcedSchedule = await executeForced("schedule_support", {
+          contractId: clientData?.contract || "N/A",
+          visitType: "Soporte Técnico (Falla de Internet)",
+          date: selectedDate,
+          time: selectedTime,
+          sessionId: sessionId!
+        }, routerTools);
+
+        const forcedTicket = await executeForced("create_glpi_ticket", {
+          name: `Soporte Técnico - Cita ${selectedDate}`,
+          content: escalationReason,
+          subReason: "Falla en Ultima Milla",
+          aiSummary: `Visita agendada para el ${selectedDate} a las ${selectedTime}.`,
+          observation: "El usuario confirmó su cita y se registró el ticket automáticamente.",
+          contractId: clientData?.contract,
+          visitDate: selectedDate,
+          visitTime: selectedTime,
+          sessionId: sessionId!
+        }, routerTools);
+
+        if (forcedSchedule && forcedTicket) {
+          return {
+            noToolNeeded: false,
+            toolCalls: [
+              { toolName: "schedule_support", args: { date: selectedDate, time: selectedTime } },
+              { toolName: "create_glpi_ticket", args: { name: "Soporte Técnico", content: "..." } }
+            ],
+            toolResults: [forcedSchedule, forcedTicket],
+            routePolicy: buildRoutePolicy("tool_call", "deterministic", { solverModel: "pro", reason: "Escalamiento técnico con cita confirmada (Secuencia Dual)" }),
+            durationMs: elapsed(),
+            intentClassification: intent,
+          };
+        }
       }
     }
   }
@@ -893,7 +953,16 @@ export async function routeRequest(
           if (forcedEscalation) {
             return {
               noToolNeeded: false,
-              toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
+              toolCalls: [{ 
+                toolName: forcedEscalation.toolName, 
+                args: { 
+                  sessionId, 
+                  reason: escalationReason,
+                  subReason: "Falla en Ultima Milla",
+                  aiSummary: "Escalamiento automático por intención detectada.",
+                  observation: "El Router forzó el escalamiento basado en la intención del usuario."
+                } 
+              }],
               toolResults: [forcedEscalation],
               routePolicy: buildRoutePolicy("tool_call", "deterministic", {
                 solverModel: "pro",
@@ -1063,7 +1132,16 @@ async function buildErrorFallback(
       if (forcedEscalation) {
         return {
           noToolNeeded: false,
-          toolCalls: [{ toolName: forcedEscalation.toolName, args: { sessionId, reason: escalationReason } }],
+          toolCalls: [{ 
+            toolName: forcedEscalation.toolName, 
+            args: { 
+              sessionId, 
+              reason: escalationReason,
+              subReason: "Falla en Ultima Milla",
+              aiSummary: "Escalamiento de fallback por error en clasificación.",
+              observation: "Se activó el protocolo de seguridad para asegurar la atención del cliente."
+            } 
+          }],
           toolResults: [forcedEscalation],
           routePolicy: buildRoutePolicy("tool_call", "deterministic", {
             solverModel: "pro",
