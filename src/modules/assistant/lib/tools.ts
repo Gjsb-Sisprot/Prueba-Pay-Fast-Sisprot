@@ -676,17 +676,7 @@ export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTech
     };
   }
 }
-      success: true,
-      message: `¡Listo! He agendado tu visita técnica de '${visitType}' para el **${visitDate}** a las **${visitTime}**. El número de ticket de seguimiento es el **#${ticketId}**.`,
-      data: { ...res.data as Record<string, unknown>, ticketId }
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: `Error al programar visita y ticket: ${error instanceof Error ? error.message : "Error desconocido"}`
-    };
-  }
-}
+
 
 export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
   try {
