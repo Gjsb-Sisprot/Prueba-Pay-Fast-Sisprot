@@ -22,7 +22,7 @@ interface ConversationUpdate {
   summary?: string;
   specialist_name?: string;
   escalation_reason?: string;
-  glpi_ticket_id?: number;
+  glpi_ticket_id?: number | string;
   visit_date?: string | Date;
   visit_time?: string;
 }
@@ -283,7 +283,7 @@ export async function syncConversationMetadata(
     if (data.name) updates.contact_name = data.name;
     if (data.email) updates.contact_email = data.email;
     if (data.phone) updates.contact_phone = data.phone;
-    if (data.glpiTicketId) updates.glpi_ticket_id = typeof data.glpiTicketId === 'string' ? parseInt(data.glpiTicketId) : data.glpiTicketId;
+    if (data.glpiTicketId) updates.glpi_ticket_id = data.glpiTicketId;
     if (data.summary) updates.summary = data.summary;
     if (data.reason) updates.escalation_reason = data.reason;
     if (data.specialistName) updates.specialist_name = data.specialistName;
