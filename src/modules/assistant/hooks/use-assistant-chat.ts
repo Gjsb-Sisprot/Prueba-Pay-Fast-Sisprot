@@ -489,27 +489,9 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
   const handleSelectTime = useCallback(async (time: string) => {
     const message = `Deseo agendar la visita para las ${time}`;
     
-    // 1. Enviar mensaje al chat
+    // 1. Enviar mensaje al chat (La IA se encargará de ejecutar schedule_support y create_glpi_ticket)
     await sendMessage(message);
-    
-    // 2. PERSISTENCIA OFICIAL: Crear registro en la tabla support_visits
-    try {
-      if (lastDateRef.current) {
-        await fetch(`/api/assistant/conversations/${sessionId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "confirm_visit",
-            date: format(lastDateRef.current, "yyyy-MM-dd"),
-            time: time,
-            reason: "Agendado por el usuario a través de Susana AI"
-          }),
-        });
-      }
-    } catch (err) {
-      console.error("[CONFIRM_VISIT_ERROR]", err);
-    }
-  }, [sessionId, sendMessage]);
+  }, [sendMessage]);
 
   const handleSelectContract = useCallback(async (contractId: string, sector: string, intent?: "admin" | "tech") => {
     let message = `Deseo revisión o atención para mi contrato #${contractId} en el sector ${sector}`;
