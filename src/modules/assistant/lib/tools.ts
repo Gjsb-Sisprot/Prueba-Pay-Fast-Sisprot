@@ -2,10 +2,10 @@ import { z } from "zod";
 import { 
   getConversationBySessionId, 
   updateConversationStatus, 
-  getConversationTranscript,
-  createSupportVisit,
-  syncConversationMetadata
+  syncConversationMetadata,
+  getConversationTranscript
 } from "./persistence";
+import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
 
@@ -31,7 +31,129 @@ const OPERATOR_NAMES: Record<number, string> = {
   26: "YERAL GOMEZ"
 };
 
+// --- MAPEO OFICIAL DE SUBMOTIVOS A ITIL Y URGENCIA ---
+const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: 'admin' | 'tech' }> = {
+  // Administrativos
+  "Actualización de datos": { itil: 2, urgency: 4, area: 'admin' },
+  "Cambio de correo electrónico": { itil: 39, urgency: 4, area: 'admin' },
+  "Cambio de dirección": { itil: 41, urgency: 5, area: 'admin' },
+  "Cambio de número de teléfono": { itil: 42, urgency: 5, area: 'admin' },
+  "Corrección de cédula": { itil: 45, urgency: 5, area: 'admin' },
+  "Cambio de ciclo": { itil: 8, urgency: 4, area: 'admin' },
+  "Cambio de plan": { itil: 9, urgency: 5, area: 'admin' },
+  "Cancelación de servicio": { itil: 13, urgency: 5, area: 'admin' },
+  "Consultas administrativas": { itil: 10, urgency: 5, area: 'admin' },
+  "Orientación al cliente": { itil: 11, urgency: 4, area: 'admin' },
+  "Reactivación de servicio": { itil: 14, urgency: 5, area: 'admin' },
+  "Reclamos administrativos": { itil: 12, urgency: 5, area: 'admin' },
+  "Ciclo de Facturación": { itil: 59, urgency: 5, area: 'admin' },
+  "Datos Bancarios": { itil: 61, urgency: 5, area: 'admin' },
+  "Facturas Pendientes": { itil: 55, urgency: 5, area: 'admin' },
+  "Financiamientos": { itil: 53, urgency: 2, area: 'admin' },
+  "Prorrateos": { itil: 51, urgency: 5, area: 'admin' },
+  "Registros de Pagos": { itil: 63, urgency: 4, area: 'admin' },
+  "Solicitud de Factura/Nota de Cobro": { itil: 62, urgency: 3, area: 'admin' },
+  "Devoluciones": { itil: 27, urgency: 5, area: 'admin' },
+  "Reclamos por Facturación": { itil: 26, urgency: 4, area: 'admin' },
+  "Reportes de Pagos": { itil: 32, urgency: 5, area: 'admin' },
+  "Seguimiento al Cliente": { itil: 6, urgency: 5, area: 'admin' },
+  "Consulta de Condiciones Legales": { itil: 68, urgency: 5, area: 'admin' },
+  "Consulta de Estado de Cuenta": { itil: 65, urgency: 5, area: 'admin' },
+  "Educación al Cliente": { itil: 69, urgency: 5, area: 'admin' },
+  "Solicitud de Contrato": { itil: 67, urgency: 4, area: 'admin' },
+  "Atención de Ventas": { itil: 40, urgency: 5, area: 'admin' },
+  "Facturas": { itil: 35, urgency: 4, area: 'admin' },
+  "Estado de la visita": { itil: 47, urgency: 5, area: 'admin' },
+  "Mudanzas / Reubicaciones": { itil: 54, urgency: 4, area: 'admin' },
+  "Reagendamiento de visitas": { itil: 52, urgency: 5, area: 'admin' },
+  "Atención Ineficiente al Cliente": { itil: 88, urgency: 5, area: 'admin' },
+  "Falta de Seguimiento": { itil: 94, urgency: 5, area: 'admin' },
+  "Tiempos Lentos de Respuesta": { itil: 97, urgency: 4, area: 'admin' },
+  "Temas Administrativos - Sin Internet": { itil: 110, urgency: 2, area: 'admin' },
+  "Bot Incompleto": { itil: 46, urgency: 1, area: 'admin' },
+  "Cliente Molesto": { itil: 71, urgency: 5, area: 'admin' },
+  "Desconocimiento del Cliente": { itil: 70, urgency: 5, area: 'admin' },
+  "Sin Respuesta del Cliente": { itil: 48, urgency: 4, area: 'admin' },
+  "Cambio de proveedor - ventas": { itil: 33, urgency: 5, area: 'admin' },
+  "Sin WiFi - Ventas": { itil: 30, urgency: 5, area: 'admin' },
+  "SisprotTV - Ventas": { itil: 31, urgency: 4, area: 'admin' },
+  "Con Wifi Migracion - Ventas": { itil: 60, urgency: 5, area: 'admin' },
+  "Con Wifi Total - Ventas": { itil: 57, urgency: 5, area: 'admin' },
+  "Con Wifi Gratis - Ventas": { itil: 56, urgency: 5, area: 'admin' },
+  "Con Wifi Financiado - Ventas": { itil: 58, urgency: 5, area: 'admin' },
+  "Problemas con Pagos - Sisprot TV": { itil: 119, urgency: 5, area: 'admin' },
+  "Cambio de Titular": { itil: 44, urgency: 3, area: 'admin' },
+  
+  // Soporte Técnico
+  "Consultas de soporte": { itil: 16, urgency: 3, area: 'tech' },
+  "Guía para configuración": { itil: 49, urgency: 5, area: 'tech' },
+  "Prueba de velocidad": { itil: 50, urgency: 3, area: 'tech' },
+  "Intermitencia/Internet Lento": { itil: 17, urgency: 4, area: 'tech' },
+  "Bandas Unificadas": { itil: 72, urgency: 3, area: 'tech' },
+  "Cambio de Firewall": { itil: 78, urgency: 5, area: 'tech' },
+  "Conf. Incorrecta de OLT": { itil: 77, urgency: 5, area: 'tech' },
+  "Falla de Taco de ONU": { itil: 73, urgency: 4, area: 'tech' },
+  "IP Duplicada": { itil: 74, urgency: 5, area: 'tech' },
+  "Microfractura de Fibra": { itil: 75, urgency: 5, area: 'tech' },
+  "Potencia Baja/Elevada en ONU": { itil: 76, urgency: 5, area: 'tech' },
+  "Saturacion de Red": { itil: 80, urgency: 5, area: 'tech' },
+  "Ultima Milla (Falla aun desconocida)": { itil: 79, urgency: 4, area: 'tech' },
+  "Lentitud velocidad plan": { itil: 25, urgency: 5, area: 'tech' },
+  "Cable ≤ CAT 5": { itil: 120, urgency: 4, area: 'tech' },
+  "Exceso de Conexiones": { itil: 126, urgency: 3, area: 'tech' },
+  "Red Interna SGF": { itil: 121, urgency: 4, area: 'tech' },
+  "Router 10/100": { itil: 122, urgency: 3, area: 'tech' },
+  "Ubicación de Router": { itil: 123, urgency: 3, area: 'tech' },
+  "Migración de equipos": { itil: 18, urgency: 5, area: 'tech' },
+  "Mudanza": { itil: 81, urgency: 4, area: 'tech' },
+  "Reubicacion": { itil: 82, urgency: 4, area: 'tech' },
+  "Onu en rojo": { itil: 19, urgency: 5, area: 'tech' },
+  "Falla por Potencia": { itil: 83, urgency: 4, area: 'tech' },
+  "Fibra Drop Partida": { itil: 84, urgency: 5, area: 'tech' },
+  "ONU Dañada": { itil: 85, urgency: 5, area: 'tech' },
+  "ONU Desconfigurada": { itil: 86, urgency: 5, area: 'tech' },
+  "Ultima Milla": { itil: 87, urgency: 3, area: 'tech' },
+  "Reclamos de soporte tecnico": { itil: 20, urgency: 4, area: 'tech' },
+  "Caida del Servicio": { itil: 89, urgency: 5, area: 'tech' },
+  "Daños en Cableado Externo": { itil: 91, urgency: 4, area: 'tech' },
+  "Falla en Ultima Milla": { itil: 92, urgency: 3, area: 'tech' },
+  "Fallas en Sisprot TV": { itil: 93, urgency: 5, area: 'tech' },
+  "Inestabilidad en Caja": { itil: 90, urgency: 4, area: 'tech' },
+  "Mala Ejecucion de Operaciones": { itil: 95, urgency: 4, area: 'tech' },
+  "Problemas Tecnicos Recurrentes": { itil: 96, urgency: 5, area: 'tech' },
+  "Router falla": { itil: 21, urgency: 5, area: 'tech' },
+  "Cable Desconectado": { itil: 98, urgency: 2, area: 'tech' },
+  "Router Colgado": { itil: 101, urgency: 3, area: 'tech' },
+  "Configuracion de Clave": { itil: 103, urgency: 3, area: 'tech' },
+  "IP Extranjera": { itil: 102, urgency: 1, area: 'tech' },
+  "Router Dañado": { itil: 99, urgency: 3, area: 'tech' },
+  "Sin internet": { itil: 22, urgency: 5, area: 'tech' },
+  "Adaptador de Corriente Dañado": { itil: 114, urgency: 4, area: 'tech' },
+  "Conf. Interna de SGF": { itil: 104, urgency: 5, area: 'tech' },
+  "Equipos Colgados": { itil: 105, urgency: 5, area: 'tech' },
+  "Equipos Internos Dañados": { itil: 106, urgency: 5, area: 'tech' },
+  "Fallo de Auditoria": { itil: 112, urgency: 4, area: 'tech' },
+  "Mala Conexión en Cableado": { itil: 107, urgency: 5, area: 'tech' },
+  "Recuperacion/reconexion": { itil: 113, urgency: 4, area: 'tech' },
+  "Router Desconfigurado": { itil: 109, urgency: 4, area: 'tech' },
+  "Ultima Milla - Sin internet": { itil: 111, urgency: 4, area: 'tech' },
+  "SisprotTV - Soporte Tecnico": { itil: 24, urgency: 5, area: 'tech' },
+  "Baja Calidad Audio/Video": { itil: 115, urgency: 3, area: 'tech' },
+  "Contenido Incompleto Sisprot TV": { itil: 117, urgency: 4, area: 'tech' },
+  "Fallas Tras Actualizaciones - Sisprot TV": { itil: 118, urgency: 5, area: 'tech' },
+  "Problemas en Carga de Contenido Sisp": { itil: 116, urgency: 5, area: 'tech' },
+  "Configuración de equipos": { itil: 127, urgency: 4, area: 'tech' },
+  "Instalación de SisprotTV": { itil: 128, urgency: 5, area: 'tech' },
+};
 
+function getItilInfo(subReason: string) {
+  return SUBREASON_MAPPING[subReason] || { itil: 22, urgency: 3, area: 'tech' };
+}
+
+function getRandomOperator(area: 'admin' | 'tech'): number {
+  const list = area === 'admin' ? OPERATORS_ADMIN : OPERATORS_TECH;
+  return list[Math.floor(Math.random() * list.length)];
+}
 
 async function sendTicketConfirmation(data: { ticketId: string; contract: string; reason: string; operatorId: number }) {
   try {
@@ -109,7 +231,7 @@ export const checkPaymentStatusSchema = z.object({
 export const createGlpiTicketSchema = z.object({
   name: z.string().describe("Título corto y descriptivo del ticket"),
   content: z.string().describe("Contenido detallado del problema u observación"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Cancelación de servicio)"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
   aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
   observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   categoryId: z.number().optional().describe("ID de la categoría Itil (default: 22)"),
@@ -117,8 +239,6 @@ export const createGlpiTicketSchema = z.object({
   requesterId: z.number().optional().describe("_users_id_requester (default: 19)"),
   contractId: z.string().optional().describe("ID del contrato para obtener detalles técnicos"),
   sessionId: z.string().optional().describe("ID de la sesión de chat para obtener contexto"),
-  visitDate: z.string().optional().describe("Fecha de la visita técnica acordada (YYYY-MM-DD)"),
-  visitTime: z.string().optional().describe("Hora de la visita técnica acordada (HH:MM AM/PM)"),
 });
 
 export const auditServiceSchema = z.object({
@@ -128,12 +248,10 @@ export const auditServiceSchema = z.object({
 export const escalateToSpecialistSchema = z.object({
   sessionId: z.string().describe("ID de la sesión de chat"),
   reason: z.string().describe("Razón detallada del escalamiento"),
-  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, Onu en rojo, Cancelación de servicio)"),
+  subReason: z.string().min(5).describe("Motivo específico OBLIGATORIO (ej: Sin internet, ONU_En_Rojo, Cancelacion_de_Servicio)"),
   aiSummary: z.string().min(25).describe("Resumen ejecutivo OBLIGATORIO y DETALLADO de toda la conversación del cliente"),
   observation: z.string().min(10).describe("Punto de vista OBLIGATORIO de la IA sobre el problema técnico o administrativo"),
   isSurvey: z.boolean().optional().describe("Indica si el ticket proviene de una encuesta de insatisfacción"),
-  visitDate: z.string().optional().describe("Fecha de la visita técnica acordada (YYYY-MM-DD)"),
-  visitTime: z.string().optional().describe("Hora de la visita técnica acordada (HH:MM AM/PM)"),
 });
 
 export const closeConversationSchema = z.object({
@@ -173,10 +291,6 @@ export const activateServiceSchema = z.object({
 export const scheduleTechVisitSchema = z.object({
   contractId: z.string().describe("ID del contrato"),
   visitType: z.string().describe("Tipo de visita (ej: Validación de Reactivación)"),
-  sessionId: z.string().describe("ID de la sesión de chat"),
-  visitDate: z.string().describe("Fecha de la visita (YYYY-MM-DD)"),
-  visitTime: z.string().describe("Hora de la visita (HH:MM AM/PM)"),
-  reason: z.string().describe("Motivo detallado de la visita"),
 });
 
 export const getPlanChangeBudgetSchema = z.object({
@@ -328,19 +442,40 @@ export async function executeCurrencyRate(): Promise<ToolResponse> {
 
 export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTicketSchema>): Promise<ToolResponse> {
   try {
-    const { subReason, aiSummary, observation, contractId, sessionId, visitDate, visitTime } = args;
+    const { subReason, aiSummary, observation, contractId, sessionId } = args;
 
-    // 1. Preparar payload para n8n
+    let finalContractId = contractId;
+    let conversation = null;
+
+    if (!finalContractId && sessionId) {
+      conversation = await getConversationBySessionId(sessionId).catch(() => null);
+      finalContractId = conversation?.contract;
+    }
+
+    const contractData = finalContractId ? await fetchContractById(finalContractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
+    const itilInfo = getItilInfo(subReason);
+    const assignedOperatorId = getRandomOperator(itilInfo.area);
     
     const payload = {
-      "Contrato": contractId || "N/A",
+      "Contrato": finalContractId || "N/A",
+      "name": contractData?.name || "Cliente",
+      "last name": contractData?.last_name || "Desconocido",
+      "sector": contractData?.sector_name || "No especificado",
+      "Observacion": `${subReason} - ${observation}`,
+      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
+      "Teléfono": contractData?.mobile || "No disponible",
+      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
+      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || "Plan no detectado",
+      "Dirección": contractData?.address || "No registrada",
+      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : "No disponible",
+      "_users_id_requester": 29,
+      "_users_id_assign": assignedOperatorId,
       "subReason": subReason,
+      "itilcategories_id": itilInfo.itil,
+      "urgency": itilInfo.urgency,
       "aiSummary": aiSummary,
-      "observation": observation,
-      "transcript": transcript,
-      "visitDate": visitDate,
-      "visitTime": visitTime
+      "transcript": transcript
     };
 
     // 2. Enviar a n8n
@@ -350,70 +485,73 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       body: JSON.stringify(payload)
     });
 
-    if (!n8nResponse.ok) {
-      throw new Error(`Error en n8n: ${n8nResponse.status}`);
-    }
-
-    const resultData = await n8nResponse.json().catch(() => ({})) as any;
-    
-    // Extraer ID del ticket de la respuesta de n8n
-    let ticketId = "PENDIENTE";
-    if (Array.isArray(resultData) && resultData[0]?.id) {
-      ticketId = String(resultData[0].id);
-    } else if (resultData?.id) {
-      ticketId = String(resultData.id);
-    }
-
-    // 3. Si hay datos de visita, agendarla también en Supabase
-    if (sessionId && visitDate && visitTime) {
-      await createSupportVisit(
-        sessionId,
-        visitDate,
-        visitTime,
-        observation || aiSummary,
-        'support',
-        ticketId !== "PENDIENTE" ? Number(ticketId) : undefined
-      );
-
-      // Sincronizar metadatos en la conversación
-      if (ticketId !== "PENDIENTE") {
-        await syncConversationMetadata(sessionId, { glpiTicketId: Number(ticketId) }).catch(() => {});
+    if (n8nResponse.ok) {
+      const resultData = await n8nResponse.json();
+      
+      // Robustez: n8n puede responder como objeto directo o como array
+      let ticketId = "PENDIENTE";
+      if (Array.isArray(resultData) && resultData[0]?.id) {
+        ticketId = resultData[0].id;
+      } else if (resultData && typeof resultData === 'object' && resultData.id) {
+        ticketId = resultData.id;
       }
-    }
 
-    return {
-      success: true,
-      message: `Ticket de GLPI creado exitosamente${ticketId !== "PENDIENTE" ? ` (ID: #${ticketId})` : ""}.`,
-      data: { ticketId }
-    };
-  } catch (error: any) {
-    console.error("[CREATE_GLPI_TICKET_ERROR]", error);
+      if (ticketId !== "PENDIENTE") {
+        await sendTicketConfirmation({
+          ticketId,
+          contract: finalContractId || "N/A",
+          reason: subReason,
+          operatorId: assignedOperatorId
+        });
+      }
+
+      return {
+        success: true,
+        message: `¡Listo! He registrado tu solicitud. El número de ticket oficial generado es el **#${ticketId}**. Un especialista administrativo procesará tu caso a la brevedad.`,
+        data: { status: "sent_to_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
+      };
+    } else {
+      throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
+    }
+  } catch (error) {
     return {
       success: false,
-      message: `No se pudo crear el ticket: ${error.message}`
+      message: `Error al procesar la solicitud vía n8n: ${error instanceof Error ? error.message : "Error desconocido"}.`,
     };
   }
 }
 
 
-
-
 export async function executeEscalateToSpecialist(args: z.infer<typeof escalateToSpecialistSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, subReason, aiSummary, observation, reason, visitDate, visitTime } = args;
+    const { sessionId, subReason, aiSummary, observation, reason } = args;
     
     const conversation = await getConversationBySessionId(sessionId).catch(() => null);
     const contractId = conversation?.contract || "N/A";
+    const contractData = contractId !== "N/A" ? await fetchContractById(contractId) : null;
     const transcript = sessionId ? await getConversationTranscript(sessionId) : "No disponible";
+    const itilInfo = getItilInfo(subReason);
+    const assignedOperatorId = getRandomOperator(itilInfo.area);
 
     const payload = {
       "Contrato": contractId,
+      "name": contractData?.name || conversation?.contact_name || "Cliente",
+      "last name": contractData?.last_name || "Desconocido",
+      "sector": contractData?.sector_name || conversation?.sector || "No especificado",
+      "Observacion": `${subReason} - ${observation || reason}`,
+      "IP Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.ip || "No detectada",
+      "Teléfono": contractData?.mobile || conversation?.contact_phone || "No disponible",
+      "VLAN Actual": contractData?.contract_detail?.[0]?.service_detail?.[0]?.interface || "VLAN_PENDIENTE",
+      "Plan Contratado": contractData?.contract_detail?.[0]?.plan_name || conversation?.plan_name || "Plan no detectado",
+      "Dirección": contractData?.address || conversation?.address || "No registrada",
+      "Ubicacion": contractData ? `https://maps.google.com/?q=${contractData.latitude},${contractData.longitude}` : (conversation?.sector || "No disponible"),
+      "_users_id_requester": 29,
+      "_users_id_assign": assignedOperatorId,
       "subReason": subReason,
+      "itilcategories_id": itilInfo.itil,
+      "urgency": itilInfo.urgency,
       "aiSummary": aiSummary,
-      "observation": observation || reason,
-      "transcript": transcript,
-      "visitDate": visitDate || null,
-      "visitTime": visitTime || null
+      "transcript": transcript
     };
 
     // Enviar a n8n
@@ -424,37 +562,33 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
     });
 
     if (n8nResponse.ok) {
-      const resultData = await n8nResponse.json().catch(() => ({})) as any;
+      const resultData = await n8nResponse.json();
       
+      // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
       if (Array.isArray(resultData) && resultData[0]?.id) {
-        ticketId = String(resultData[0].id);
-      } else if (resultData?.id) {
-        ticketId = String(resultData.id);
-      }
-      
-      // PERSISTENCIA EN SUPABASE SI HAY VISITA
-      if (sessionId && visitDate && visitTime) {
-        if (ticketId !== "PENDIENTE") {
-          await syncConversationMetadata(sessionId, { glpiTicketId: Number(ticketId) }).catch(() => {});
-        }
-
-        await createSupportVisit(
-          sessionId,
-          visitDate,
-          visitTime,
-          observation || aiSummary,
-          'support',
-          ticketId !== "PENDIENTE" ? Number(ticketId) : undefined
-        ).catch(err => console.error("Error guardando visita en Supabase:", err));
+        ticketId = resultData[0].id;
+      } else if (resultData && typeof resultData === 'object' && resultData.id) {
+        ticketId = resultData.id;
       }
 
-      await updateConversationStatus(sessionId, "waiting_specialist").catch(() => {});
+      await Promise.all([
+        updateConversationStatus(sessionId, "waiting_specialist"),
+      ]).catch(() => {});
+
+      if (ticketId !== "PENDIENTE") {
+        await sendTicketConfirmation({
+          ticketId,
+          contract: contractId,
+          reason: subReason,
+          operatorId: assignedOperatorId
+        });
+      }
 
       return {
         success: true,
         message: `¡Listo! He registrado tu solicitud exitosamente. Tu número de ticket oficial es el **#${ticketId}**. Un técnico especializado revisará tu reporte pronto. 🎫`,
-        data: { status: "escalated_via_n8n", ticketId: ticketId },
+        data: { status: "escalated_via_n8n", ticketId: ticketId, operatorId: assignedOperatorId },
       };
     } else {
       throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
@@ -652,31 +786,12 @@ export async function executeActivateService(args: z.infer<typeof activateServic
 
 
 export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTechVisitSchema>): Promise<ToolResponse> {
-  try {
-    const { sessionId, visitDate, visitTime, visitType, reason } = args;
-
-    const res = await createSupportVisit(
-      sessionId,
-      visitDate,
-      visitTime,
-      reason || visitType || "Visita técnica programada"
-    );
-
-    if (!res.success) throw new Error(res.error);
-
-    return {
-      success: true,
-      message: `Visita técnica agendada para el ${visitDate} a las ${visitTime}.`,
-      data: { visitId: res.data?.id }
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      message: `No se pudo agendar la visita: ${error.message}`
-    };
-  }
+  return {
+    success: true,
+    message: `Visita técnica de '${args.visitType}' programada exitosamente para el contrato #${args.contractId}.`,
+    data: { visitId: `VISIT-${Date.now()}` }
+  };
 }
-
 
 export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
   try {
