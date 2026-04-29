@@ -485,7 +485,8 @@ export async function createSupportVisit(
   date: string,
   time: string,
   reason: string,
-  category: 'support' | 'administration' = 'support'
+  category: 'support' | 'administration' = 'support',
+  glpiTicketId?: string
 ) {
   try {
     const conversation = await getConversationBySessionId(sessionId);
@@ -513,6 +514,8 @@ export async function createSupportVisit(
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
         category: category,
+        conversation_id: conversation.id,
+        glpi_ticket_id: glpiTicketId || conversation.glpi_ticket_id,
         created_at: new Date().toISOString()
       }])
       .select()
