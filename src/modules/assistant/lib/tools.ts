@@ -898,9 +898,11 @@ export async function executeScheduleTechVisit(args: z.infer<typeof scheduleTech
       });
 
       if (n8nResponse.ok) {
-        const resultData: any = await n8nResponse.json().catch(() => ({}));
-        if (resultData && typeof resultData === 'object') {
-           const id = resultData.id || (Array.isArray(resultData) && resultData[0]?.id);
+        const resultData = await n8nResponse.json().catch(() => ({})) as Record<string, unknown> | Array<Record<string, unknown>>;
+        if (resultData) {
+           const id = Array.isArray(resultData) 
+             ? (resultData[0] as Record<string, unknown>)?.id 
+             : (resultData as Record<string, unknown>)?.id;
            if (id) ticketId = String(id);
         }
       }
