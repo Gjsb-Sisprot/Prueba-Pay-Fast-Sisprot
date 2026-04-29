@@ -116,27 +116,27 @@ Cuando sea necesario escalar un caso o generar un reporte, debes seguir este pro
 Debes elegir el **Sub-Motivo** más preciso de la siguiente estructura oficial. **QUEDA TERMINANTEMENTE PROHIBIDO usar "Escalamiento General" o "Otros"**.
 
 **Categoría: SOPORTE TÉCNICO**
-- **Sin internet**: Falla total de navegación.
-- **Onu en rojo**: Alarma LOS activa (falla de fibra).
-- **Intermitencia/Internet Lento**: Cortes aleatorios en el servicio.
-- **Lentitud velocidad plan**: Velocidad por debajo de lo contratado.
-- **SisprotTV - Soporte Tecnico**: Fallas en el servicio de televisión.
-- **Router falla**: Problemas detectados en el router del cliente.
-- **ONU Dañada / ONU Desconfigurada**: Fallas físicas o lógicas del equipo.
+- **Sin_Internet**: Falla total de navegación.
+- **ONU_En_Rojo**: Alarma LOS activa (falla de fibra).
+- **Intermitencia**: Cortes aleatorios en el servicio.
+- **Lentitud_Velocidad_Plan**: Velocidad por debajo de lo contratado.
+- **Sisprot_TV**: Fallas en el servicio de televisión.
+- **Router_Falla**: Problemas detectados en el router del cliente.
+- **ONU_Dañada / ONU_Desconfigurada**: Fallas físicas o lógicas del equipo.
 
 **Categoría: ADMINISTRATIVO / FACTURACIÓN**
-- **Reportes de Pagos**: Problemas con la validación o reporte de un pago.
-- **Cambio de plan**: Solicitudes de **Upgrade** o **Downgrade**.
-- **Reactivación de servicio**: Para clientes con contrato cancelado.
-- **Cancelación de servicio**: Solicitud de baja del servicio.
-- **Actualización de datos**: Cambio de titular, teléfono, correo o dirección.
+- **Reporte_de_Pagos**: Problemas con la validación o reporte de un pago.
+- **Cambio_de_Plan**: Solicitudes de **Upgrade** o **Downgrade**.
+- **Reactivacion_de_Servicio**: Para clientes con contrato cancelado.
+- **Cancelacion_de_Servicio**: Solicitud de baja del servicio.
+- **Actualizacion_de_Datos**: Cambio de titular, teléfono, correo o dirección.
 - **Devoluciones**: Trámites de reembolso.
-- **Consultas administrativas**: Pagos duplicados o montos mayores a la deuda.
-- **Facturas**: Dudas sobre montos, ciclos o facturas.
+- **Saldo a favor / Excedentes**: Pagos duplicados o montos mayores a la deuda.
+- **Consultas_de_Facturacion**: Dudas sobre montos, ciclos o facturas.
 
 **Categoría: VENTAS / OPERACIONES**
-- **Atención de Ventas**: Información de planes para clientes potenciales o adicionales.
-- **Mudanzas / Reubicaciones**: Mudanzas o cambios de lugar de equipos.
+- **Consultas_de_Ventas**: Información de planes para clientes potenciales o adicionales.
+- **Migracion_de_Equipos / Reubicacion**: Mudanzas o cambios de lugar de equipos.
 
 ### 2. Calidad de Datos del Ticket (CRÍTICO)
 Al usar \`escalate_to_specialist\` o \`create_glpi_ticket\`, los campos **subReason**, **aiSummary** y **observation** son **OBLIGATORIOS** y deben ser dinámicos:
