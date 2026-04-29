@@ -2,10 +2,8 @@ import { z } from "zod";
 import { 
   getConversationBySessionId, 
   updateConversationStatus, 
-  syncConversationMetadata,
   getConversationTranscript
 } from "./persistence";
-import { createTicket as createGlpiTicketInternal } from "./glpi";
 import { type LocalToolSet } from "./router-helpers";
 import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
 
@@ -491,7 +489,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
     if (n8nResponse.ok) {
       const responseText = await n8nResponse.text();
-      let resultData: any = null;
+      let resultData: unknown = null;
       try {
         if (responseText) resultData = JSON.parse(responseText);
       } catch (e) {
@@ -500,10 +498,10 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       
       // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
-      if (Array.isArray(resultData) && resultData[0]?.id) {
-        ticketId = resultData[0].id;
-      } else if (resultData && typeof resultData === 'object' && resultData.id) {
-        ticketId = resultData.id;
+      if (Array.isArray(resultData) && resultData[0] && typeof resultData[0] === 'object' && 'id' in resultData[0]) {
+        ticketId = String((resultData[0] as Record<string, unknown>).id);
+      } else if (resultData && typeof resultData === 'object' && !Array.isArray(resultData) && 'id' in resultData) {
+        ticketId = String((resultData as Record<string, unknown>).id);
       }
 
       if (ticketId !== "PENDIENTE") {
@@ -573,7 +571,7 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
 
     if (n8nResponse.ok) {
       const responseText = await n8nResponse.text();
-      let resultData: any = null;
+      let resultData: unknown = null;
       try {
         if (responseText) resultData = JSON.parse(responseText);
       } catch (e) {
@@ -582,10 +580,10 @@ export async function executeEscalateToSpecialist(args: z.infer<typeof escalateT
       
       // Robustez: n8n puede responder como objeto directo o como array
       let ticketId = "PENDIENTE";
-      if (Array.isArray(resultData) && resultData[0]?.id) {
-        ticketId = resultData[0].id;
-      } else if (resultData && typeof resultData === 'object' && resultData.id) {
-        ticketId = resultData.id;
+      if (Array.isArray(resultData) && resultData[0] && typeof resultData[0] === 'object' && 'id' in resultData[0]) {
+        ticketId = String((resultData[0] as Record<string, unknown>).id);
+      } else if (resultData && typeof resultData === 'object' && !Array.isArray(resultData) && 'id' in resultData) {
+        ticketId = String((resultData as Record<string, unknown>).id);
       }
 
       await Promise.all([
