@@ -471,7 +471,7 @@ function ChatMessageComponent({
                 {/* Título de selección */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900">Seleccionar Ventana de tiempo</h3>
-                  <p className="text-[10px] text-gray-500">Duración estimada: 60 minutos</p>
+                  <p className="text-[10px] text-gray-500">Duración estimada: 90 minutos</p>
                 </div>
 
                 {/* Lista de Horas (Vertical) */}
@@ -480,10 +480,14 @@ function ChatMessageComponent({
                     // Generar slots basados en las reglas de Susana
                     // Sáb/Dom: 8am-8pm | Lun/Vie: 8am-5pm y 5pm-8pm
                     const slots = [];
-                    for (let h = 8; h < 20; h++) {
+                    const startHour = 8;
+                    const endHour = 20;
+                    for (let m = startHour * 60; m < endHour * 60; m += 90) {
+                      const h = Math.floor(m / 60);
+                      const min = m % 60;
                       const ampm = h >= 12 ? "PM" : "AM";
-                      const displayHour = h > 12 ? h - 12 : h;
-                      const timeStr = `${displayHour.toString().padStart(2, '0')}:00 ${ampm}`;
+                      const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+                      const timeStr = `${displayHour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} ${ampm}`;
                       slots.push(timeStr);
                     }
 
