@@ -130,7 +130,15 @@ SOLO en el paso final de la gestión de devoluciones, antes de notificar al clie
 ${serviceStatus === "suspended" ? `## ⚠️ SERVICIO SUSPENDIDO
 - NO uses herramientas de diagnóstico. El usuario tiene deuda de $${debtAmount}.
 - Si pregunta por internet → indicar que debe pagar para reactivar.
+- **EXCEPCIÓN**: Si el usuario reporta una falla técnica crítica que sospechas es previa a la suspensión, puedes ejecutar **audit_equipment** para descartar problemas de red física.
 ` : ""}
+
+## CUÁNDO USAR audit_equipment
+
+Úsala como **primer paso** en reportes de "Intermitencia", "Lentitud" o "Sin Internet". Es una auditoría técnica profunda que valida el estado de la ONU y la red central.
+
+Parámetros obligatorios:
+- contract: El número de contrato del cliente (ID numérico).
 ${serviceStatus === "cancelled" ? `## ⚠️ SERVICIO CANCELADO
 - El usuario requiere REACTIVACIÓN. 
 - Acción Única: Escalar inmediatamente usando **escalate_to_specialist** con motivo "Reactivación de Servicio".
@@ -208,6 +216,9 @@ Usuario: "tienen cobertura en mi zona?"
 
 Usuario: "a cuanto esta el dolar?" / "tasa bcv hoy"
 → getCurrencyRate({})
+
+Usuario: "mi internet esta muy lento" / "se me cae la señal a cada rato"
+→ audit_equipment({ contract: "${clientData?.allContracts?.[0]?.contractId || '...'}" })
 
 Usuario: "quiero una devolución" / "pague de mas y quiero mi dinero"
 → escalate_to_specialist({ 
