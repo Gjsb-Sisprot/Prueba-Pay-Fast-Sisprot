@@ -466,10 +466,11 @@ export async function getOccupiedSlots(date: string): Promise<string[]> {
 
     return (data || []).map((v: { visit_date: string }) => {
       const d = new Date(v.visit_date);
-      const hours = d.getHours();
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-      return `${displayHour.toString().padStart(2, '0')}:00 ${ampm}`;
+      const h = d.getHours();
+      const m = d.getMinutes();
+      const ampm = h >= 12 ? "PM" : "AM";
+      const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      return `${displayHour.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
     });
   } catch (error) {
     console.error("[GET_OCCUPIED_SLOTS_ERROR]", error);
