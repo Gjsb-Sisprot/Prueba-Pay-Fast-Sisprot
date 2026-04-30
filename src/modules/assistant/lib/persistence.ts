@@ -504,15 +504,18 @@ export async function createSupportVisit(
     }
 
     // Construir fecha completa
-    const [t, ampm] = time.split(" ");
+    const [t, ampmRaw] = time.split(" ");
+    const ampm = ampmRaw ? ampmRaw.toUpperCase().replace(/\./g, "") : "";
     const [hoursRaw, minutes] = t.split(":").map(Number);
     let hours = hoursRaw;
     
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
 
-    const visitDate = new Date(date);
-    visitDate.setHours(hours, minutes, 0, 0);
+    const visitDate = new Date(date + "T00:00:00");
+    // Ajustamos a UTC considerando que la hora proporcionada es VET (UTC-4)
+    // Para obtener UTC: UTC = VET + 4
+    visitDate.setUTCHours(hours + 4, minutes, 0, 0);
 
     const { data, error } = await supabase
       .from("support_visits")
