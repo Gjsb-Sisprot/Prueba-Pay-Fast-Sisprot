@@ -17,8 +17,19 @@ import { supabase } from "./supabase";
 const OPERATORS_ADMIN = [20, 10, 19, 22]; // Georgina, Khaloa, Martha, Yhossellyn
 const OPERATORS_TECH = [27, 13, 25, 8, 28, 11, 26]; // Arnaldo, Carlos, Dario, Jonathan, Jean, Kelvin, Yeral
 
-
-
+const OPERATOR_NAMES: Record<number, string> = {
+  20: "Georgina Baladi",
+  10: "Khaloa Serrano",
+  19: "Martha Pinto",
+  22: "Yhossellyn Perez",
+  27: "Arnaldo Rojas",
+  13: "Carlos Ovalles",
+  25: "Dario Pedroza",
+  8: "Jonathan Garcia",
+  28: "Jean Morales",
+  11: "Kelvin Sanchez",
+  26: "Yeral Gomez"
+};
 // --- MAPEO OFICIAL DE SUBMOTIVOS A ITIL Y URGENCIA ---
 const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: 'admin' | 'tech' }> = {
   // Administrativos
@@ -476,7 +487,8 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
             contrato: contractId || "N/A",
             fecha: visitDate,
             hora: visitTime,
-            motivo: `Soporte Técnico (${subReason})`
+            motivo: `Soporte Técnico (${subReason})`,
+            tecnico: assignedOperatorId ? (OPERATOR_NAMES[assignedOperatorId] || "Técnico por asignar") : "Técnico por asignar"
           })
         });
       } catch (err) {
