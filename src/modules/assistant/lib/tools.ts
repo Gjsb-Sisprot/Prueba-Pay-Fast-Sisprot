@@ -489,7 +489,7 @@ export async function executeScheduleSupport(args: z.infer<typeof scheduleSuppor
       return {
         success: true,
         message: `La visita técnica de tipo '${visitType}' ha sido agendada para el día ${date} a las ${time}.`,
-        data: { visitId: result.visitId }
+        data: { visitId: result.data.id }
       };
     } else {
       throw new Error(result.error || "No se pudo agendar la visita");
