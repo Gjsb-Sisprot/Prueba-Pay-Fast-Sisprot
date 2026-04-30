@@ -658,7 +658,7 @@ export async function routeRequest(
         const forcedTicket = await executeForced("create_glpi_ticket", { 
           name: "Gestión Administrativa Directa", 
           content: escalationReason,
-          subReason: intent.category === "REACTIVACION_SERVICIO" ? "Reactivacion_de_Servicio" : "Consultas_de_Facturacion",
+          subReason: escalationReason.toLowerCase().includes("reactivaci") ? "Reactivacion_de_Servicio" : "Consultas_de_Facturacion",
           aiSummary: "Escalamiento administrativo automático detectado por el Router.",
           observation: "El usuario solicitó una gestión administrativa que requiere ticket inmediato."
         }, routerTools);
