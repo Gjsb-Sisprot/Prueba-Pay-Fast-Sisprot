@@ -17,19 +17,7 @@ import { supabase } from "./supabase";
 const OPERATORS_ADMIN = [20, 10, 19, 22]; // Georgina, Khaloa, Martha, Yhossellyn
 const OPERATORS_TECH = [27, 13, 25, 8, 28, 11, 26]; // Arnaldo, Carlos, Dario, Jonathan, Jean, Kelvin, Yeral
 
-const OPERATOR_NAMES: Record<number, string> = {
-  20: "Georgina Baladi",
-  10: "Khaloa Serrano",
-  19: "Martha Pinto",
-  22: "Yhossellyn Perez",
-  27: "ARNALDO ROJAS",
-  13: "CARLOS OVALLES",
-  25: "DARIO PEDROZA",
-  8: "JONATHAN GARCIA",
-  28: "JEAN MORALES",
-  11: "KELVIN SANCHEZ",
-  26: "YERAL GOMEZ"
-};
+
 
 // --- MAPEO OFICIAL DE SUBMOTIVOS A ITIL Y URGENCIA ---
 const SUBREASON_MAPPING: Record<string, { itil: number; urgency: number; area: 'admin' | 'tech' }> = {
