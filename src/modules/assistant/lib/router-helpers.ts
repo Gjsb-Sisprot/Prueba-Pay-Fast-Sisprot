@@ -53,7 +53,7 @@ interface RouterToolFilterOptions {
 }
 
 export function filterToolsForRouter(tools: LocalToolSet, options: RouterToolFilterOptions = {}): LocalToolSet {
-  const allowEscalation = options.allowEscalation ?? true;
+
   const allowClose = options.allowClose ?? true;
   const filtered: LocalToolSet = {};
   for (const [name, tool] of Object.entries(tools)) {
