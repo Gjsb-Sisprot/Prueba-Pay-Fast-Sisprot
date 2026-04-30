@@ -485,7 +485,8 @@ export async function createSupportVisit(
   date: string,
   time: string,
   reason: string,
-  category: 'support' | 'administration' = 'support'
+  category: 'support' | 'administration' = 'support',
+  glpiTicketId?: string
 ) {
   try {
     let conversation = await getConversationBySessionId(sessionId);
@@ -512,7 +513,17 @@ export async function createSupportVisit(
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
 
-    const visitDate = new Date(date + "T00:00:00");
+    // Normalizar fecha (soportar YYYY-MM-DD y DD/MM/YYYY)
+    let normalizedDate = date;
+    if (date.includes("/")) {
+      const parts = date.split("/");
+      if (parts.length === 3) {
+        // Asumimos DD/MM/YYYY
+        normalizedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+
+    const visitDate = new Date(normalizedDate + "T00:00:00");
     // Ajustamos a UTC considerando que la hora proporcionada es VET (UTC-4)
     // Para obtener UTC: UTC = VET + 4
     visitDate.setUTCHours(hours + 4, minutes, 0, 0);
@@ -526,7 +537,7 @@ export async function createSupportVisit(
         visit_date: visitDate.toISOString(),
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
-        glpi_ticket_id: conversation.glpi_ticket_id || null,
+        glpi_ticket_id: glpiTicketId || conversation.glpi_ticket_id || null,
         conversation_id: conversation.id, // UUID garantizado
         metadata: {
           source: "susana_ai",
