@@ -481,6 +481,8 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           metadata: { visitDate: date }
         }),
       });
+      // 🚀 SINCRONIZACIÓN LOCAL: Actualizar el estado para que el próximo mensaje lleve la fecha
+      setClientData(prev => prev ? { ...prev, visitDate: date } : undefined);
     } catch (err) {
       console.error("[SYNC_VISIT_DATE_ERROR]", err);
     }
@@ -491,7 +493,24 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
     
     // 1. Enviar mensaje al chat (La IA se encargará de ejecutar schedule_support y create_glpi_ticket)
     await sendMessage(message);
-  }, [sendMessage]);
+
+    // 2. Sincronizar localmente la hora
+    setClientData(prev => prev ? { ...prev, visitTime: time } : undefined);
+
+    // 3. Sincronizar en DB
+    try {
+      await fetch(`/api/assistant/conversations/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_metadata",
+          metadata: { visitTime: time }
+        }),
+      });
+    } catch (err) {
+      console.error("[SYNC_VISIT_TIME_ERROR]", err);
+    }
+  }, [sessionId, sendMessage]);
 
   const handleSelectContract = useCallback(async (contractId: string, sector: string, intent?: "admin" | "tech") => {
     let message = `Deseo revisión o atención para mi contrato #${contractId} en el sector ${sector}`;
