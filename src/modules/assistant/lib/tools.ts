@@ -259,6 +259,10 @@ export const auditServiceSchema = z.object({
   contractId: z.string().describe("ID del contrato del cliente para realizar la auditoría interna"),
 });
 
+export const auditEquipmentSchema = z.object({
+  contract: z.string().describe("Número de contrato seleccionado para la auditoría técnica de equipos de red"),
+});
+
 export const getPlanChangeBudgetSchema = z.object({
   contractId: z.string().describe("ID del contrato del cliente"),
   newPlanId: z.string().describe("ID del nuevo plan solicitado"),
@@ -594,6 +598,37 @@ export async function executeAuditService(args: z.infer<typeof auditServiceSchem
   }
 }
 
+export async function executeAuditEquipment(args: z.infer<typeof auditEquipmentSchema>): Promise<ToolResponse> {
+  try {
+    const { contract } = args;
+    const response = await fetch("https://n8n.sisprottaurus.com/webhook/bfd2bf8bd443", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-Token": "4b4d70755e93455f92524259c508cbe9"
+      },
+      body: JSON.stringify({ contract: contract }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en la auditoría de equipos: ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    
+    return {
+      success: true,
+      message: `✅ **Auditoría de equipos finalizada.** El sistema ha verificado la integridad de la red y la configuración de los dispositivos asociados al contrato #${contract}.`,
+      data: data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `❌ Error al realizar la auditoría de equipos: ${error instanceof Error ? error.message : "Error desconocido"}.`,
+    };
+  }
+}
+
 
 export async function executeQueryClient(args: z.infer<typeof queryClientSchema>): Promise<ToolResponse> {
   try {
@@ -879,6 +914,21 @@ export const getLocalTools = (): LocalToolSet => {
       },
       execute: async (args: Record<string, unknown>) => {
         const res = await executeAuditService(args as z.infer<typeof auditServiceSchema>);
+        return { content: [{ type: "text", text: JSON.stringify(res) }] };
+      }
+    },
+    audit_equipment: {
+      name: "audit_equipment",
+      description: "Realiza una auditoría técnica profunda de los equipos de red asociados a un contrato. Úsala cuando necesites verificar la configuración avanzada de la ONU y el estado del servicio en la red central.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          contract: { type: "string" },
+        },
+        required: ["contract"],
+      },
+      execute: async (args: Record<string, unknown>) => {
+        const res = await executeAuditEquipment(args as z.infer<typeof auditEquipmentSchema>);
         return { content: [{ type: "text", text: JSON.stringify(res) }] };
       }
     },
