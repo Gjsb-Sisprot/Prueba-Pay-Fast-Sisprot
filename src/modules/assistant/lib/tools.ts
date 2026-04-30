@@ -470,6 +470,10 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
             .from("support_visits")
             .update({ glpi_ticket_id: ticketId.toString() })
             .eq("id", recentVisit.id);
+        } else if (visitDate && visitTime) {
+          // 🚀 BLINDAJE: Si la IA generó el ticket pero olvidó ejecutar 'schedule_support', lo creamos aquí
+          console.log(`[TOOLS] Creando visita de emergencia para ticket ${ticketId} en Supabase`);
+          await createSupportVisit(sessionId, visitDate, visitTime, subReason, 'support', ticketId.toString());
         }
       } catch (err) {
         console.error("[TOOLS] Error vinculando ticket a visita:", err);
