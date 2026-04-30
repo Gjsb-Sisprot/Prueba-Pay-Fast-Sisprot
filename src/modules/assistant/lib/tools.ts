@@ -6,7 +6,7 @@ import {
   createSupportVisit
 } from "./persistence";
 import { type LocalToolSet } from "./router-helpers";
-import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest, fetchContractById } from "./sisprot-api";
+import { fetchClientContracts, fetchClientInvoices, rebootOnu, getPlanChangeBudget, postPlanChangeRequest } from "./sisprot-api";
 import { supabase } from "./supabase";
 
 
@@ -154,35 +154,6 @@ function getRandomOperator(area: 'admin' | 'tech'): number {
   const list = area === 'admin' ? OPERATORS_ADMIN : OPERATORS_TECH;
   return list[Math.floor(Math.random() * list.length)];
 }
-
-async function sendTicketConfirmation(data: { ticketId: string; contract: string; reason: string; operatorId: number }) {
-  try {
-    const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const operatorName = OPERATOR_NAMES[data.operatorId] || "Operador asignado";
-
-    const payload = {
-      "id_tickect": data.ticketId,
-      "contrato": data.contract,
-      "fecha": date,
-      "hora": time,
-      "motivo": data.reason,
-      "id_tecnico": data.operatorId,
-      "nombre_tecnico": operatorName
-    };
-
-    await fetch('https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-  } catch (error) {
-    console.error("Error al enviar confirmación de visita:", error);
-  }
-}
-
-
 
 export const TOOLS_ENABLED =
   process.env.NEXT_PUBLIC_ASSISTANT_TOOLS_ENABLED === "true";
@@ -441,7 +412,6 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
   try {
     const { subReason, aiSummary, observation, contractId, sessionId, visitDate, visitTime } = args;
 
-    // Obtener la transcripción para contexto histórico
     const transcript = sessionId 
       ? await getConversationTranscript(sessionId).catch(() => "Transcripción no disponible")
       : "No disponible";
@@ -449,7 +419,6 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
     const itilInfo = getItilInfo(subReason);
     const assignedOperatorId = getRandomOperator(itilInfo.area);
     
-    // Payload simplificado: n8n se encargará de consultar el resto de los datos del contrato
     const payload = {
       "Contrato": contractId || "N/A",
       "Observacion": `${subReason} - ${observation}`,
@@ -475,19 +444,17 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       throw new Error(`n8n webhook returned status ${n8nResponse.status}`);
     }
 
-    const resultData = await n8nResponse.json();
+    const resultData = await n8nResponse.json() as Record<string, unknown>;
     
-    // Robustez: extraer el ticketId de la respuesta de n8n
     let ticketId = "PENDIENTE";
     if (Array.isArray(resultData) && resultData[0]?.id) {
-      ticketId = resultData[0].id;
+      ticketId = String(resultData[0].id);
     } else if (resultData && typeof resultData === 'object' && resultData.id) {
-      ticketId = resultData.id;
+      ticketId = String(resultData.id);
     }
 
     if (ticketId !== "PENDIENTE" && sessionId) {
       try {
-        // Vincular el ticket a la visita más reciente si existe
         const conversation = await getConversationBySessionId(sessionId).catch(() => null);
         const searchId = conversation?.id || sessionId;
         const { data: recentVisit } = await supabase
@@ -526,7 +493,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
 export async function executeScheduleSupport(args: z.infer<typeof scheduleSupportSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, date, time, visitType, contractId } = args;
+    const { sessionId, date, time, visitType } = args;
     
     const result = await createSupportVisit(sessionId, date, time, visitType);
     
@@ -547,16 +514,6 @@ export async function executeScheduleSupport(args: z.infer<typeof scheduleSuppor
   }
 }
 
-
-// La función executeEscalateToSpecialist ha sido deprecada a favor de create_glpi_ticket.
-// Se mantiene temporalmente para compatibilidad interna si fuera necesario.
-export async function executeEscalateToSpecialist(args: any): Promise<ToolResponse> {
-  return executeCreateGlpiTicket({
-    ...args,
-    name: `Escalamiento: ${args.subReason}`,
-    content: args.reason || args.content
-  });
-}
 
 export async function executeCloseConversation(args: z.infer<typeof closeConversationSchema>): Promise<ToolResponse> {
   try {
@@ -592,13 +549,13 @@ export async function executeAuditService(args: z.infer<typeof auditServiceSchem
 
     const data = (await response.json()) as Record<string, unknown>;
     
-    // Si el webhook devuelve detalles técnicos, los formateamos
     let auditSummary = "";
     if (data && typeof data === 'object') {
-       const status = data.status || data.result || "Completado";
+       const audit = data as { status?: string; result?: string; device_status?: string; signal_level?: string };
+       const status = audit.status || audit.result || "Completado";
        auditSummary = `\n\n🔍 **Resultado:** ${status}\n` +
-                      `⚙️ **Equipos:** ${data.device_status || 'Operativos'}\n` +
-                      `📶 **Señal:** ${data.signal_level || 'Óptima'}`;
+                      `⚙️ **Equipos:** ${audit.device_status || 'Operativos'}\n` +
+                      `📶 **Señal:** ${audit.signal_level || 'Óptima'}`;
     }
 
     return {
@@ -646,7 +603,9 @@ export async function executeQueryInvoices(args: z.infer<typeof queryInvoicesSch
 
     const invoiceList = (result.invoices as Array<Record<string, unknown>>).map(inv => {
       const statusIcon = inv.status === 'paid' ? '✅' : '⏳';
-      return `${statusIcon} **Referencia ${inv.reference || inv.id}**: ${inv.amount} ${inv.currency || 'USD'} (${inv.status_name || inv.status})`;
+      const reference = inv.reference || inv.id;
+      const statusName = inv.status_name || inv.status;
+      return `${statusIcon} **Referencia ${reference}**: ${inv.amount} ${inv.currency || 'USD'} (${statusName})`;
     }).join('\n');
 
     return {
@@ -675,7 +634,6 @@ export async function executeRebootOnu(args: z.infer<typeof rebootOnuSchema>): P
 export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledgeSchema>): Promise<ToolResponse> {
   try {
     const { query } = args;
-    // Búsqueda vía webhook de n8n o similar
     const response = await fetch("https://n8n.sisprottaurus.com/webhook/knowledge-base", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -699,9 +657,6 @@ export async function executeSearchKnowledge(args: z.infer<typeof searchKnowledg
   }
 }
 
-/**
- * Genera el documento de autorización de devolución.
- */
 export async function executeCreateAuthPdf(args: z.infer<typeof createAuthPdfSchema>): Promise<ToolResponse> {
   return {
     success: true,
@@ -713,9 +668,6 @@ export async function executeCreateAuthPdf(args: z.infer<typeof createAuthPdfSch
   };
 }
 
-/**
- * Activa un convenio de no suspensión para garantizar la continuidad del servicio.
- */
 export async function executeActivateNonSuspension(args: z.infer<typeof activateNonSuspensionSchema>): Promise<ToolResponse> {
   return {
     success: true,
@@ -742,15 +694,13 @@ export async function executeActivateService(args: z.infer<typeof activateServic
 }
 
 
-
-
 export async function executeGetPlanChangeBudget(args: z.infer<typeof getPlanChangeBudgetSchema>): Promise<ToolResponse> {
   try {
     const result = await getPlanChangeBudget(args.contractId, args.newPlanId);
     if (!result.success) throw new Error(result.message);
 
-    const budget = result.data as Record<string, unknown>;
-    const total = budget.total_usd || budget.total;
+    const budget = result.data as { total_usd?: number; total?: number; admin_fee?: number; prorated_amount?: number };
+    const total = budget.total_usd || budget.total || 0;
     const adminFee = budget.admin_fee || 0;
     const prorated = budget.prorated_amount || 0;
 
@@ -792,9 +742,6 @@ export async function executeRequestPlanChange(args: z.infer<typeof requestPlanC
 }
 
 
-/**
- * Retorna las herramientas locales en un formato compatible con lo que espera el Router (MCPToolSet).
- */
 export const getLocalTools = (): LocalToolSet => {
   return {
     getCurrencyRate: {
