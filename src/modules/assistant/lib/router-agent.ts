@@ -674,10 +674,36 @@ export async function routeRequest(
           };
         }
       } else {
-        // FLUJO TÉCNICO CON CITA: 1. Schedule Support -> 2. Create Ticket
-        const timeMatch = message.match(/(\d{1,2}:\d{1,2}\s*(AM|PM))/i);
+        // 📅 EXTRACCIÓN DE FECHA Y HORA DEL MENSAJE (MEJORADO)
+        const timeMatch = message.match(/(\d{1,2}:\d{1,2}\s*(AM|PM)?)/i);
         const selectedTime = timeMatch ? timeMatch[1] : "08:00 AM";
-        const selectedDate = clientData?.visitDate ? new Date(clientData.visitDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        
+        // Intentar extraer fecha del texto si no viene en clientData
+        let extractedDate: string | null = null;
+        
+        // 1. Formato ISO (YYYY-MM-DD)
+        const isoMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
+        if (isoMatch) extractedDate = isoMatch[1];
+        
+        // 2. Formato Latino (DD/MM/YYYY)
+        if (!extractedDate) {
+          const slashMatch = message.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (slashMatch) extractedDate = `${slashMatch[3]}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
+        }
+        
+        // 3. Formato Texto (DD de Mes)
+        if (!extractedDate) {
+          const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+          const deMatch = message.match(/(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i);
+          if (deMatch) {
+            const day = deMatch[1].padStart(2, '0');
+            const month = (months.indexOf(deMatch[2].toLowerCase()) + 1).toString().padStart(2, '0');
+            const year = new Date().getFullYear();
+            extractedDate = `${year}-${month}-${day}`;
+          }
+        }
+
+        const selectedDate = extractedDate || (clientData?.visitDate ? new Date(clientData.visitDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
 
         console.log(`[ROUTER_DECISION] Ejecutando secuencia de agendamiento para ${selectedDate} ${selectedTime}`);
 
