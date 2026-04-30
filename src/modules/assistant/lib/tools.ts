@@ -465,6 +465,25 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
       }
     }
 
+    // 🚀 NOTIFICACIÓN DE CONFIRMACIÓN (Email/WhatsApp)
+    if (visitDate && visitTime) {
+      try {
+        await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id_tickect: ticketId, // ID real de GLPI devuelto por n8n
+            contrato: contractId || "N/A",
+            fecha: visitDate,
+            hora: visitTime,
+            motivo: `Soporte Técnico (${subReason})`
+          })
+        });
+      } catch (err) {
+        console.error("[TOOLS] Error enviando confirmación de visita:", err);
+      }
+    }
+
     return {
       success: true,
       message: `¡Listo! He registrado tu solicitud oficialmente. Tu número de ticket de seguimiento es el **#${ticketId}**. Con este número podrás consultar el estado de tu caso en cualquier momento.`,
