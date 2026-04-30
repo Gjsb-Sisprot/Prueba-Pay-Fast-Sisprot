@@ -59,16 +59,17 @@ Detectar la INTENCIÓN del mensaje del usuario y decidir SI necesita una herrami
 - **Seguimientos**: "no respondiste", "incompleto", "faltó", "continúa" → NO_TOOL_NEEDED
 - **Datos del cliente**: deuda ($${debtAmount}), estado (${serviceStatus}) → NO_TOOL_NEEDED
 
+## CUÁNDO USAR audit_equipment (PRIMER PASO MANDATORIO)
+Usala como **ACCIÓN INICIAL** ante cualquier reporte de:
+- Sin Internet / Caída del servicio.
+- Intermitencia / Se cae la señal.
+- Internet Lento / Lentitud.
+- Luces inusuales o ONU en Rojo.
+
+**REGLA**: Esta herramienta debe ejecutarse ANTES de pedir cualquier prueba al usuario (WiFiman, fotos o videos).
+
 ## CUÁNDO USAR get_onu_diagnostic
-
-SOLO si:
-1. El usuario reporta explícitamente un problema de internet
-2. El servicio NO está suspendido
-${onuSerial ? `3. Serial disponible: ${onuSerial}` : "3. NO tienes serial → NO puedes diagnosticar"}
-${totalContracts > 1 ? "4. Si el cliente tiene múltiples contratos y NO indicó contrato/sector explícito, responde NO_TOOL_NEEDED para pedirle que especifique cuál contrato presentar falla." : ""}
-
-El diagnóstico retorna: offlineCause (DYING_GASP|LOS_FIBER|ADMIN_DISABLED|ONLINE), oltContext (uptime/temp del OLT).
-NUNCA si pregunta información general o el servicio está suspendido.
+Usala como **SEGUNDO PASO** si la auditoría de equipos (\`audit_equipment\`) no arroja una causa clara y necesitas verificar el estado específico del enlace OLT (offlineCause, uptimes).
 
 ## CUÁNDO USAR reboot_onu
 
@@ -181,13 +182,9 @@ Usuario: "cuánto debo?"
 → NO_TOOL_NEEDED (ya tienes: $${debtAmount})
 
 Usuario: "no tengo internet"
-${serviceStatus === "suspended"
-    ? `→ NO_TOOL_NEEDED (servicio suspendido, debe pagar $${debtAmount})`
-    : totalContracts > 1
-      ? `→ NO_TOOL_NEEDED (cliente con múltiples contratos; primero pedir contrato/sector específico)`
-      : onuSerial
-      ? `→ get_onu_diagnostic({ serial: "${onuSerial}" })`
-      : `→ NO_TOOL_NEEDED (no hay serial disponible)`
+${totalContracts > 1
+    ? `→ NO_TOOL_NEEDED (cliente con múltiples contratos; primero pedir contrato/sector específico)`
+    : `→ audit_equipment({ contract: "${clientData?.allContracts?.[0]?.contractId || '...'}" })`
   }
 
 Usuario: "hazme el ticket tu de una ez"
