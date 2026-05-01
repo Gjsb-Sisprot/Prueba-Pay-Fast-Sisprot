@@ -520,6 +520,7 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
 export async function executeScheduleSupport(args: z.infer<typeof scheduleSupportSchema>): Promise<ToolResponse> {
   try {
+    const { sessionId, date, time, visitType } = args;
     const itilInfo = getItilInfo(visitType);
     const assignedOperatorId = getRandomOperator(itilInfo.area);
     const result = await createSupportVisit(sessionId, date, time, visitType, itilInfo.area === 'admin' ? 'administration' : 'support', undefined, assignedOperatorId);
