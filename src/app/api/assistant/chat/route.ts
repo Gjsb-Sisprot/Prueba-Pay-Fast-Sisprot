@@ -50,6 +50,8 @@ const CALENDAR_ACTION_TOKEN_REGEX = /__CALENDAR_ACTION__/gi;
 const CLOSE_CHAT_TOKEN_REGEX = /__CLOSE_CHAT__/gi;
 const REFUND_FORM_TOKEN_REGEX = /__REFUND_FORM__/gi;
 const SIGNED_DOCUMENT_TOKEN_REGEX = /__SIGNED_DOCUMENT_FORM__/gi;
+const CANCELLATION_FORM_TOKEN_REGEX = /__CANCELLATION_FORM__/gi;
+const REACTIVATION_FORM_TOKEN_REGEX = /__REACTIVATION_FORM__/gi;
 const TECHNICAL_TOKEN_REGEX = /fcl_[a-z0-9_]+|fcall_[a-z0-9_]+|\[TOOL_CALL:[a-z0-9_]+\]/gi;
 
 function stripUiControlTokens(content: string): string {
@@ -69,6 +71,8 @@ function stripUiControlTokens(content: string): string {
     .replace(CLOSE_CHAT_TOKEN_REGEX, "")
     .replace(REFUND_FORM_TOKEN_REGEX, "")
     .replace(SIGNED_DOCUMENT_TOKEN_REGEX, "")
+    .replace(CANCELLATION_FORM_TOKEN_REGEX, "")
+    .replace(REACTIVATION_FORM_TOKEN_REGEX, "")
     .replace(TECHNICAL_TOKEN_REGEX, "")
     // Eliminar fugas de JSON crudo antes de guardar persistentemente
     .replace(/\[\s*\{\s*"content":[\s\S]*?\}\s*\}\s*\]/g, "")
@@ -217,13 +221,7 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("[SUPABASE_USER_SAVE_ERROR]", err));
         }
 
-        const agentRole = status === "handed_over" ? "un especialista" : "el equipo de soporte";
-        const messageHeader = status === "handed_over" ? "👩‍💻 Atención en curso" : "⏸️ Asistente en pausa";
-        
-        return createTextStreamResponse(
-          `**${messageHeader}**\n\nEn este momento ${agentRole} cuenta con el control de esta conversación. Por favor, espera a que te respondan directamente.`,
-          undefined
-        );
+        return Response.json({ success: true, silent: true });
       }
 
       conversationHistory = await loadConversationHistory(sessionId);
