@@ -476,8 +476,8 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
             .eq("id", recentVisit.id);
         } else if (visitDate && visitTime) {
           // 🚀 BLINDAJE: Si la IA generó el ticket pero olvidó ejecutar 'schedule_support', lo creamos aquí
-          console.log(`[TOOLS] Creando visita de emergencia para ticket ${ticketId} en Supabase`);
-          await createSupportVisit(sessionId, visitDate, visitTime, subReason, 'support', ticketId.toString());
+          console.log(`[TOOLS] Creando visita de emergencia para ticket ${ticketId} en Supabase con técnico ${assignedOperatorId}`);
+          await createSupportVisit(sessionId, visitDate, visitTime, subReason, itilInfo.area === 'admin' ? 'administration' : 'support', ticketId.toString(), assignedOperatorId);
         }
       } catch (err) {
         console.error("[TOOLS] Error vinculando ticket a visita:", err);
@@ -520,9 +520,9 @@ export async function executeCreateGlpiTicket(args: z.infer<typeof createGlpiTic
 
 export async function executeScheduleSupport(args: z.infer<typeof scheduleSupportSchema>): Promise<ToolResponse> {
   try {
-    const { sessionId, date, time, visitType } = args;
-    
-    const result = await createSupportVisit(sessionId, date, time, visitType);
+    const itilInfo = getItilInfo(visitType);
+    const assignedOperatorId = getRandomOperator(itilInfo.area);
+    const result = await createSupportVisit(sessionId, date, time, visitType, itilInfo.area === 'admin' ? 'administration' : 'support', undefined, assignedOperatorId);
     
     if (result.success) {
       return {
