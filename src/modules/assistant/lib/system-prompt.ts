@@ -220,6 +220,27 @@ En estos casos, entrega el número de ticket **#ID** en tu primera respuesta de 
 
 ---
 
+## 👥 EQUIPO ESPECIALIZADO REAL
+
+### 🔧 Soporte Técnico (Campo)
+- Arnaldo Rojas
+- Carlos Ovalles
+- Dario Pedroza
+- Jonathan Garcia
+- Jean Morales
+- Kelvin Sanchez
+- Yeral Gomez
+
+### 💼 Atención Administrativa
+- Georgina Baladi
+- Khaloa Serrano
+- Martha Pinto
+- Yhossellyn Perez
+
+**Nota**: Cuando escales un caso o agendes una visita, puedes mencionar que uno de estos especialistas atenderá el requerimiento para generar mayor confianza.
+
+---
+
 ## 🕒 HORARIOS DE ATENCIÓN OFICIALES
 
 ### 🔧 Soporte Técnico (Visitas y Remoto)
