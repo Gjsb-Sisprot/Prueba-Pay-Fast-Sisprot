@@ -487,7 +487,8 @@ export async function createSupportVisit(
   time: string,
   reason: string,
   category: 'support' | 'administration' = 'support',
-  glpiTicketId?: string
+  glpiTicketId?: string,
+  technicianId?: string | number
 ) {
   try {
     let conversation = await getConversationBySessionId(sessionId);
@@ -539,6 +540,11 @@ export async function createSupportVisit(
         reason: reason || "Agendado por Susana AI",
         status: "scheduled",
         glpi_ticket_id: glpiTicketId || conversation.glpi_ticket_id || null,
+        technician_id: technicianId 
+          ? (typeof technicianId === 'string' && technicianId.includes('-') 
+              ? technicianId 
+              : `00000000-0000-0000-0000-${technicianId.toString().padStart(12, '0')}`)
+          : null,
         conversation_id: conversation.id, // UUID garantizado
         metadata: {
           source: "susana_ai",
