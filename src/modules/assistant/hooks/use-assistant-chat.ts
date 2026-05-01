@@ -212,45 +212,54 @@ export function useAssistantChat(options: UseAssistantChatOptions = {}) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
+        const contentType = response.headers.get("Content-Type");
+        if (contentType?.includes("application/json")) {
+            const data = await response.json();
+            if (data.silent) {
+                // Si es una respuesta silenciosa (pausada/handed_over), no hacemos nada más
+                return;
+            }
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
         const assistantMessageId = generateMessageId();
         setMessages((prev) => [
           ...prev,
           { id: assistantMessageId, role: "assistant", content: "", timestamp: new Date() },
         ]);
 
-        const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let assistantContent = "";
 
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              console.log("[DEBUG] Llamando a speak con:", assistantContent.substring(0, 50) + "...");
-              if (isAudioEnabled) {
-                speak(assistantContent);
-              }
-              break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log("[DEBUG] Llamando a speak con:", assistantContent.substring(0, 50) + "...");
+            if (isAudioEnabled) {
+              speak(assistantContent);
             }
-
-            assistantContent += decoder.decode(value, { stream: true });
-            const patch = buildAssistantStreamPatch(assistantContent, {
-              isPortalAuthenticated: Boolean(clientData?.identification || identification),
-            });
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessageId
-                  ? {
-                    ...m,
-                    role: patch.role,
-                    content: patch.content,
-                    closeOffer: patch.closeOffer,
-                    paymentOffer: patch.paymentOffer,
-                  }
-                  : m
-              )
-            );
+            break;
           }
+
+          assistantContent += decoder.decode(value, { stream: true });
+          const patch = buildAssistantStreamPatch(assistantContent, {
+            isPortalAuthenticated: Boolean(clientData?.identification || identification),
+          });
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId
+                ? {
+                  ...m,
+                  role: patch.role,
+                  content: patch.content,
+                  closeOffer: patch.closeOffer,
+                  paymentOffer: patch.paymentOffer,
+                }
+                : m
+            )
+          );
         }
 
         // Si detectamos el marcador de cierre automático (por escalamiento a especialista)
