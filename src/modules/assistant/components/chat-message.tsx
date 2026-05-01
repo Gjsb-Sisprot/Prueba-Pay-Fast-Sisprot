@@ -19,7 +19,8 @@ import {
   Landmark,
   UploadCloud,
   Volume2,
-  VolumeX
+  VolumeX,
+  Star
 } from "lucide-react";
 import Image from "next/image";
 
@@ -105,7 +106,8 @@ function ChatMessageComponent({
       // Catch tokens without underscores just in case
       /PLAN_PAYMENT_FORM/gi,
       /ZELLE_BINANCE_FORM/gi,
-      /PLAN_CHANGE_FORM/gi
+      /PLAN_CHANGE_FORM/gi,
+      /__SATISFACTION_SURVEY__/gi
     ];
 
     let cleaned = text;
@@ -1163,7 +1165,47 @@ function ChatMessageComponent({
             </div>
           )}
 
-          {isAssistant && content.includes("__ZELLE_BINANCE_FORM__") && !isLoading && (
+          {isAssistant && content.includes("__SATISFACTION_SURVEY__") && !isLoading && (
+1246:             <div className="mt-3 bg-white border border-yellow-200 rounded-2xl p-5 shadow-lg animate-in fade-in zoom-in-95 duration-300 w-full max-w-[320px] text-center">
+1247:               <div className="flex flex-col items-center gap-4">
+1248:                 <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center border border-yellow-100">
+1249:                   <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+1250:                 </div>
+1251:                 
+1252:                 <div>
+1253:                   <h4 className="text-base font-black text-gray-900 leading-tight">¿Qué te pareció mi atención?</h4>
+1254:                   <p className="text-xs text-gray-500 mt-1">Califica tu experiencia de 1 a 5 estrellas</p>
+1255:                 </div>
+1256: 
+1257:                 <div className="flex gap-2 py-2">
+1258:                   {[1, 2, 3, 4, 5].map((star) => (
+1259:                     <button
+1260:                       key={star}
+1261:                       onClick={() => {
+1262:                         const chatTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
+1263:                         if (chatTextarea) {
+1264:                           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+1265:                           nativeInputValueSetter?.call(chatTextarea, star.toString());
+1266:                           chatTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+1267:                           setTimeout(() => {
+1268:                             const sendButton = chatTextarea.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement;
+1269:                             sendButton?.click();
+1270:                           }, 100);
+1271:                         }
+1272:                       }}
+1273:                       className="p-1 hover:scale-125 transition-transform group"
+1274:                     >
+1275:                       <Star className="w-8 h-8 text-gray-200 group-hover:text-yellow-400 group-hover:fill-yellow-400 transition-colors" />
+1276:                     </button>
+1277:                   ))}
+1278:                 </div>
+1279: 
+1280:                 <p className="text-[10px] text-gray-400 italic">Tu opinión nos ayuda a seguir mejorando para ti 🙌</p>
+1281:               </div>
+1282:             </div>
+1283:           )}
+1284:           
+1285:           {isAssistant && content.includes("__ZELLE_BINANCE_FORM__") && !isLoading && (
             <div className="mt-3 bg-white border border-green-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300 w-full max-w-[320px]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center border border-green-100">
