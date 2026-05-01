@@ -123,7 +123,7 @@ export interface Conversation {
   contactPhone?: string;
   summary?: string;
   status: ConversationStatus;
-  glpiTicketId?: number | null;
+  glpiTicketId?: number | string | null;
   specialistName?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -131,7 +131,7 @@ export interface Conversation {
 }
 
 export function canSendMessages(status: ConversationStatus): boolean {
-  return status === "active" || status === "waiting_specialist";
+  return status !== "closed";
 }
 
 export function isConversationLive(status: ConversationStatus): boolean {
